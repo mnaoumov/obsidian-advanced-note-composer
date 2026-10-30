@@ -1,3 +1,4 @@
+import dedent from 'dedent';
 import {
   describe,
   expect,
@@ -107,16 +108,16 @@ describe('parseFolderContentTemplate', () => {
   });
 
   it('should reproduce the reporter\'s own two-note layout', () => {
-    const sections = parseFolderContentTemplate([
-      '{{file}} !.md',
-      '---',
-      'title: "{{folderName}}"',
-      '---',
-      '',
-      '- [ ] refine',
-      '{{file}} {{safeFolderName}}.md',
-      '# {{folderName}}'
-    ].join('\n'));
+    const sections = parseFolderContentTemplate(dedent`
+      {{file}} !.md
+      ---
+      title: "{{folderName}}"
+      ---
+
+      - [ ] refine
+      {{file}} {{safeFolderName}}.md
+      # {{folderName}}
+    `);
 
     expect(sections).toEqual([
       { contentTemplate: '---\ntitle: "{{folderName}}"\n---\n\n- [ ] refine\n', nameTemplate: '!.md' },

@@ -21,6 +21,7 @@ import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import dedent from 'dedent';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -399,18 +400,18 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       initApp({ 'parent/note.md': 'note' });
       mockPrompt.mockResolvedValue('test notes');
       const { handler } = createHandler({
-        newFolderContentTemplate: [
-          '{{file}} !.md',
-          '---',
-          'title: "{{folderName}}"',
-          'aliases:',
-          '  - {{safeFolderName}}',
-          '---',
-          '',
-          '- [ ] refine',
-          '{{file}} {{safeFolderName}}.md',
-          '# {{folderName}}'
-        ].join('\n')
+        newFolderContentTemplate: dedent`
+          {{file}} !.md
+          ---
+          title: "{{folderName}}"
+          aliases:
+            - {{safeFolderName}}
+          ---
+
+          - [ ] refine
+          {{file}} {{safeFolderName}}.md
+          # {{folderName}}
+        `
       });
 
       await handler.executeFolder(getFolder('parent'));
