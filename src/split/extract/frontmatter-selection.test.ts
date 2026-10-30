@@ -1,3 +1,4 @@
+import dedent from 'dedent';
 import {
   describe,
   expect,
@@ -13,19 +14,18 @@ interface ExtractionSummary {
   readonly remainingYaml: string;
 }
 
-const ALIASES_NOTE = [
-  '---',
-  'aliases:',
-  '  - alpha',
-  '  - bravo',
-  '  - charlie',
-  'tags:',
-  '  - x',
-  '---',
-  '',
-  'body',
-  ''
-].join('\n');
+const ALIASES_NOTE = dedent`
+  ---
+  aliases:
+    - alpha
+    - bravo
+    - charlie
+  tags:
+    - x
+  ---
+
+  body\n
+`;
 
 // Obsidian's `getFrontMatterInfo` keeps the newline before the closing `---` in `frontmatter`, so the
 // remainder ends in one and the region it replaces runs up to the fence itself.
@@ -58,7 +58,17 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should keep the key line out of the remainder when the whole property is selected', () => {
-    const content = ['---', 'aliases:', '  - alpha', '  - bravo', 'tags:', '  - x', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      aliases:
+        - alpha
+        - bravo
+      tags:
+        - x
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, 'aliases:', '  - bravo'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha\n  - bravo',
       remainingYaml: 'tags:\n  - x\n'
@@ -73,7 +83,15 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should take a scalar property in full when only part of its value is selected', () => {
-    const content = ['---', 'title: My Note', 'tags:', '  - x', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      title: My Note
+      tags:
+        - x
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, 'My', 'My'))).toEqual({
       extractedYaml: 'title: My Note',
       remainingYaml: 'tags:\n  - x\n'
@@ -81,7 +99,16 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should pull the whole ancestor chain of a nested value', () => {
-    const content = ['---', 'meta:', '  author:', '    name: Bob', '    age: 42', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      meta:
+        author:
+          name: Bob
+          age: 42
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '    name: Bob', '    name: Bob'))).toEqual({
       extractedYaml: 'meta:\n  author:\n    name: Bob',
       remainingYaml: 'meta:\n  author:\n    age: 42\n'
@@ -89,7 +116,17 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should collapse emptied nested maps upwards', () => {
-    const content = ['---', 'meta:', '  author:', '    name: Bob', 'tags:', '  - x', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      meta:
+        author:
+          name: Bob
+      tags:
+        - x
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '    name: Bob', '    name: Bob'))).toEqual({
       extractedYaml: 'meta:\n  author:\n    name: Bob',
       remainingYaml: 'tags:\n  - x\n'
@@ -97,7 +134,15 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should recognize unindented sequence items as values of the key above them', () => {
-    const content = ['---', 'aliases:', '- alpha', '- bravo', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      aliases:
+      - alpha
+      - bravo
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '- alpha', '- alpha'))).toEqual({
       extractedYaml: 'aliases:\n- alpha',
       remainingYaml: 'aliases:\n- bravo\n'
@@ -105,7 +150,15 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should look past a comment line when resolving the property a value belongs to', () => {
-    const content = ['---', 'aliases:', '  # the good ones', '  - alpha', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      aliases:
+        # the good ones
+        - alpha
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '  - alpha', '  - alpha'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha',
       remainingYaml: '  # the good ones\n'
@@ -113,7 +166,15 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should look past a blank line when resolving the property a value belongs to', () => {
-    const content = ['---', 'aliases:', '', '  - alpha', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      aliases:
+
+        - alpha
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '  - alpha', '  - alpha'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha',
       remainingYaml: '\n'
@@ -121,7 +182,14 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should keep an empty property that had no values to begin with', () => {
-    const content = ['---', 'aliases:', 'title: My Note', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      aliases:
+      title: My Note
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, 'title: My Note', 'title: My Note'))).toEqual({
       extractedYaml: 'title: My Note',
       remainingYaml: 'aliases:\n'
@@ -129,7 +197,16 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should keep comments and key order in the remainder', () => {
-    const content = ['---', '# who wrote this', 'author: Bob', 'aliases:', '  - alpha', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      # who wrote this
+      author: Bob
+      aliases:
+        - alpha
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '  - alpha', '  - alpha'))).toEqual({
       extractedYaml: 'aliases:\n  - alpha',
       remainingYaml: '# who wrote this\nauthor: Bob\n'
@@ -137,7 +214,16 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should honor several selections at once', () => {
-    const content = ['---', 'title: My Note', 'aliases:', '  - alpha', '  - bravo', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      title: My Note
+      aliases:
+        - alpha
+        - bravo
+      ---
+
+      body\n
+    `;
     expect(
       extract(
         content,
@@ -178,7 +264,17 @@ describe('extractFrontmatterSelection', () => {
   });
 
   it('should ignore a selection covering only blank lines', () => {
-    const content = ['---', 'title: My Note', '', '', 'tags:', '  - x', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      title: My Note
+
+
+      tags:
+        - x
+      ---
+
+      body\n
+    `;
     const blankStart = content.indexOf('My Note') + 'My Note'.length + 1;
     expect(extract(content, { endOffset: blankStart + 1, startOffset: blankStart })).toBeNull();
   });
@@ -186,27 +282,60 @@ describe('extractFrontmatterSelection', () => {
   it('should ignore a selection whose lines are not a YAML map', () => {
     // The `- alpha` line has no key line to belong to — the one above it carries a value of its own — so it
     // stays an orphaned sequence item, which is not a set of properties.
-    const content = ['---', 'title: My Note', '- alpha', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      title: My Note
+      - alpha
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '- alpha', '- alpha'))).toBeNull();
   });
 
   it('should ignore a selection whose lines are not YAML at all', () => {
-    const content = ['---', 'just text', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      just text
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, 'just text', 'just text'))).toBeNull();
   });
 
   it('should ignore a selection whose lines do not parse as YAML', () => {
-    const content = ['---', 'aliases: [alpha', 'title: My Note', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      aliases: [alpha
+      title: My Note
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, 'aliases: [alpha', 'aliases: [alpha'))).toBeNull();
   });
 
   it('should ignore a selection of a comment alone', () => {
-    const content = ['---', '# who wrote this', 'author: Bob', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      # who wrote this
+      author: Bob
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '# who wrote this', '# who wrote this'))).toBeNull();
   });
 
   it('should ignore a selection that yields no properties', () => {
-    const content = ['---', '{}', '---', '', 'body', ''].join('\n');
+    const content = dedent`
+      ---
+      {}
+      ---
+
+      body\n
+    `;
     expect(extract(content, selectText(content, '{}', '{}'))).toBeNull();
   });
 });

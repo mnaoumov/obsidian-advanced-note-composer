@@ -4,6 +4,7 @@ import type {
   TFile
 } from 'obsidian';
 
+import dedent from 'dedent';
 import {
   ContextId,
   evalInObsidian,
@@ -314,32 +315,31 @@ describe('auto-numbering what a split creates (issue #269)', () => {
 
   it('reproduces the reporter\'s recursive tree, with children restarting at 1 per parent', async () => {
     const rootFolder = 'split-auto-number-recursive';
-    const sourceContent = [
-      '# D',
-      '',
-      'body of D',
-      '',
-      '## DD',
-      '',
-      'body of DD',
-      '',
-      '## DD2',
-      '',
-      'body of DD2',
-      '',
-      '# F',
-      '',
-      'body of F',
-      '',
-      '## FF',
-      '',
-      'body of FF',
-      '',
-      '## FF2',
-      '',
-      'body of FF2',
-      ''
-    ].join('\n');
+    const sourceContent = dedent`
+      # D
+
+      body of D
+
+      ## DD
+
+      body of DD
+
+      ## DD2
+
+      body of DD2
+
+      # F
+
+      body of F
+
+      ## FF
+
+      body of FF
+
+      ## FF2
+
+      body of FF2\n
+    `;
 
     const result = await runSplitScenario({
       expectation: {

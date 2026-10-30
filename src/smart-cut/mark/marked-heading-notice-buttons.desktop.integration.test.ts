@@ -3,6 +3,7 @@ import type {
   TFile
 } from 'obsidian';
 
+import dedent from 'dedent';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -15,26 +16,25 @@ import { findSettingItemInObsidian } from '../../settings/settings-tab-navigatio
 
 const PLUGIN_ID = 'advanced-note-composer';
 const SOURCE_PATH = 'marked-heading-notice-source.md';
-const SOURCE_CONTENT = [
-  'Intro text',
-  '',
-  '## NoticeA',
-  '',
-  'body of NoticeA',
-  '',
-  '## NoticeB',
-  '',
-  'body of NoticeB',
-  '',
-  '### NoticeB1',
-  '',
-  'body of NoticeB1',
-  '',
-  '## NoticeC',
-  '',
-  'body of NoticeC',
-  ''
-].join('\n');
+const SOURCE_CONTENT = dedent`
+  Intro text
+
+  ## NoticeA
+
+  body of NoticeA
+
+  ## NoticeB
+
+  body of NoticeB
+
+  ### NoticeB1
+
+  body of NoticeB1
+
+  ## NoticeC
+
+  body of NoticeC\n
+`;
 // Inside `NoticeB`'s body — the enclosing heading is the one the mark resolves.
 const CURSOR_LINE = 8;
 const EXPECTED_HEADING_COUNT = 4;

@@ -9,6 +9,7 @@ import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import dedent from 'dedent';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -146,10 +147,10 @@ describe('updateHeadingBacklinks', () => {
   beforeEach(() => {
     app = App.createConfigured__({
       files: {
-        'note.md': [
-          'Links: [[target#Parent#Child]] and [[target#Parent]] and [md](target.md#Parent#Child) and',
-          'block [[target#^abc]] and plain [[target]] and unrelated [[other]].'
-        ].join('\n'),
+        'note.md': dedent`
+          Links: [[target#Parent#Child]] and [[target#Parent]] and [md](target.md#Parent#Child) and
+          block [[target#^abc]] and plain [[target]] and unrelated [[other]].
+        `,
         'other.md': 'other body',
         'target.md': '# Parent\n\ntext\n\n## Child\n\ntext\n'
       }

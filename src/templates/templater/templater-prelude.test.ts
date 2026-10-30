@@ -1,3 +1,4 @@
+import dedent from 'dedent';
 import {
   describe,
   expect,
@@ -20,22 +21,20 @@ const TOKENS: CreateFolderTemplateTokens = {
 
 describe('buildTemplaterPrelude', () => {
   it('should declare every token in one execution command', () => {
-    expect(buildTemplaterPrelude(TOKENS)).toBe([
-      '<%*',
-      `const TOKENS = ${
-        JSON.stringify({
-          folderName: '1. Test Notes',
-          folderPath: 'Inbox/1. Test Notes',
-          index: 1,
-          parentFolder: 'Inbox',
-          parentFolderPath: 'Inbox',
-          rawFolderName: 'test notes',
-          safeFolderName: 'Test Notes'
-        })
-      };`,
-      '-%>',
-      ''
-    ].join('\n'));
+    const json = JSON.stringify({
+      folderName: '1. Test Notes',
+      folderPath: 'Inbox/1. Test Notes',
+      index: 1,
+      parentFolder: 'Inbox',
+      parentFolderPath: 'Inbox',
+      rawFolderName: 'test notes',
+      safeFolderName: 'Test Notes'
+    });
+    expect(buildTemplaterPrelude(TOKENS)).toBe(dedent`
+      <%*
+      const TOKENS = ${json};
+      -%>\n
+    `);
   });
 
   it('should keep the index a number, so it can be used in arithmetic', () => {

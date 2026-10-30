@@ -1,6 +1,7 @@
 import type { HeadingCache } from 'obsidian';
 
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
+import dedent from 'dedent';
 import {
   describe,
   expect,
@@ -14,24 +15,23 @@ import {
   MAX_HEADING_LEVEL
 } from './heading-split-recursion.ts';
 
-const CONTENT = [
-  '# A',
-  '',
-  'intro',
-  '',
-  '## B',
-  '',
-  'b body',
-  '',
-  '### C',
-  '',
-  'c body',
-  '',
-  '## D',
-  '',
-  'd body',
-  ''
-].join('\n');
+const CONTENT = dedent`
+  # A
+
+  intro
+
+  ## B
+
+  b body
+
+  ### C
+
+  c body
+
+  ## D
+
+  d body\n
+`;
 
 function createHeading(level: number, headingText: string, offset: number): HeadingCache {
   return strictProxy<HeadingCache>({

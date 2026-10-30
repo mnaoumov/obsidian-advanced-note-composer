@@ -1,6 +1,7 @@
 import type { HeadingCache } from 'obsidian';
 
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import dedent from 'dedent';
 import {
   describe,
   expect,
@@ -49,22 +50,21 @@ function parseHeadings(content: string): HeadingCache[] {
   return headings;
 }
 
-const NESTED_CONTENT = [
-  'intro',
-  '',
-  '# A',
-  'aaa',
-  '',
-  '## A.1',
-  'a1',
-  '',
-  '## A.2',
-  'a2',
-  '',
-  '# B',
-  'bbb',
-  ''
-].join('\n');
+const NESTED_CONTENT = dedent`
+  intro
+
+  # A
+  aaa
+
+  ## A.1
+  a1
+
+  ## A.2
+  a2
+
+  # B
+  bbb\n
+`;
 const NESTED_HEADINGS = parseHeadings(NESTED_CONTENT);
 
 describe('heading-sections', () => {
