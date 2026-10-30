@@ -11,6 +11,8 @@ import type {
   TFile
 } from 'obsidian';
 
+import { UndoBulkOperationCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/undo-bulk-operation-command-handler';
+import { BulkOperationCommitComponent } from '@mnaoumov/obsidian-lib/components/bulk-operation-commit-component';
 import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
 import { TemplatesLanguageComponent } from '@mnaoumov/obsidian-lib/components/templates-language-component';
 import { noopAsync } from '@mnaoumov/typescript-lib/function';
@@ -37,6 +39,14 @@ import { PluginSettingsTab } from './settings/plugin-settings-tab.ts';
 import { SelectionHighlightComponent } from './smart-cut/mark/selection-highlight-component.ts';
 import { MoveNoticeComponent } from './smart-cut/move-notice-component.ts';
 import { TOKENIZED_STRING_LANGUAGE } from './templates/tokenized-string-language.ts';
+
+vi.mock('@mnaoumov/obsidian-lib/command-handlers/undo-bulk-operation-command-handler', () => ({
+  UndoBulkOperationCommandHandler: vi.fn()
+}));
+
+vi.mock('@mnaoumov/obsidian-lib/components/bulk-operation-commit-component', () => ({
+  BulkOperationCommitComponent: vi.fn()
+}));
 
 vi.mock('@mnaoumov/obsidian-lib/components/plugin-settings-tab-component', () => ({
   PluginSettingsTabComponent: vi.fn()
@@ -245,8 +255,8 @@ describe('Plugin', () => {
     // handler's own suite.
     const buildCommandHandlers = registerCommandHandlers.mock.calls[0]?.[0] as () => CommandHandler[];
     const commandHandlers = buildCommandHandlers();
-    // 40 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
-    const EXPECTED_COMMAND_HANDLER_COUNT = 57;
+    // 41 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
+    const EXPECTED_COMMAND_HANDLER_COUNT = 58;
     expect(commandHandlers).toHaveLength(EXPECTED_COMMAND_HANDLER_COUNT);
     expect(commandHandlers.every(Boolean)).toBe(true);
     expect(TemplatesLanguageComponent).toHaveBeenCalledOnce();
@@ -262,7 +272,18 @@ describe('Plugin', () => {
     expect(SelectionHighlightComponent).toHaveBeenCalledOnce();
     expect(SelectionAnchorComponent).toHaveBeenCalledOnce();
 
-    const EXPECTED_ADD_CHILD_CALLS = 7;
+    // The bulk-operation commits and their undo command read the plugin's own opt-in setting, live.
+    const commitParams = vi.mocked(BulkOperationCommitComponent).mock.lastCall?.[0];
+    const undoParams = vi.mocked(UndoBulkOperationCommandHandler).mock.lastCall?.[0];
+    expect(commitParams?.pluginId).toBe('test-plugin');
+    expect(undoParams?.isEnabled).toBe(commitParams?.isEnabled);
+    const settings = castTo<PluginSettings>(internals.pluginSettingsComponent.settings);
+    settings.shouldCommitBulkOperations = true;
+    expect(commitParams?.isEnabled()).toBe(true);
+    settings.shouldCommitBulkOperations = false;
+    expect(commitParams?.isEnabled()).toBe(false);
+
+    const EXPECTED_ADD_CHILD_CALLS = 8;
     expect(addChildSpy).toHaveBeenCalledTimes(EXPECTED_ADD_CHILD_CALLS);
   });
 

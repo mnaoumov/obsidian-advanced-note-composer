@@ -30,10 +30,12 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../../settings/plugin-settings.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
 
+import { createBulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import { InsertMode } from '../../composers/insert-mode.ts';
 import {
   publishCustomAttachmentLocationStub,
@@ -130,6 +132,7 @@ const mockOpenConfirmDialogModal = vi.mocked(openConfirmDialogModal);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectFolder = vi.mocked(selectFolder);
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let app: AppOriginal;
 
 afterEach(() => {
@@ -177,8 +180,10 @@ function createHandler(overrides?: CreateHandlerOverrides): HandlerContext {
   const { flattenMode = FlattenMode.AllChildren, ...settingsOverrides } = overrides ?? {};
   const editAndSave = vi.fn().mockResolvedValue(undefined);
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   const handler = new FlattenFolderCommandHandler({
     app,
+    bulkOperationRunner: bulkOperationRunnerStub,
     flattenMode,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -313,6 +318,20 @@ describe('FlattenFolderCommandHandler', () => {
     // The children no longer live under the flattened folder.
     expect(await app.vault.adapter.exists('parent/a/note.md')).toBe(false);
     expect(await app.vault.adapter.exists('parent/a/sub/deep.md')).toBe(false);
+    // The flatten is one bulk operation, committed under the command's name and both folders.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Flatten folder parent/a into parent']);
+  });
+
+  it('should name the flatten variant in its bulk-operation summary', async () => {
+    initApp({
+      'parent/a/b/note.md': 'note body',
+      'parent/a/c/note.md': 'note body'
+    });
+    const { handler } = createHandler({ flattenMode: FlattenMode.ChildFoldersOnly });
+
+    await handler.executeFolder(getFolder('parent/a'));
+
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Flatten folder (child folders only) parent/a into parent']);
   });
 
   it('should de-duplicate a name that collides with an existing sibling', async () => {

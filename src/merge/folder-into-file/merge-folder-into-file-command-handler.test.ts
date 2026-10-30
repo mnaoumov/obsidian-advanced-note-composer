@@ -27,9 +27,11 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../../settings/plugin-settings.ts';
 
+import { createBulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import {
   publishCustomAttachmentLocationStub,
   revokeCustomAttachmentLocationStubs
@@ -89,6 +91,7 @@ vi.mock('../../ui/select-folder-modal.ts', () => ({
 const mockConfirm = vi.mocked(confirmMergeFolderIntoFile);
 const mockSelectFolder = vi.mocked(selectFolder);
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let app: AppOriginal;
 
 afterEach(() => {
@@ -107,8 +110,10 @@ function containsNotice(showNotice: MockInstance<PluginNoticeComponent['showNoti
 
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   const handler = new MergeFolderIntoFileCommandHandler({
     app,
+    bulkOperationRunner: bulkOperationRunnerStub,
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -339,6 +344,8 @@ describe('MergeFolderIntoFileCommandHandler', () => {
 
       expect(await app.vault.adapter.exists('parent/src.md')).toBe(true);
       expect(await app.vault.adapter.read('parent/src.md')).toContain('alpha body');
+      // The merge is one bulk operation, committed under a summary naming the merged folder.
+      expect(bulkOperationRunnerStub.summaries).toEqual(['Merge folder contents of parent/src into a single file']);
     });
 
     it('should create the note beside a root-level folder without a leading separator', async () => {

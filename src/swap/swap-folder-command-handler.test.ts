@@ -26,11 +26,13 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the swap
 // proceeds without opening a suggest modal. Everything else (vault, lock, transaction, swapper) is REAL.
+import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import { SwapFolderCommandHandler } from './swap-folder-command-handler.ts';
 import { selectTargetFolderForSwap } from './swap-folder-modal.ts';
 
@@ -68,6 +70,7 @@ vi.mock('./swap-folder-modal.ts', () => ({
 
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForSwap);
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let app: AppOriginal;
 let resourceLockComponent: ResourceLockComponent;
 
@@ -78,8 +81,10 @@ afterEach(() => {
 
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   const handler = new SwapFolderCommandHandler({
     app,
+    bulkOperationRunner: bulkOperationRunnerStub,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({
@@ -191,6 +196,8 @@ describe('SwapFolderCommandHandler', () => {
     expect(await app.vault.adapter.exists('right/shared/b.md')).toBe(false);
     // The scratch temp folder was cleaned up.
     expect(await app.vault.adapter.exists('__temp')).toBe(false);
+    // The swap is one bulk operation, committed under a summary naming both folders.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Swap folder left/shared with right/shared']);
   });
 
   it('should swap two differently-named empty folders', async () => {

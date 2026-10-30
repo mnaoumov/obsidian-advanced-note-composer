@@ -10,6 +10,7 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/folder-command-handler';
 import {
   doesExist,
@@ -30,6 +31,7 @@ import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 import { join } from '@mnaoumov/typescript-lib/path';
 import { Vault } from 'obsidian';
 
+import type { BulkOperationRunner } from '../../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 
 import { runLockedTransaction } from '../../composers/locked-transaction.ts';
@@ -53,6 +55,7 @@ import { selectTargetFolderForMergeFolder } from './merge-folder-modal.ts';
 
 interface MergeFolderCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -85,6 +88,7 @@ interface MergeFolderCommandHandlerMergeMarkdownFilesParams {
 
 export class MergeFolderCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -100,6 +104,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     });
 
     this.app = params.app;
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
@@ -189,18 +194,22 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
     const abortController = new AbortController();
     try {
-      await runLockedTransaction({
-        abortController,
-        app: this.app,
-        body: async (vaultTransaction) => {
-          await this.mergeFolderImpl({ abortController, sourceFolder, targetFolder, vaultTransaction });
-        },
-        lockTargets: [
-          { mode: 'subtree', pathOrFile: sourceFolder.path },
-          { mode: 'subtree', pathOrFile: targetFolder.path }
-        ],
-        operationName: 'Merge folder',
-        resourceLockComponent: this.resourceLockComponent
+      await this.bulkOperationRunner.runBulkOperation({
+        operation: () =>
+          runLockedTransaction({
+            abortController,
+            app: this.app,
+            body: async (vaultTransaction) => {
+              await this.mergeFolderImpl({ abortController, sourceFolder, targetFolder, vaultTransaction });
+            },
+            lockTargets: [
+              { mode: 'subtree', pathOrFile: sourceFolder.path },
+              { mode: 'subtree', pathOrFile: targetFolder.path }
+            ],
+            operationName: 'Merge folder',
+            resourceLockComponent: this.resourceLockComponent
+          }),
+        summary: `Merge folder ${sourceFolder.path} into ${targetFolder.path}`
       });
     } catch (error) {
       if (abortController.signal.aborted) {
@@ -323,6 +332,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
 
     for (const sourceOtherFile of sourceOtherFiles) {
       this.throwIfAborted(abortController);
+      // The merge does not iterate through `loop()`, so it refreshes a bulk-operation commit's lease lock itself.
+      reportBulkOperationProgress();
       /* v8 ignore start -- defensive ?? on parent?.path and Map.get(). */
       const targetParentFolderPath = subfoldersMap.get(sourceOtherFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */
@@ -374,6 +385,8 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     const { abortController, ignoredSourceFiles, sourceMdFiles, subfoldersMap, vaultTransaction } = params;
     for (const sourceMdFile of sourceMdFiles) {
       this.throwIfAborted(abortController);
+      // The merge does not iterate through `loop()`, so it refreshes a bulk-operation commit's lease lock itself.
+      reportBulkOperationProgress();
       /* v8 ignore start -- defensive ?? on parent?.path and Map.get(). */
       const targetParentFolderPath = subfoldersMap.get(sourceMdFile.parent?.path ?? '') ?? '';
       /* v8 ignore stop */

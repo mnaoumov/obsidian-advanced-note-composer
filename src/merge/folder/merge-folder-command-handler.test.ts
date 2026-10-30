@@ -30,11 +30,13 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../../settings/plugin-settings.ts';
 
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the merge
 // proceeds without opening a suggest modal. Everything else (vault, lock, transaction, composer) is REAL.
+import { createBulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import { FrontmatterMergeStrategy } from '../../settings/plugin-settings.ts';
 import { MergeFolderCommandHandler } from './merge-folder-command-handler.ts';
 import { selectTargetFolderForMergeFolder } from './merge-folder-modal.ts';
@@ -98,6 +100,7 @@ vi.mock('./merge-folder-modal.ts', () => ({
 
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMergeFolder);
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let app: AppOriginal;
 let resourceLockComponent: ResourceLockComponent;
 
@@ -113,8 +116,10 @@ function containsNotice(showNotice: MockInstance<PluginNoticeComponent['showNoti
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
   const hide = vi.fn();
   const showNotice = vi.fn().mockReturnValue({ hide });
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   const handler = new MergeFolderCommandHandler({
     app,
+    bulkOperationRunner: bulkOperationRunnerStub,
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
@@ -256,6 +261,8 @@ describe('MergeFolderCommandHandler', () => {
     expect(await app.vault.adapter.exists('src/sub/sketch.excalidraw.md')).toBe(false);
     // The ordinary note still merged.
     expect(await app.vault.adapter.read('dst/sub/note.md')).toContain('note body');
+    // The merge is one bulk operation, committed under a summary naming both folders.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Merge folder src into dst']);
   });
 
   it('should de-duplicate a markdown-shaped attachment against one already in the target (issue #161)', async () => {

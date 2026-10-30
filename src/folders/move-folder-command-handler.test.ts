@@ -27,10 +27,12 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 import type { ConfirmDialogModalResult } from '../ui/confirm-dialog-modal.ts';
 
+import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import { InsertMode } from '../composers/insert-mode.ts';
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the move
 // proceeds without opening a suggest modal. Everything else (vault, lock, transaction) is REAL.
@@ -111,6 +113,7 @@ const mockOpenConfirmDialogModal = vi.mocked(openConfirmDialogModal);
 const mockRenderInternalLink = vi.mocked(renderInternalLink);
 const mockSelectTargetFolder = vi.mocked(selectTargetFolderForMove);
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let app: AppOriginal;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
 let confirmResults: ConfirmDialogModalResult[] = [];
@@ -139,8 +142,10 @@ function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true, should
 function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerContext {
   const editAndSave = vi.fn().mockResolvedValue(undefined);
   const showNotice = vi.fn().mockReturnValue({ hide: vi.fn() });
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   const handler = new MoveFolderCommandHandler({
     app,
+    bulkOperationRunner: bulkOperationRunnerStub,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       editAndSave,
@@ -262,6 +267,8 @@ describe('MoveFolderCommandHandler', () => {
     expect(await app.vault.adapter.exists('parent/a/note.md')).toBe(false);
     // The pre-existing target file is untouched.
     expect(await app.vault.adapter.read('dst/keep.md')).toBe('keep');
+    // The move is one bulk operation, committed under a summary naming both ends.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Move folder parent/a to dst/a']);
   });
 
   it('should de-duplicate when the target already has a folder with the same name', async () => {

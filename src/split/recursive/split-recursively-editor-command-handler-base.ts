@@ -12,11 +12,13 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
 import { MarkdownView } from 'obsidian';
 
+import type { BulkOperationRunner } from '../../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
 import type { SplitTemplateNote } from './apply-split-template.ts';
@@ -126,6 +128,7 @@ interface RecursiveSplitRootTarget {
 
 interface SplitRecursivelyEditorCommandHandlerBaseConstructorParams extends EditorCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -183,6 +186,7 @@ const PREVIEW_INDENT = ' '.repeat(PREVIEW_INDENT_WIDTH);
  */
 export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEditorCommandHandlerBase {
   protected readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly resourceLockComponent: ResourceLockComponent;
@@ -190,6 +194,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
   public constructor(params: SplitRecursivelyEditorCommandHandlerBaseConstructorParams) {
     super(params);
 
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
@@ -234,43 +239,53 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
       pluginSettingsComponent: this.pluginSettingsComponent
     });
 
-    let createdNotes: readonly SplitTemplateNote[];
-    try {
-      createdNotes = await this.splitBranch({
-        editor,
-        file,
-        isRootPass: true,
-        minLevel: 1,
-        rootFolderOverride: rootTarget.rootFolderOverride,
-        rootHeadingLine: run.rootHeadingLine
-      });
-    } finally {
-      progressNotice?.[Symbol.dispose]();
-      /*
-       * The recursion walks the leaf down through every note it creates, so it ends up parked on the
-       * deepest one. Bring the user back to the note they invoked the command on, whether the run
-       * finished or failed part-way.
-       */
-      await this.app.workspace.getLeaf(false).openFile(file, { active: true });
-    }
-
     /*
-     * Only now, with the tree built and no produced note left open in the leaf, wrap each of them in the
-     * split template — see `applySplitTemplateToNotes` for why it cannot happen as each note is created.
+     * The whole run is ONE bulk operation: every pass commits its own transaction, so only the commit wrapper
+     * lets one `git revert` undo the tree and the template pass after it.
      */
-    await applySplitTemplateToNotes({
-      app: this.app,
-      folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
-      notes: createdNotes,
-      resourceLockComponent: this.resourceLockComponent,
-      runTemplater: resolveDestinationTemplaterRunner({
-        app: this.app,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        shouldRunTemplater: this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile,
-        // Every pass's composer has already reported a missing `Templater` for this run.
-        shouldWarnIfMissing: false
-      }),
-      template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)
+    const createdNotes = await this.bulkOperationRunner.runBulkOperation({
+      operation: async () => {
+        let notes: readonly SplitTemplateNote[];
+        try {
+          notes = await this.splitBranch({
+            editor,
+            file,
+            isRootPass: true,
+            minLevel: 1,
+            rootFolderOverride: rootTarget.rootFolderOverride,
+            rootHeadingLine: run.rootHeadingLine
+          });
+        } finally {
+          progressNotice?.[Symbol.dispose]();
+          /*
+           * The recursion walks the leaf down through every note it creates, so it ends up parked on the
+           * deepest one. Bring the user back to the note they invoked the command on, whether the run
+           * finished or failed part-way.
+           */
+          await this.app.workspace.getLeaf(false).openFile(file, { active: true });
+        }
+
+        /*
+         * Only now, with the tree built and no produced note left open in the leaf, wrap each of them in the
+         * split template — see `applySplitTemplateToNotes` for why it cannot happen as each note is created.
+         */
+        await applySplitTemplateToNotes({
+          app: this.app,
+          folderNameTemplate: this.pluginSettingsComponent.settings.reorderedFolderNameTemplate,
+          notes,
+          resourceLockComponent: this.resourceLockComponent,
+          runTemplater: resolveDestinationTemplaterRunner({
+            app: this.app,
+            pluginNoticeComponent: this.pluginNoticeComponent,
+            shouldRunTemplater: this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile,
+            // Every pass's composer has already reported a missing `Templater` for this run.
+            shouldWarnIfMissing: false
+          }),
+          template: resolveSplitTemplateForNewTargetFile(this.pluginSettingsComponent.settings)
+        });
+        return notes;
+      },
+      summary: run.headingText === null ? `${run.dialogTitle} ${file.path}` : `${run.dialogTitle} ${run.headingText} in ${file.path}`
     });
 
     // The run landed, so the folder the produced tree was rooted in counts as clicked-on for the next
@@ -539,6 +554,8 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
       file,
       heading
     } = params;
+    // The split does not iterate through `loop()`, so it refreshes a bulk-operation commit's lease lock itself.
+    reportBulkOperationProgress();
     const headingInfo = getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: heading.position.start.line });
     if (!headingInfo) {
       this.pluginNoticeComponent.showNotice('Failed to find heading');

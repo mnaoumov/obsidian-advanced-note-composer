@@ -4,6 +4,8 @@ import type {
   TFile
 } from 'obsidian';
 
+import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
+
 import type { Frontmatter } from '../../composers/frontmatter-merge.ts';
 import type { DestinationTemplaterRunner } from '../../templates/templater/destination-templater.ts';
 
@@ -124,6 +126,8 @@ export async function applySplitTemplateToNotes(params: ApplySplitTemplateToNote
     // note itself, and it is the template just written that holds the commands to run. An ordinary split runs
     // it at the same point relative to the template — once the destination holds it.
     await runTemplater?.(note.file);
+    // Refreshes the lease lock of a bulk-operation commit wrapping the recursive split this pass ends.
+    reportBulkOperationProgress();
   }
 }
 

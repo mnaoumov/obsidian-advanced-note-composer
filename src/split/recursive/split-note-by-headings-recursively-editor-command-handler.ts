@@ -10,6 +10,7 @@ import type {
   TFile
 } from 'obsidian';
 
+import type { BulkOperationRunner } from '../../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 import type { RecursiveSplitRun } from './split-recursively-editor-command-handler-base.ts';
 
@@ -24,6 +25,7 @@ import { SplitRecursivelyEditorCommandHandlerBase } from './split-recursively-ed
 
 interface SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -34,6 +36,7 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends SplitRec
   public constructor(params: SplitNoteByHeadingsRecursivelyEditorCommandHandlerConstructorParams) {
     super({
       app: params.app,
+      bulkOperationRunner: params.bulkOperationRunner,
       consoleDebugComponent: params.consoleDebugComponent,
       editorMenuSubmenuIcon: 'lucide-git-merge',
       icon: 'lucide-list-tree',

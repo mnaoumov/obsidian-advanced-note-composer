@@ -57,6 +57,8 @@ Each row is one family of commands; its link opens the demo-vault section that w
 | [UI](<./demo-vault/10 UI/README.md>) | Minimizable dialogs, a changeable target, operation notices, and command menu placement |
 | [Select](<./demo-vault/11 Selection/README.md>) | Commands that only set the selection, for the phone, where selecting by hand fails |
 
+On desktop, for a vault kept in a git repository, the opt-in `Should commit bulk operations` setting records each folder-wide command and each recursive split as its own git commit, so `git revert` undoes it, and the `Undo a bulk operation...` command does that for you. See [Settings](<./demo-vault/10 UI/36 Settings.md>).
+
 ## See also
 
 Merges also preserve keys from `Permanent Links` when it is enabled: see [Merge file](<./demo-vault/01 Merge/01 Merge file.md>).

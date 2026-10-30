@@ -276,6 +276,11 @@ Obsidian has two context menus over an open note, and they never both answer one
 
 `Should show console debug messages` lives on this page too. It has no `data.json` key: the choice is stored by the debug controller the plugin shares with its library, which is why it is not in this list.
 
+## Bulk operation commits
+
+- `shouldCommitBulkOperations`
+  - record each folder-wide command (merge, move, rename, flatten, swap and reorder folders) and each recursive split as git commits: `chore: before OP<n>` holds whatever was pending, then `OP<n>: <summary>` holds what the command changed, so one `git revert` undoes one command. The `Undo a bulk operation...` command lists those commits and reverts the one you pick. Desktop only, for a vault inside a git repository; anywhere else the commands run as they always do. Off by default.
+
 ## Internal
 
 - `releaseNotesShown`

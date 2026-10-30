@@ -27,6 +27,7 @@ import { join } from '@mnaoumov/typescript-lib/path';
 import { trimEnd } from '@mnaoumov/typescript-lib/string';
 import { Vault } from 'obsidian';
 
+import type { BulkOperationRunner } from '../../bulk-operations/bulk-operation-runner.ts';
 import type { PluginSettingsComponent } from '../../settings/plugin-settings-component.ts';
 
 import {
@@ -76,6 +77,7 @@ const DEV_UTILS_EMPTY_FOLDER_BEHAVIORS: Record<EmptyFolderBehaviorAfterMergingFo
 
 interface MergeFolderIntoFileCommandHandlerConstructorParams {
   readonly app: App;
+  readonly bulkOperationRunner: BulkOperationRunner;
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -121,6 +123,7 @@ interface MergeWalkPredicates {
  */
 export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
   private readonly app: App;
+  private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
@@ -136,6 +139,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     });
 
     this.app = params.app;
+    this.bulkOperationRunner = params.bulkOperationRunner;
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
@@ -195,56 +199,69 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
     // Snapshotted before the merge: the folders are what they are now, and the merge only empties them.
     const folderPathsToCleanUp = collectFolderPathsDeepestFirst(folder, walkPredicates);
 
-    const targetFile = await this.app.vault.create(pathToCreate, '');
+    /*
+     * One bulk operation from the note's creation to the folder cleanup, so a single `git revert` brings the
+     * folder back whole. The open below stays outside: it changes nothing in the vault.
+     */
+    const targetFile = await this.bulkOperationRunner.runBulkOperation({
+      operation: async () => {
+        const mergedFile = await this.app.vault.create(pathToCreate, '');
 
-    const result = await mergeFilesIntoSingleFile({
-      app: this.app,
-      attachmentSourceFolder: settings.shouldMoveAttachmentsWhenMergingFolder ? folder : undefined,
-      consoleDebugComponent: this.consoleDebugComponent,
-      folderHeadingPlan: settings.shouldConvertFoldersToHeadingsWhenMergingFolder
-        ? buildFolderHeadingPlan({
-          items: mergeItems.map((mergeItem) => ({ isFolder: isFolder(mergeItem), path: mergeItem.path })),
-          rootPath: folder.path
-        })
-        : undefined,
-      isNewTargetFile: true,
-      pluginNoticeComponent: this.pluginNoticeComponent,
-      pluginSettingsComponent: this.pluginSettingsComponent,
-      progressLabel: 'Merging folder',
-      resourceLockComponent: this.resourceLockComponent,
-      sourceFiles: sourceMdFiles,
-      targetFile
+        const result = await mergeFilesIntoSingleFile({
+          app: this.app,
+          attachmentSourceFolder: settings.shouldMoveAttachmentsWhenMergingFolder ? folder : undefined,
+          consoleDebugComponent: this.consoleDebugComponent,
+          folderHeadingPlan: settings.shouldConvertFoldersToHeadingsWhenMergingFolder
+            ? buildFolderHeadingPlan({
+              items: mergeItems.map((mergeItem) => ({ isFolder: isFolder(mergeItem), path: mergeItem.path })),
+              rootPath: folder.path
+            })
+            : undefined,
+          isNewTargetFile: true,
+          pluginNoticeComponent: this.pluginNoticeComponent,
+          pluginSettingsComponent: this.pluginSettingsComponent,
+          progressLabel: 'Merging folder',
+          resourceLockComponent: this.resourceLockComponent,
+          sourceFiles: sourceMdFiles,
+          targetFile: mergedFile
+        });
+
+        if (result.aborted || result.mergedCount === 0) {
+          // Cancelled or nothing merged (e.g. all notes ignored): remove the empty target we created.
+          await trashSafe(this.app, mergedFile);
+          return null;
+        }
+
+        // Issue #186: the merged-away note has released the configured path, so claim it. Guarded on the path
+        // actually being free, because the merge may have been partial - an ignored note is never merged away and
+        // keeps its name. The adapter is asked rather than the vault index, because the index is what the merge
+        // has just been mutating and it is the filesystem that decides whether the rename can land.
+        if (mergedFile.path !== targetPath && !await this.app.vault.adapter.exists(targetPath)) {
+          await this.app.fileManager.renameFile(mergedFile, targetPath);
+        }
+
+        /*
+         * Only after the transaction has committed: folder deletion is NOT part of the rollback, so running
+         * it on an aborted merge would delete folders whose notes were just restored. Deepest-first, so each
+         * folder is already empty by the time it is considered. `Keep` makes this a no-op.
+         */
+        const emptyFolderBehaviorAfterMergingFolder = settings.emptyFolderBehaviorAfterMergingFolder;
+        await cleanupEmptyFolders({
+          app: this.app,
+          emptyFolderBehavior: DEV_UTILS_EMPTY_FOLDER_BEHAVIORS[emptyFolderBehaviorAfterMergingFolder],
+          // `DeleteSubFoldersOnly` keeps the merged folder by simply never offering it to the cleanup (issue
+          // #167): the behavior is the same `Delete`, only the path set differs.
+          folderPaths: emptyFolderBehaviorAfterMergingFolder === EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly
+            ? folderPathsToCleanUp.filter((folderPath) => folderPath !== folder.path)
+            : folderPathsToCleanUp
+        });
+        return mergedFile;
+      },
+      summary: `Merge folder contents of ${folder.path} into a single file`
     });
-
-    if (result.aborted || result.mergedCount === 0) {
-      // Cancelled or nothing merged (e.g. all notes ignored): remove the empty target we created.
-      await trashSafe(this.app, targetFile);
+    if (!targetFile) {
       return;
     }
-
-    // Issue #186: the merged-away note has released the configured path, so claim it. Guarded on the path
-    // actually being free, because the merge may have been partial - an ignored note is never merged away and
-    // keeps its name. The adapter is asked rather than the vault index, because the index is what the merge
-    // has just been mutating and it is the filesystem that decides whether the rename can land.
-    if (targetFile.path !== targetPath && !await this.app.vault.adapter.exists(targetPath)) {
-      await this.app.fileManager.renameFile(targetFile, targetPath);
-    }
-
-    /*
-     * Only after the transaction has committed: folder deletion is NOT part of the rollback, so running
-     * it on an aborted merge would delete folders whose notes were just restored. Deepest-first, so each
-     * folder is already empty by the time it is considered. `Keep` makes this a no-op.
-     */
-    const emptyFolderBehaviorAfterMergingFolder = settings.emptyFolderBehaviorAfterMergingFolder;
-    await cleanupEmptyFolders({
-      app: this.app,
-      emptyFolderBehavior: DEV_UTILS_EMPTY_FOLDER_BEHAVIORS[emptyFolderBehaviorAfterMergingFolder],
-      // `DeleteSubFoldersOnly` keeps the merged folder by simply never offering it to the cleanup (issue
-      // #167): the behavior is the same `Delete`, only the path set differs.
-      folderPaths: emptyFolderBehaviorAfterMergingFolder === EmptyFolderBehaviorAfterMergingFolder.DeleteSubFoldersOnly
-        ? folderPathsToCleanUp.filter((folderPath) => folderPath !== folder.path)
-        : folderPathsToCleanUp
-    });
 
     /*
      * Issue #212: the merged note is what the command produced, so the user can be put in it. LAST, and

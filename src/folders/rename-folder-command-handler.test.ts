@@ -31,10 +31,12 @@ import {
   vi
 } from 'vitest';
 
+import type { BulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 import type { RenameFolderCommandHandlerConstructorParams } from './rename-folder-command-handler.ts';
 
+import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
 import { RenameFolderCommandHandler } from './rename-folder-command-handler.ts';
 
 interface HandlerContext {
@@ -82,6 +84,7 @@ vi.mock('@mnaoumov/obsidian-lib/modals/prompt', () => ({
 
 const mockPrompt = vi.mocked(prompt);
 
+let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let app: AppOriginal;
 let promptParams: null | PromptParams = null;
 let resourceLockComponent: ResourceLockComponent;
@@ -170,6 +173,8 @@ describe('RenameFolderCommandHandler', () => {
 
     expect(getChildFolderNames('parent')).toEqual(['Beta']);
     expect(await readNote('parent/Beta/note.md')).toBe('a');
+    // The rename is one bulk operation, committed under a summary naming the old and the new path.
+    expect(bulkOperationRunnerStub.summaries).toEqual(['Rename folder parent/Alpha to parent/Beta']);
   });
 
   it('should seed the prompt with the name WITHOUT its index, and keep the index on the way back', async () => {
@@ -425,8 +430,10 @@ function createHandlerParams(
   showNotice: PluginNoticeComponent['showNotice'],
   settingsOverrides?: Partial<PluginSettings>
 ): RenameFolderCommandHandlerConstructorParams {
+  bulkOperationRunnerStub = createBulkOperationRunnerStub();
   return {
     app,
+    bulkOperationRunner: bulkOperationRunnerStub,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice, showNoticeAfterDelay: createShowNoticeAfterDelayStub() }),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({
       settings: strictProxy<PluginSettings>({

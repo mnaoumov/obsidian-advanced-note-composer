@@ -834,6 +834,15 @@ export class PluginSettings {
    * its source rather than after, so the same hook there is a separate question.
    */
   public shouldCollectAttachmentsWithCustomAttachmentLocationAfterSplit = false;
+
+  /**
+   * Whether each folder-wide command and recursive split is recorded as git commits, so `git revert` undoes
+   * it: a `chore: before OP<n>` commit of whatever was pending, then an `OP<n>: <summary>` commit of what the
+   * command changed. `@mnaoumov/obsidian-lib`'s `BulkOperationCommitComponent` does the committing, and only
+   * on desktop for a vault inside a git work tree; anywhere else this changes nothing. Off by default, since
+   * it writes to the repository's history.
+   */
+  public shouldCommitBulkOperations = false;
   public shouldConvertFoldersToHeadingsWhenMergingFolder = false;
   /**
    * Whether a selection taken entirely from the source note's frontmatter is extracted as PROPERTIES —
