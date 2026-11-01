@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## 6.1.0
+
+- docs(readme): point bug reports at the Report a bug command
+- docs: add issue-filing instructions for AI agents
+- feat: add a Report a bug command
+- chore(github): give the bug form the field ids bug-report links prefill
+- build(deps): bump typescript-dev-toolkit to ^5.4.1
+- build(deps): float obsidian-dev-toolkit to ^7.4.0 and override re2js for GHSA-gg6h-894w-4m9c
+- feat: record folder-wide commands as git commits for undo
+- refactor: use obsidian-lib isPositionInOffsetRange for selection containment
+- build(deps): bump @mnaoumov/typescript-dev-toolkit to ^5.1.0
+- chore(deps): update vulnerable fast-uri dependency
+- fix: retain incoming frontmatter when templates have no properties
+- chore: adopt shared keyword identifier rule
+- refactor: adopt readonly interface members
+- feat: preserve permanent links when merging notes
+- test: drop obsolete text-component probe patches
+- docs(readme): combine related resources and plugin comparisons
+- refactor: group src into feature folders
+- docs(readme): bring the README under the landing-page size budget
+- docs(readme): add a Similar plugins section
+- fix(create-folder): keep the confirm row's colon beside its label
+- test(demo-vault): floor `CodeScript Toolkit` at 15.0.0
+
 ## 6.0.0
 
 - fix(demo-vault): wait for the automatic heading splits before a button reports
