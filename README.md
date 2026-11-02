@@ -63,7 +63,7 @@ On desktop, for a vault kept in a git repository, the opt-in `Should commit bulk
 
 Merges also preserve keys from `Permanent Links` when it is enabled: see [Merge file](<./demo-vault/01 Merge/01 Merge file.md>).
 
-[My other Obsidian resources](https://github.com/mnaoumov/obsidian-resources)
+[My other Obsidian resources](https://mnaoumov.dev/obsidian/)
 
 | Plugin | Features | How `Advanced Note Composer` differs |
 | --- | --- | --- |
