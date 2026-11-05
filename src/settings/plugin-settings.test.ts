@@ -364,6 +364,7 @@ describe('PluginSettings', () => {
     expect(settings.smartCutAndPasteToBottomTemplate).toBe('');
     expect(settings.smartCutAndPasteToTopTemplate).toBe('');
     expect(settings.splitIntoFolderNoteNameTemplate).toBe('');
+    expect(settings.splitNoteFolderPath).toBe('');
     expect(settings.splitTemplate).toBe('');
     expect(settings.splitToExistingFileTemplate).toBe(Action.Split);
     expect(settings.textAfterExtractionMode).toBe(TextAfterExtractionMode.LinkToNewFile);

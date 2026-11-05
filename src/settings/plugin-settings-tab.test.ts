@@ -723,6 +723,16 @@ describe('PluginSettingsTab', () => {
     expect(findCodeHighlighter('Split into folder note name').getValue()).toBe('');
   });
 
+  // Discussion #309: empty is Obsidian's own default location, which is what the placeholder says.
+  it('should render the folder for split notes text box bound to its setting', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab);
+
+    const entry = texts.find((text) => text.name === 'Folder for split notes');
+    expect(entry?.component.getValue()).toBe('');
+    expect(findDesc('Folder for split notes')).toContain('Default location for new notes');
+  });
+
   // Issue #285: emptying either folder-note property template is its opt-out, and `bind` used to write
   // the default straight back into the setting the moment the box was cleared.
   it.each(

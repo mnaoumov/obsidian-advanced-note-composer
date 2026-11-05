@@ -835,6 +835,26 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
           }),
           this.settingEx({
             desc: createFragment((f) => {
+              f.appendText('The folder a split or extract creates its new note in, created if it does not exist.');
+              f.createEl('br');
+              f.appendText('Leave empty to use Obsidian\'s ');
+              appendCodeBlock(f, 'Default location for new notes');
+              f.appendText('. A folder chosen for one split and ');
+              appendCodeBlock(f, 'Should allow only current folder');
+              f.appendText(' win over it, and ');
+              appendCodeBlock(f, 'Should split into folder');
+              f.appendText(' still puts the note in a folder of its own inside it.');
+            }),
+            name: 'Folder for split notes',
+            render: (setting) => {
+              setting.addText((text) => {
+                text.setPlaceholder('Default location for new notes');
+                this.bind({ propertyName: 'splitNoteFolderPath', valueComponent: text });
+              });
+            }
+          }),
+          this.settingEx({
+            desc: createFragment((f) => {
               f.appendText('Whether heading-driven splits run immediately, with no target picker and no confirmation.');
               f.createEl('br');
               f.appendText('This covers ');
