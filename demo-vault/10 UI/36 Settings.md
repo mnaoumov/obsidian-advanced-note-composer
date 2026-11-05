@@ -93,6 +93,8 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
   - put every newly created note in a folder of its own.
 - `splitIntoFolderNoteNameTemplate`
   - names the note inside that folder. Empty means name it after the folder.
+- `splitNoteFolderPath`
+  - the folder every new note from a split or extract goes in, created if missing. Empty means Obsidian's own `Default location for new notes`. A folder chosen for one split and `shouldAllowOnlyCurrentFolderByDefault` win over it.
 - `numberedSplitFolderNameTemplate` / `numberedSplitNoteNameTemplate`
   - continue the numbering the destination already carries — on the folder when the split makes one, on the note otherwise. Empty means no numbering.
 - `shouldSplitHeadingsAutomatically`

@@ -3,6 +3,9 @@ import type {
   TFolder
 } from 'obsidian';
 
+import { createFolderSafe } from '@mnaoumov/obsidian-lib/vault';
+import { normalizePath } from 'obsidian';
+
 import type {
   ItemSelectorBaseConstructorParams,
   SelectItemResult
@@ -125,7 +128,7 @@ export class SplitItemSelector extends ItemSelectorBase {
       app: this.app,
       contextFile: this.sourceFile,
       fileName,
-      folderPrefix: this.resolveTargetFolderPrefix(),
+      folderPrefix: await this.resolveTargetFolderPrefix(),
       pluginSettingsComponent: this.pluginSettingsComponent,
       relocateNote: this.shouldForceSplitIntoFolder || this.pluginSettingsComponent.settings.shouldSplitIntoFolder
         ? async (file: TFile): Promise<null | string> =>
@@ -163,6 +166,26 @@ export class SplitItemSelector extends ItemSelectorBase {
   }
 
   /**
+   * The prefix the `Folder for split notes` setting names (discussion #309), or an empty string when it is
+   * unset, which leaves the folder to Obsidian's own `Default location for new notes` exactly as before.
+   *
+   * It sits BELOW `shouldAllowOnlyCurrentFolder` on purpose: that toggle can be flipped in the picker for
+   * one split, so it is the more specific answer, while this setting is the standing default. The folder is
+   * created when it does not exist yet, because a configured destination that silently fell back to the
+   * vault root is exactly what the reporter of #309 was trying to get away from.
+   *
+   * @returns The prefix to prepend to the file name, or an empty string.
+   */
+  private async resolveSplitNoteFolderPrefix(): Promise<string> {
+    const folderPath = normalizePath(this.pluginSettingsComponent.settings.splitNoteFolderPath.trim());
+    if (folderPath === '' || folderPath === '/') {
+      return '';
+    }
+    await createFolderSafe(this.app, folderPath);
+    return `/${folderPath}/`;
+  }
+
+  /**
    * The linktext prefix that decides which folder the new note is created in.
    *
    * An explicit override wins over everything: it is the only way to name a folder that is neither the
@@ -176,7 +199,7 @@ export class SplitItemSelector extends ItemSelectorBase {
    *
    * @returns The prefix to prepend to the file name, or an empty string to let Obsidian resolve the folder.
    */
-  private resolveTargetFolderPrefix(): string {
+  private async resolveTargetFolderPrefix(): Promise<string> {
     if (this.targetParentFolderOverride) {
       return `/${this.targetParentFolderOverride.getParentPrefix()}`;
     }
@@ -184,6 +207,8 @@ export class SplitItemSelector extends ItemSelectorBase {
     if (pickedParentFolder) {
       return `/${pickedParentFolder.getParentPrefix()}`;
     }
-    return this.shouldAllowOnlyCurrentFolder ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}` : '';
+    return this.shouldAllowOnlyCurrentFolder
+      ? `/${this.sourceFile.parent?.getParentPrefix() ?? ''}`
+      : await this.resolveSplitNoteFolderPrefix();
   }
 }

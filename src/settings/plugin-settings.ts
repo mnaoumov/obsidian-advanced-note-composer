@@ -1145,6 +1145,18 @@ export class PluginSettings {
   public smartCutAndPasteToTopTemplate = '';
 
   public splitIntoFolderNoteNameTemplate = '';
+
+  /**
+   * The folder every split or extract that CREATES a note puts it in (discussion #309), so heading-driven splits
+   * land somewhere chosen once, with no per-split prompt and no folder named after the source.
+   *
+   * Empty (the default) leaves the choice to Obsidian's own `Default location for new notes`, which is the
+   * behavior before this setting existed, so it needs no `registerLegacySettingsConverter`. A folder chosen
+   * for one split (the folder prompt, a picked picker row, `Change target`) and the `Should allow only current
+   * folder` toggle all win over it; `Should split into folder` still wraps the note in a folder of its own
+   * inside it. The folder is created when missing.
+   */
+  public splitNoteFolderPath = '';
   /**
    * The template a split into a BRAND-NEW note applies, falling back to {@link mergeTemplate} when empty.
    *

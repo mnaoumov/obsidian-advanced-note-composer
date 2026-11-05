@@ -62,6 +62,7 @@ interface SettingsOverrides {
   readonly shouldReplaceInvalidTitleCharacters?: boolean;
   readonly shouldSplitIntoFolder?: boolean;
   readonly splitIntoFolderNoteNameTemplate?: string;
+  readonly splitNoteFolderPath?: string;
 }
 
 function createMockApp(): App {
@@ -123,6 +124,7 @@ function createMockPluginSettingsComponent(settingsOverrides: SettingsOverrides 
       shouldReplaceInvalidTitleCharacters: true,
       shouldSplitIntoFolder: false,
       splitIntoFolderNoteNameTemplate: '',
+      splitNoteFolderPath: '',
       ...settingsOverrides
     })
   });
@@ -799,6 +801,88 @@ describe('SplitItemSelector', () => {
 
       expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
         '/picked/new-note.md',
+        'my-folder/source.md'
+      );
+    });
+
+    // Discussion #309. The reporter wanted heading-driven splits in one chosen folder, with no prompt, no folder
+    // named after the note and not the vault root.
+    it('should create the new note in the folder for split notes when one is configured', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        splitNoteFolderPath: ' Inbox/Splits/ '
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: false,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'my-folder/source.md', 'my-folder'),
+        splitTargetMode: SplitTargetMode.Create
+      });
+
+      await selector.selectItem();
+
+      expect(app.vault.createFolder).toHaveBeenCalledWith('Inbox/Splits');
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        '/Inbox/Splits/new-note.md',
+        'my-folder/source.md'
+      );
+    });
+
+    it('should leave the folder to Obsidian when the folder for split notes is the vault root', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        splitNoteFolderPath: '/'
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: false,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: false,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'my-folder/source.md', 'my-folder'),
+        splitTargetMode: SplitTargetMode.Create
+      });
+
+      await selector.selectItem();
+
+      expect(app.vault.createFolder).not.toHaveBeenCalled();
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith('new-note.md', 'my-folder/source.md');
+    });
+
+    it('should keep the new note beside its source when only the current folder is allowed', async () => {
+      const app = createMockApp();
+      const pluginSettingsComponent = createMockPluginSettingsComponent({
+        shouldAddInvalidTitleToNoteAlias: false,
+        splitNoteFolderPath: 'Inbox'
+      });
+
+      const selector = new SplitItemSelector({
+        app,
+        inputValue: 'new-note',
+        isModifier: false,
+        item: null,
+        pluginSettingsComponent,
+        shouldAllowOnlyCurrentFolder: true,
+        shouldTreatTitleAsPath: true,
+        sourceFile: createMockFile('source', 'my-folder/source.md', 'my-folder'),
+        splitTargetMode: SplitTargetMode.Create
+      });
+
+      await selector.selectItem();
+
+      expect(app.fileManager.createNewMarkdownFileFromLinktext).toHaveBeenCalledWith(
+        '/my-folder/new-note.md',
         'my-folder/source.md'
       );
     });
