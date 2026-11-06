@@ -6,6 +6,6 @@
   "id": "advanced-note-composer",
   "isDesktopOnly": false,
   "name": "Advanced Note Composer",
-  "version": "6.1.0",
-  "minAppVersion": "1.14.5"
+  "version": "6.2.0",
+  "minAppVersion": "1.15.0"
 }

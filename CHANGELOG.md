@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 6.2.0
+
+- feat(split): add a Folder for split notes setting (#309)
+- chore(github): add the plugin-version id to the feature request form
+- docs: make issue attachments optional and strongly encouraged
+- docs: link to the Obsidian resources page
+
 ## 6.1.0
 
 - docs(readme): point bug reports at the Report a bug command
