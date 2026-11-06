@@ -135,6 +135,17 @@ function buildReleaseNotes(): ReleaseNotes {
       f.appendText('A ');
       appendCodeBlock(f, '/regular expression/');
       f.appendText(' entry may now carry flags after its closing slash, and an invalid entry is reported with the reason.');
+    }),
+    // Discussion #310: on by default, it changes where an ordinary file merge writes the note.
+    '6.3.0': createFragment((f) => {
+      appendCodeBlock(f, 'Merge current file with another file...');
+      f.appendText(' now puts the note in place of the one link to it the destination holds, when that link is alone on its line, which is the link an extract leaves behind. So merging an extracted note brings it back where it came from.');
+      f.createEl('br');
+      f.appendText('Clear the picker\'s ');
+      appendCodeBlock(f, 'Merge at the link to the source');
+      f.appendText(' checkbox for one merge, or turn off ');
+      appendCodeBlock(f, 'Should merge at the link to the source by default');
+      f.appendText(' to keep merging to the bottom or the top.');
     })
   };
 }

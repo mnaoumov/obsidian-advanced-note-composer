@@ -195,6 +195,7 @@ describe('MergeFileCommandHandler', () => {
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
+      shouldMergeAtSourceLink: true,
       shouldMergeHeadings: false,
       targetFile
     };
@@ -215,6 +216,7 @@ describe('MergeFileCommandHandler', () => {
       pluginSettingsComponent: params.pluginSettingsComponent,
       resourceLockComponent: params.resourceLockComponent,
       shouldFixFootnotes: true,
+      shouldMergeAtSourceLink: true,
       shouldMergeHeadings: false,
       shouldMergeIgnoredTarget: false,
       sourceFile: file,
@@ -239,6 +241,7 @@ describe('MergeFileCommandHandler', () => {
       shouldAllowOnlyCurrentFolder: false,
       shouldAllowSplitIntoUnresolvedPath: true,
       shouldFixFootnotes: true,
+      shouldMergeAtSourceLink: true,
       shouldMergeHeadings: false,
       targetFile
     });

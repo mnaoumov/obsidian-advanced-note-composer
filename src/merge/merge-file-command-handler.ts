@@ -86,6 +86,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
       shouldFixFootnotes: result.shouldFixFootnotes,
+      shouldMergeAtSourceLink: result.shouldMergeAtSourceLink,
       shouldMergeHeadings: result.shouldMergeHeadings,
       // Follows the picker that chose the target: whatever the picker was allowed to OFFER, the merge must
       // be allowed to land in (issue #253), or picking an excluded destination would end in a refusal.

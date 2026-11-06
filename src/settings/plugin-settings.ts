@@ -889,6 +889,13 @@ export class PluginSettings {
   public shouldKeepHeadingsWhenSplittingContent = true;
   public shouldLockAllNotesWhenMarkingSelection = false;
 
+  /**
+   * Seeds the merge picker's `Merge at the link to the source` checkbox: when the destination holds exactly one
+   * link or embed to the merged note, alone on its line (the residual an extract leaves), the note goes in place
+   * of that link instead of to the top or the bottom.
+   */
+  public shouldMergeAtSourceLinkByDefault = true;
+
   public shouldMergeHeadingsByDefault = false;
 
   public shouldMoveAttachmentsWhenMergingFile = true;

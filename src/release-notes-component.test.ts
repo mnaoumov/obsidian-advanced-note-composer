@@ -181,7 +181,7 @@ describe('createReleaseNotesComponent', () => {
       }
 
       expect(whenLoadedFromFile).toHaveBeenCalledTimes(1);
-      settings.releaseNotesShown = ['3.0.0', '5.11.0', '5.12.0', '5.20.0'];
+      settings.releaseNotesShown = ['3.0.0', '5.11.0', '5.12.0', '5.20.0', '6.3.0'];
       resolveLoadedFromFile();
       await waitForAllAsyncOperations();
 
@@ -201,15 +201,15 @@ describe('createReleaseNotesComponent', () => {
       component.load();
       await triggerLayoutReadyAndWait(triggerLayoutReady);
 
-      expect(settings.releaseNotesShown).toEqual(['3.0.0', '5.11.0', '5.12.0', '5.20.0']);
+      expect(settings.releaseNotesShown).toEqual(['3.0.0', '5.11.0', '5.12.0', '5.20.0', '6.3.0']);
       const message = mockAlert.mock.lastCall?.[0].message;
       expect(message).toBeInstanceOf(DocumentFragment);
-      expect(Array.from(castTo<DocumentFragment>(message).querySelectorAll('h3'), (heading) => heading.textContent)).toEqual(['5.11.0', '5.12.0', '5.20.0']);
+      expect(Array.from(castTo<DocumentFragment>(message).querySelectorAll('h3'), (heading) => heading.textContent)).toEqual(['5.11.0', '5.12.0', '5.20.0', '6.3.0']);
     });
 
     it('should do nothing when all release note versions were already shown', async () => {
       const { app, triggerLayoutReady } = createMockApp();
-      const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0', '5.11.0', '5.12.0', '5.20.0']);
+      const { editAndSave, pluginSettingsComponent } = createMockPluginSettingsComponent(['3.0.0', '5.11.0', '5.12.0', '5.20.0', '6.3.0']);
       const component = createReleaseNotesComponent({
         app,
         pluginName: PLUGIN_NAME,

@@ -291,6 +291,25 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
             items: [
               this.settingEx({
                 desc: createFragment((f) => {
+                  f.appendText('When ');
+                  appendCodeBlock(f, 'Merge current file with another file...');
+                  f.appendText(' merges a note into a note that links to it exactly once, with the link alone on its line, whether the note goes in place of that link instead of to the bottom or the top.');
+                  f.createEl('br');
+                  f.appendText('That is the link an extract leaves behind, so this merges an extracted note back where it came from. Several links, a heading link, or a link inside a sentence keep the usual bottom or top.');
+                  f.createEl('br');
+                  f.appendText('This is the default of the picker\'s ');
+                  appendCodeBlock(f, 'Merge at the link to the source');
+                  f.appendText(' checkbox.');
+                }),
+                name: 'Should merge at the link to the source by default',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldMergeAtSourceLinkByDefault', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
                   f.appendText('Whether to open the destination note once ');
                   appendCodeBlock(f, 'Merge current file with another file...');
                   f.appendText(' or ');
