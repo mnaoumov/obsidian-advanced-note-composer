@@ -13,10 +13,10 @@
 - docs: add issue-filing instructions for AI agents
 - feat: add a Report a bug command
 - chore(github): give the bug form the field ids bug-report links prefill
-- build(deps): bump typescript-dev-toolkit to ^5.4.1
-- build(deps): float obsidian-dev-toolkit to ^7.4.0 and override re2js for GHSA-gg6h-894w-4m9c
-- feat: record folder-wide commands as git commits for undo
-- refactor: use obsidian-lib isPositionInOffsetRange for selection containment
+- build(deps): bump `typescript-dev-toolkit` to ^5.4.1
+- build(deps): float `obsidian-dev-toolkit` to ^7.4.0 and override re2js for GHSA-gg6h-894w-4m9c
+- feat: record folder-wide commands as `git` commits for undo
+- refactor: use `obsidian-lib` isPositionInOffsetRange for selection containment
 - build(deps): bump @mnaoumov/typescript-dev-toolkit to ^5.1.0
 - chore(deps): update vulnerable fast-uri dependency
 - fix: retain incoming frontmatter when templates have no properties
@@ -34,13 +34,13 @@
 ## 6.0.0
 
 - fix(demo-vault): wait for the automatic heading splits before a button reports
-- chore(deps)!: move to obsidian-lib 6 and off the dropped obsidian-dev-utils names
-- docs: name obsidian-lib where comments said dev-utils
-- docs: point leftover obsidian-dev-utils mentions at the packages that hold the APIs now
-- chore(deps): move to obsidian-dev-toolkit 4 and its demo-vault directive spelling
+- chore(deps)!: move to `obsidian-lib` 6 and off the dropped `obsidian-dev-utils` names
+- docs: name `obsidian-lib` where comments said dev-utils
+- docs: point leftover `obsidian-dev-utils` mentions at the packages that hold the APIs now
+- chore(deps): move to `obsidian-dev-toolkit` 4 and its demo-vault directive spelling
 - fix: drop the plugin name from notice text
 - docs: shorten the debugging section
-- docs(changelog): escape the issue-title tags so markdownlint and cspell pass
+- docs(changelog): escape the issue-title tags so `markdownlint` and `cspell` pass
 - docs(changelog): name the issue each released entry resolved
 - fix(demo-vault): load the demo setup helpers from @mnaoumov/obsidian-lib
 - docs(readme): lead the Debugging section with `Advanced Debug Mode`
@@ -55,7 +55,7 @@
 
 - fix(split): refuse when the source tab navigates away mid-split
 - test: stop the `Templater` cursor test racing the extract it drives
-- build(deps): merge taking obsidian-lib 4.3.0 and its validation debug switch
+- build(deps): merge taking `obsidian-lib` 4.3.0 and its validation debug switch
 - docs(demo-vault): give every settings button a way back to the shipped default
 - docs(demo-vault): give every Try it section buttons for its setup and steps
 - chore(github): point questions to Discussions from the new-issue page
@@ -64,13 +64,13 @@
 
 ## 5.19.1
 
-- refactor(deps): merge moving off obsidian-dev-utils onto the @mnaoumov packages
-- refactor(api): merge re-copying the providers' contracts in their short typescript-lib form
+- refactor(deps): merge moving off `obsidian-dev-utils` onto the @mnaoumov packages
+- refactor(api): merge re-copying the providers' contracts in their short `typescript-lib` form
 - refactor(api): merge using the providers' copied plugin API contracts, with full schemas
 - fix(ui): render plugin names as code in notices, settings, docs and comments
-- build: merge loading obsidian-typings' ESM copy for the `Templater` augmentation
+- build: merge loading `obsidian-typings`' ESM copy for the `Templater` augmentation
 - refactor: merge the keyed getConfig read of attachmentFolderPath
-- test: merge using the obsidian-typings declarations of Obsidian internals
+- test: merge using the `obsidian-typings` declarations of Obsidian internals
 
 ## 5.19.0
 
@@ -105,9 +105,9 @@
 ## 5.13.0
 
 - test(split-target-mode): merge setting spellcheck after the source note opens
-- chore(cspell): merge accepting repoint for the changelog spellcheck
+- chore(`cspell`): merge accepting repoint for the changelog spellcheck
 - refactor(release-notes): merge moving the popup onto the shared ReleaseNotesComponent
-- test(split-auto-number): merge running each case in phases driven from node
+- test(split-auto-number): merge running each case in phases driven from `node`
 - feat(merge-folder): merge keeping attachment unit folders whole (#298)
 - feat(split): merge offering the create/merge switch before the folder is chosen (#297)
 - feat(merge-folder): keep same-named folders separate by path (re #296 - \[FR\] `Folder names to keep separate` adjustment)
@@ -117,7 +117,7 @@
 - test(integration): merge per-test Obsidian error recording for the desktop aggregate
 - feat(rename-folder): merge several folder note aliases per template (re #294 - \[FR\] Allow folder note aliases to enter multiple `aliases`)
 - refactor(notices): merge the move onto the library file-explorer reveal
-- chore: merge the obsidian-integration-testing 17 float
+- chore: merge the `obsidian-integration-testing` 17 float
 - docs: merge updating five JSDoc links whose targets were renamed or removed
 
 ## 5.12.0
@@ -130,7 +130,7 @@
 - refactor: merge reaching `Custom Attachment Location` through its published API
 - feat(settings): merge folding the strategies group into Common (re #275 - \[FR\] Settings Enhancement)
 - fix: merge keeping the editor focused after every extract-notice click (re #263 - \[FR\] Continuous clicking on notification should keep highlighting the selection)
-- test: merge floating obsidian-test-mocks to ^7.0.0
+- test: merge floating `obsidian-test-mocks` to ^7.0.0
 - test(demo-vault): merge installing `CodeScript Toolkit` headlessly in the demo-vault setup
 - docs(screenshots): merge recapturing the recursive-split mobile frames
 - fix(merge): merge merging a folder into its destination, not beneath it
@@ -156,8 +156,8 @@
 - test(screenshots): restore the extract and merge picker mobile frames
 - feat(merge): keep named folders out of a same-named destination folder (#267)
 - feat(split): keep create/merge reachable and enrich the naming box (#280)
-- build(markdownlint): forbid hard-wrapped markdown paragraphs
-- chore: raise obsidian-dev-utils to 105 and clear what held the range back
+- build(`markdownlint`): forbid hard-wrapped markdown paragraphs
+- chore: raise `obsidian-dev-utils` to 105 and clear what held the range back
 - test(split-composer): elapse the reveal poll's give-up budget in fake time
 - docs(settings): record why the two root setting groups stay at the root (#274)
 - feat(move): auto-number what a move or a flatten relocates (#273)
@@ -170,18 +170,18 @@
 - docs: replace the private tracker references with what they pointed at
 - docs: record why the rename-heading frame does not raise the soft keyboard
 - refactor(rename-heading): adopt editBacklinks instead of re-deriving its loop
-- chore: adopt the npm run gate branch gate
+- chore: adopt the `npm` run gate branch gate
 - docs: say where the debug command is run
 - test: bring the in-closure wait ceiling under the transport's per-eval cap
 - docs(agents): record where the picker's spellcheck rule now lives
-- refactor(modals): take the picker's spellcheck rule from obsidian-dev-utils
+- refactor(modals): take the picker's spellcheck rule from `obsidian-dev-utils`
 - refactor(android): drive the Android suites with trusted input
 
 ## 5.11.0
 
 - docs: name the unversioned demo-vault asset and the folder it unzips into
 - chore: make the LICENSE copyright line lintable and guard it against the year roll-over
-- chore(deps): take obsidian-dev-utils 101.4.1, so each vitest project collects only its own files
+- chore(deps): take `obsidian-dev-utils` 101.4.1, so each `vitest` project collects only its own files
 - test(integration): isolate the shared desktop vault per file, and stop waiting for the create row
 - test(test-mocks): await the trusted-input helpers, and stop assigning over app.plugins
 - feat(settings): merge the title page into the frontmatter page (#272)
@@ -194,9 +194,9 @@
 - feat(split): spell-check the picker box while it names a note
 - fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
 - refactor: narrow an over-exposed field
-- style: reformat after the dprint bump
+- style: reformat after the `dprint` bump
 - chore(deps): sweep caret-ranged dependencies to latest
-- fix(deps): move to obsidian-integration-testing 11 and obsidian-dev-utils 96.5.2
+- fix(deps): move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
 - fix(deps): drop the brace-expansion file: override that breaks a clean install
 - test(confirm-dialog): restore the picker's Create/Merge mode after the change-target flow
 - feat(select): selection-only commands and the Selection anchor pair (#266)
@@ -231,12 +231,12 @@
 - docs(agents): record CommandMenuPlacement and the two editor context menus
 - feat(commands): offer each command category on the readable-line-length margin (#252)
 - chore: update libs
-- docs(readme): match the GitHub rendering on Obsidian's plugin page (#251)
+- docs(readme): match the `GitHub` rendering on Obsidian's plugin page (#251)
 - feat(commands): narrow command blocking to one category at a time (#249)
 - feat(split): apply the split template to the create-empty-note commands (#244)
 - feat(split): remember the last used create/merge mode behind a setting
-- chore: update obsidian-dev-utils to 94.6.1
-- chore: update obsidian-dev-utils to 94.6.0
+- chore: update `obsidian-dev-utils` to 94.6.1
+- chore: update `obsidian-dev-utils` to 94.6.0
 - fix: override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
 - feat(pickers): let the picker recency order be chosen, rather than fixed (#248)
 - feat(ui): offer a progress dialog that blocks the vault until the work is done (#247)
@@ -244,7 +244,7 @@
 - test: gate the demo vault by clicking every code button
 - feat(split): create an empty note from an empty extract (#244)
 - feat(settings): move the lock-all-notes row to the smart cut & paste page (#243)
-- chore: teach cspell the advisory wording
+- chore: teach `cspell` the advisory wording
 - chore: update libs
 - fix(merge-folder): make the excluded-items setting reach the folder picker
 - feat(settings): hide every per-operation override when the UI setting is off (#242)
@@ -264,13 +264,13 @@
 
 ## 5.9.2
 
-- fix(demo-vault): stop committing the app.json settings obsidian-dev-utils owns
+- fix(demo-vault): stop committing the app.json settings `obsidian-dev-utils` owns
 - feat(notices): land the extract notice link on the extracted content and reveal the file
 
 ## 5.9.1
 
 - docs: make the demo vault the documentation, in the standard layout
-- feat(demo-vault): migrate to obsidian-dev-utils 93.3.1 and adopt the authoring convention
+- feat(demo-vault): migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
 - test(merge-suites): stop the folder-merge suites dying on the 30 s CDP cap
 - test(modals): pin the modal keyboard paths and drop the dead Escape handlers
 - docs(agents): record the #230 synchronous nesting gate in the flatten-items notes
@@ -326,7 +326,7 @@
 ## 5.6.1
 
 - chore(flatten): exempt the unreachable parent-less guard from coverage
-- chore: update libs and adopt obsidian-integration-testing 10
+- chore: update libs and adopt `obsidian-integration-testing` 10
 - feat(flatten): protect excluded items and the configured attachment folder
 - feat: add `Create folder with notes...` command (#191)
 
@@ -354,17 +354,17 @@
 - chore: update libs
 - feat: show a progress and completion notice for every operation (#182)
 - fix: re #181
-- chore(vitest): adopt the shared Obsidian plugin vitest configuration
+- chore(`vitest`): adopt the shared Obsidian plugin `vitest` configuration
 - feat: re #177
 - feat: re #178
 - fix: re #179
-- refactor(prism): register the template language through obsidian-dev-utils' SyntaxHighlightingComponent
+- refactor(prism): register the template language through `obsidian-dev-utils`' SyntaxHighlightingComponent
 
 ## 5.3.0
 
 - refactor(settings): move the settings tab onto the declarative settings API
 - feat: re #175 re #176
-- chore: update libs and clear the npm audit
+- chore: update libs and clear the `npm` audit
 
 ## 5.2.0
 
@@ -460,7 +460,7 @@
 ## 3.34.5
 
 - docs: standardize demo-vault README
-- docs: drop per-plugin demo-vault setup notes (bootstrap covered by obsidian-dev-utils harness)
+- docs: drop per-plugin demo-vault setup notes (bootstrap covered by `obsidian-dev-utils` harness)
 - docs: renumber demo-vault setup notes
 - feat: number demo vault example notes
 - docs: reconcile the demo vault helper description with the injected helper
@@ -555,8 +555,8 @@
 ## 3.26.9
 
 - chore: unify tsconfig
-- test: use real obsidian-dev-utils implementations in unit tests
-- test: drive real obsidian-dev-utils base classes via test-mocks bridge
+- test: use real `obsidian-dev-utils` implementations in unit tests
+- test: drive real `obsidian-dev-utils` base classes via test-mocks bridge
 - fix: restrict merge-file command to markdown files
 - chore: add integration tests
 
@@ -866,7 +866,7 @@
 - refactor: clean comments
 - feat: remove dependency from core plugin
 - fix: renamed fields
-- chore: enable markdownlint
+- chore: enable `markdownlint`
 - chore: enable conventional commits
 - refactor: commands
 - chore: lint

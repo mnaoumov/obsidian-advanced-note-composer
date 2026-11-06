@@ -11,4 +11,4 @@ On first open, Obsidian treats the vault as untrusted — choose **Trust author 
 
 ## Reading it without installing anything
 
-This vault **is** the plugin's documentation: every feature has a note that explains what it does and why you would want it, and most of them walk you through it step by step. It is plain markdown, so you can read the whole thing here on GitHub — start at [00 Start](<./00 Start.md>). Opening it in Obsidian only adds the interactive part: the **Run** buttons that flip a setting for you so you can try the feature immediately.
+This vault **is** the plugin's documentation: every feature has a note that explains what it does and why you would want it, and most of them walk you through it step by step. It is plain markdown, so you can read the whole thing here on `GitHub` — start at [00 Start](<./00 Start.md>). Opening it in Obsidian only adds the interactive part: the **Run** buttons that flip a setting for you so you can try the feature immediately.
