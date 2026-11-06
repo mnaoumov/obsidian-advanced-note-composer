@@ -39,8 +39,6 @@ import { prepareForSplitFile } from '../picker/split-file-modal.ts';
 import { SplitComposer } from '../split-composer.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './split-note-by-headings-content-editor-command-handler.ts';
 
-type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
-
 interface TestableHandler {
   readonly canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
   readonly executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
@@ -95,12 +93,12 @@ interface SplitNoteByHeadingsContentEditorCommandHandlerConstructorParams {
   readonly resourceLockComponent: ResourceLockComponent;
 }
 
-function createHeading(level: number, startLine: number, endLine?: number): HeadingCache {
+function createHeading(level: number, startLine: number, endLine = startLine): HeadingCache {
   return strictProxy<HeadingCache>({
     heading: `Heading ${String(startLine)}`,
     level,
     position: {
-      end: { col: 10, line: endLine ?? startLine, offset: 0 },
+      end: { col: 10, line: endLine, offset: 0 },
       start: { col: 0, line: startLine, offset: 0 }
     }
   });
@@ -110,9 +108,9 @@ function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
-function createMockEditor(fromLine = 0, toLine = fromLine): Editor {
+function createMockEditor(fromLine = 0): Editor {
   const getCursor = vi.fn();
-  getCursor.mockImplementation((which?: string) => ({ ch: 0, line: which === 'to' ? toLine : fromLine }));
+  getCursor.mockImplementation(() => ({ ch: 0, line: fromLine }));
   return strictProxy<Editor>({
     getCursor,
     replaceRange: vi.fn(),
@@ -165,6 +163,8 @@ function toTestable(handler: SplitNoteByHeadingsContentEditorCommandHandler): Te
 }
 
 describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
+  type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     useRealFragments();
@@ -428,7 +428,7 @@ describe('SplitNoteByHeadingsContentEditorCommandHandler', () => {
     let callCount = 0;
     mockGetCacheSafe.mockImplementation(() => {
       callCount++;
-      return callCount === 1 ? Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [heading] })) : Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [] }));
+      return Promise.resolve(strictProxy<CachedMetadataEx>(callCount === 1 ? { headings: [heading] } : { headings: [] }));
     });
 
     mockGetSelectionUnderHeading.mockReturnValue({

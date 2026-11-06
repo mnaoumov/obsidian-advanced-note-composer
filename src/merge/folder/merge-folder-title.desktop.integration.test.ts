@@ -46,9 +46,9 @@ describe('merge folder preserves a child note title (issue #114)', () => {
 
           // Choose the target folder, then confirm the merge.
           await chooseFolderInPicker('mt-dst');
-          await waitUntil({ predicate: () => findButton('Merge') !== null });
+          await waitUntil({ predicate: () => findMergeButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          findButton('Merge')?.click();
+          findMergeButton()?.click();
 
           // The merge completes: the source folder is deleted and the child note lands in the target.
           await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('mt-dst/note.md') !== null });
@@ -64,9 +64,9 @@ describe('merge folder preserves a child note title (issue #114)', () => {
           await didSetAskBeforeMerging(isOriginalShouldAsk);
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findMergeButton(): HTMLButtonElement | null {
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Merge') {
               return el;
             }
           }

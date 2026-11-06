@@ -30,7 +30,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
       async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const isOriginalShouldAsk = await didSetToggle('Should ask before flattening a folder', true);
+        const isOriginalShouldAsk = await didSetToggle(true);
         try {
           await trashIfExists('fc-note.md');
           await trashIfExists('fc-flat');
@@ -66,7 +66,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
           return { changeTargetDisabled: isChangeTargetDisabled, confirmButtonPresent: isConfirmButtonPresent, linkTexts, listsTheItem: isListsTheItem, promoted: isPromoted };
         } finally {
-          await didSetToggle('Should ask before flattening a folder', isOriginalShouldAsk);
+          await didSetToggle(isOriginalShouldAsk);
         }
 
         function findButton(text: string): HTMLButtonElement | null {
@@ -87,7 +87,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(shouldBeEnabled: boolean): Promise<boolean> {
+          const settingName = 'Should ask before flattening a folder';
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -137,7 +138,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
       async callback({ app, findSettingItem, lib: { waitUntil }, obsidianModule, pluginId }) {
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const isOriginalShouldAsk = await didSetToggle('Should ask before flattening a folder', true);
+        const isOriginalShouldAsk = await didSetToggle(true);
         try {
           await trashIfExists('fc-keep.md');
           await trashIfExists('fc-flat-cancel');
@@ -148,9 +149,9 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
           app.commands.executeCommandById(`${pluginId}:flatten-folder`);
 
-          await waitUntil({ message: 'flatten dialog did not open', predicate: () => findButton('Cancel') !== null });
+          await waitUntil({ message: 'flatten dialog did not open', predicate: () => findCancelButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          findButton('Cancel')?.click();
+          findCancelButton()?.click();
           await waitUntil({ message: 'dialog did not close', predicate: () => document.querySelector('.modal-button-container') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -160,13 +161,13 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
           return { untouched: isUntouched };
         } finally {
-          await didSetToggle('Should ask before flattening a folder', isOriginalShouldAsk);
+          await didSetToggle(isOriginalShouldAsk);
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findCancelButton(): HTMLButtonElement | null {
           // Every control of the confirmation dialog sits in its one action row (issue #281).
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Cancel') {
               return el;
             }
           }
@@ -181,7 +182,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(shouldBeEnabled: boolean): Promise<boolean> {
+          const settingName = 'Should ask before flattening a folder';
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -234,7 +236,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
          */
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
+        const isOriginalShouldAsk = await didSetToggle(true);
         try {
           await trashIfExists('fc-mv-dst');
           await trashIfExists('fc-mv-src');
@@ -272,7 +274,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
           return { changeTargetEnabled: isChangeTargetEnabled, confirmButtonPresent: isConfirmButtonPresent, linkTexts, moved: isMoved };
         } finally {
-          await didSetToggle('Should ask before moving a folder', isOriginalShouldAsk);
+          await didSetToggle(isOriginalShouldAsk);
         }
 
         async function chooseInPicker(itemPath: string): Promise<void> {
@@ -305,7 +307,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(shouldBeEnabled: boolean): Promise<boolean> {
+          const settingName = 'Should ask before moving a folder';
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);
@@ -363,7 +366,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
          */
         const RENDER_DELAY_IN_MILLISECONDS = 400;
 
-        const isOriginalShouldAsk = await didSetToggle('Should ask before moving a folder', true);
+        const isOriginalShouldAsk = await didSetToggle(true);
         try {
           await trashIfExists('fc-mv-dst-cancel');
           await trashIfExists('fc-mv-src-cancel');
@@ -379,9 +382,9 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
           await chooseInPicker('fc-mv-dst-cancel');
 
-          await waitUntil({ message: 'move dialog did not open', predicate: () => findButton('Cancel') !== null });
+          await waitUntil({ message: 'move dialog did not open', predicate: () => findCancelButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          findButton('Cancel')?.click();
+          findCancelButton()?.click();
           await waitUntil({ message: 'dialog did not close', predicate: () => document.querySelector('.modal-button-container') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -391,7 +394,7 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
 
           return { untouched: isUntouched };
         } finally {
-          await didSetToggle('Should ask before moving a folder', isOriginalShouldAsk);
+          await didSetToggle(isOriginalShouldAsk);
         }
 
         async function chooseInPicker(itemPath: string): Promise<void> {
@@ -406,10 +409,10 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           await pressKey({ key: 'Enter' });
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findCancelButton(): HTMLButtonElement | null {
           // Every control of the confirmation dialog sits in its one action row (issue #281).
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Cancel') {
               return el;
             }
           }
@@ -424,7 +427,8 @@ describe('folder operation confirmation dialogs (issue #154)', () => {
           });
         }
 
-        async function didSetToggle(settingName: string, shouldBeEnabled: boolean): Promise<boolean> {
+        async function didSetToggle(shouldBeEnabled: boolean): Promise<boolean> {
+          const settingName = 'Should ask before moving a folder';
           app.setting.open();
           app.setting.openTabById(pluginId);
           const tab = app.setting.pluginTabs.find((pluginTab) => pluginTab.id === pluginId);

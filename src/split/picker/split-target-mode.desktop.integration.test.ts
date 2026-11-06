@@ -70,11 +70,6 @@ interface SettingsCarrier {
   readonly settings: SplitTargetModeSettings;
 }
 
-/**
- * The picker box's `spellcheck` attribute, keyed by the mode the switch reported when it was read.
- */
-type SpellcheckByMode = Record<string, null | string>;
-
 interface SplitTargetModeSettings {
   // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   defaultSplitTargetMode: string;
@@ -142,6 +137,11 @@ describe('the split/extract picker\'s create/merge switch (issue #227)', () => {
   it('should spell-check the box only while it names a note, following Editor > Spellcheck (issue #268)', async () => {
     const result = await evalInObsidian({
       async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * The picker box's `spellcheck` attribute, keyed by the mode the switch reported when it was read.
+         */
+        type SpellcheckByMode = Record<string, null | string>;
+
         /**
          * Sized so the SUM of every wait this closure declares stays under the transport's ~30 s per-closure
          * cap, not at it. Before this shared budget it declared 42 400 ms, so the eval could only ever die
@@ -387,13 +387,10 @@ async function extractInMode(pass: ExtractInModeOptions): Promise<ExtractInModeR
       });
       await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-      const input = document.querySelector('.prompt-input');
-      if (!(input instanceof HTMLInputElement)) {
-        throw new TypeError('No split picker input.');
-      }
+      const input = requirePickerInput();
 
       // A name nothing matches: only `Create` may offer to make it.
-      typeIntoPicker(input, unknownName);
+      typeIntoPicker(unknownName);
       await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
       const checkboxes = [...document.querySelectorAll('.prompt-instructions input[type="checkbox"]')];
@@ -404,7 +401,7 @@ async function extractInMode(pass: ExtractInModeOptions): Promise<ExtractInModeR
         isUnresolvedPathDisabled: isCheckboxDisabled(checkboxes[unresolvedPathCheckboxIndex])
       };
 
-      typeIntoPicker(input, options.typedName);
+      typeIntoPicker(options.typedName);
       if (options.shouldForceCreate) {
         // `Merge` offers nothing creatable, so there is deliberately no suggestion to wait for here:
         // `Mod+Enter` has to flip the switch to `Create` and create from what was typed.
@@ -438,7 +435,16 @@ async function extractInMode(pass: ExtractInModeOptions): Promise<ExtractInModeR
       const contentAfter = readFile instanceof obsidianModule.TFile ? await app.vault.read(readFile) : '';
       return { contentAfter, observations };
 
-      function typeIntoPicker(inputEl: HTMLInputElement, value: string): void {
+      function requirePickerInput(): HTMLInputElement {
+        const inputEl = document.querySelector('.prompt-input');
+        if (!(inputEl instanceof HTMLInputElement)) {
+          throw new TypeError('No split picker input.');
+        }
+        return inputEl;
+      }
+
+      function typeIntoPicker(value: string): void {
+        const inputEl = requirePickerInput();
         inputEl.value = value;
         inputEl.dispatchEvent(new Event('input', { bubbles: true }));
       }

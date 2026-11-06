@@ -61,6 +61,7 @@ import {
 } from '../templates/templater/templater-string.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
@@ -465,7 +466,7 @@ export abstract class ReorderItemsCommandHandlerBase extends FolderCommandHandle
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     return true;

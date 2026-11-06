@@ -29,6 +29,7 @@ import {
 import { CommandCategory } from '../../settings/plugin-settings.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../../ui/operation-notices.ts';
@@ -77,7 +78,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
       return false;
     }
     const file = context.file;
-    return file ? hasMovableHeadings(this.getHeadings(file)) : false;
+    return !!file && hasMovableHeadings(this.getHeadings(file));
   }
 
   protected override async executeEditor(_editor: Editor, context: MarkdownFileInfo): Promise<void> {
@@ -163,7 +164,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     showOperationCompletionNotice({

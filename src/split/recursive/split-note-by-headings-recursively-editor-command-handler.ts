@@ -58,12 +58,9 @@ export class SplitNoteByHeadingsRecursivelyEditorCommandHandler extends SplitRec
       return false;
     }
     const cache = this.app.metadataCache.getFileCache(file);
-    if (!cache) {
-      return false;
-    }
     // Unlike the level-scoped commands, this one is not tied to the cursor: it restructures the whole
     // note, so any heading anywhere in it is enough.
-    return (cache.headings ?? []).length > 0;
+    return !!cache && (cache.headings ?? []).length > 0;
   }
 
   protected override resolveRun(editor: Editor, _file: TFile, cache: CachedMetadata): null | RecursiveSplitRun {

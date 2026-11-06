@@ -270,7 +270,7 @@ describe('cursor follows the moved content (issue #144)', () => {
         const SETTLE_IN_MILLISECONDS = 400;
         const FEEDBACK_SETTING_NAME = 'Smart cut & paste completion feedback';
 
-        await setDropdown(FEEDBACK_SETTING_NAME, 'Notice');
+        await setFeedbackDropdown('Notice');
         try {
           const source = await resetFile('cursor-notice-source.md', 'AAA MOVED CCC');
           const target = await resetFile('cursor-notice-target.md', 'target end');
@@ -313,7 +313,7 @@ describe('cursor follows the moved content (issue #144)', () => {
           return { movedTextOffset, noticeTexts, selection, selectionStartOffset };
         } finally {
           // Leave the shared instance on the default for the suites that follow.
-          await setDropdown(FEEDBACK_SETTING_NAME, 'Select moved content');
+          await setFeedbackDropdown('Select moved content');
         }
 
         async function resetFile(path: string, content: string): Promise<TFile> {
@@ -340,7 +340,8 @@ describe('cursor follows the moved content (issue #144)', () => {
         }
 
         // Drives the REAL settings tab, so the dropdown is exercised the way a user changes it.
-        async function setDropdown(settingName: string, optionText: string): Promise<void> {
+        async function setFeedbackDropdown(optionText: string): Promise<void> {
+          const settingName = FEEDBACK_SETTING_NAME;
           const RENDER_DELAY_IN_MILLISECONDS = 150;
           const EDIT_SAVE_DELAY_IN_MILLISECONDS = 300;
 

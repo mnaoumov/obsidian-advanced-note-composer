@@ -83,7 +83,7 @@ describe('auto-numbering what a move relocates (issue #273)', () => {
           });
 
           // Rebuild from scratch, so nothing is de-duplicated against a previous run's leftovers.
-          await trashIfExists(DESTINATION);
+          await trashDestinationIfExists();
           await app.vault.createFolder(DESTINATION);
           /*
            * The destination's two sequences deliberately reach DIFFERENT highs: folders to `3`, notes to
@@ -138,7 +138,7 @@ describe('auto-numbering what a move relocates (issue #273)', () => {
           };
         } finally {
           // The vault is SHARED by the whole aggregate run. Leave nothing behind, settings included.
-          await trashIfExists(DESTINATION);
+          await trashDestinationIfExists();
           await settingsComponent.editAndSave((settings) => {
             settings.numberedMovedFolderNameTemplate = original.numberedMovedFolderNameTemplate;
             settings.numberedMovedNoteNameTemplate = original.numberedMovedNoteNameTemplate;
@@ -172,8 +172,8 @@ describe('auto-numbering what a move relocates (issue #273)', () => {
           });
         }
 
-        async function trashIfExists(path: string): Promise<void> {
-          const existing = app.vault.getAbstractFileByPath(path);
+        async function trashDestinationIfExists(): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(DESTINATION);
           if (existing) {
             await app.fileManager.trashFile(existing);
           }

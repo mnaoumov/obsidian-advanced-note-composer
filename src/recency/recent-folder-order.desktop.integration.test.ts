@@ -61,7 +61,7 @@ describe('recent folder ordering (issue #158)', () => {
         const pluginName = app.plugins.manifests[pluginId]?.name ?? '';
 
         // Flat menu items (no submenu) so the folder commands are directly in `menu.items`.
-        await setToggle(SUBMENU_SETTING_NAME, false);
+        await setSubmenuToggle(false);
         try {
           for (const name of ['rc-a', 'rc-b', 'rc-c']) {
             await trashIfExists(name);
@@ -85,7 +85,7 @@ describe('recent folder ordering (issue #158)', () => {
 
           return { mergeSuggestions, moveSuggestions, recentPaths };
         } finally {
-          await setToggle(SUBMENU_SETTING_NAME, true);
+          await setSubmenuToggle(true);
         }
 
         async function pickerSuggestions(folder: TFolder, itemTitle: string): Promise<string[]> {
@@ -156,12 +156,12 @@ describe('recent folder ordering (issue #158)', () => {
           return settingTab as PluginSettingsTab;
         }
 
-        async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
+        async function setSubmenuToggle(shouldEnable: boolean): Promise<void> {
           const settingTab = await openSettingTab();
-          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
+          const settingItem = await findSettingItem({ app, name: SUBMENU_SETTING_NAME, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new TypeError(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${SUBMENU_SETTING_NAME}" toggle was not found.`);
           }
           if (toggleEl.classList.contains('is-enabled') !== shouldEnable) {
             toggleEl.click();

@@ -226,15 +226,16 @@ describe('resolveTemplateTokens', () => {
      * `splitIntoFolderNoteNameTemplate` does, since it resolves before the note is renamed into the folder
      * being created.
      *
+     * The folder tokens are pointed at `Notes/9. Beta`.
+     *
      * @param template - The template to resolve.
-     * @param folderPath - The folder the folder tokens must name.
      * @returns The resolved template.
      */
-    function resolveWithFolderOverride(template: string, folderPath: string): string {
+    function resolveWithFolderOverride(template: string): string {
       return resolveTemplateTokens({
         content: 'BODY',
         folderNameTemplate: FOLDER_NAME_TEMPLATE,
-        folderPath,
+        folderPath: 'Notes/9. Beta',
         sourceFile,
         targetFile: createFile('Notes/3. Alpha/3. Alpha.md', '3. Alpha'),
         template
@@ -295,12 +296,12 @@ describe('resolveTemplateTokens', () => {
     // The `Split into folder note name template` is resolved before the note is renamed into the folder
     // being created, so it names that folder explicitly.
     it('should name the overriding folder instead of the note\'s current parent', () => {
-      expect(resolveWithFolderOverride('{{folderName}} | {{folderPath}} | {{safeFolderName}}', 'Notes/9. Beta')).toBe('9. Beta | Notes/9. Beta | Beta');
+      expect(resolveWithFolderOverride('{{folderName}} | {{folderPath}} | {{safeFolderName}}')).toBe('9. Beta | Notes/9. Beta | Beta');
     });
 
     // `{{parentFolder}}` is a shipped token: an override must not quietly move it one level down.
     it('should leave the parentFolder token on the note\'s own parent when the folder is overridden', () => {
-      expect(resolveWithFolderOverride('{{parentFolder}}', 'Notes/9. Beta')).toBe('3. Alpha');
+      expect(resolveWithFolderOverride('{{parentFolder}}')).toBe('3. Alpha');
     });
 
     it('should leave the folder path of a root-level note as the vault reports it', () => {

@@ -4,6 +4,8 @@ import type {
   TFile
 } from 'obsidian';
 
+import { dispose } from '@mnaoumov/typescript-lib/disposable';
+
 import type { Selection } from '../../composers/composer-base.ts';
 
 /**
@@ -99,8 +101,8 @@ export class MoveSelectionBuffer {
     if (!this.markedSelection) {
       return;
     }
-    this.markedSelection.lock[Symbol.dispose]();
-    this.markedSelection.highlight[Symbol.dispose]();
+    dispose(this.markedSelection.lock);
+    dispose(this.markedSelection.highlight);
     const notice = this.markedSelection.notice;
     this.markedSelection = null;
     notice?.hide();
@@ -159,11 +161,9 @@ export class MoveSelectionBuffer {
    */
   public isRangeOverlappingMarkedSelection(params: MoveSelectionBufferIsRangeOverlappingMarkedSelectionParams): boolean {
     const { endOffset, startOffset } = params;
-    return this.markedSelection
-      ? this.markedSelection.capturedSelections.some(
-        (selection) => startOffset < selection.endOffset && selection.startOffset < endOffset
-      )
-      : false;
+    return !!this.markedSelection && this.markedSelection.capturedSelections.some(
+      (selection) => startOffset < selection.endOffset && selection.startOffset < endOffset
+    );
   }
 
   /**

@@ -48,6 +48,7 @@ import {
 } from '../templates/templater/templater-string.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
@@ -350,7 +351,7 @@ export class RenameFolderCommandHandler extends FolderCommandHandler {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     return true;

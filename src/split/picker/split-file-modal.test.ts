@@ -326,21 +326,6 @@ function createMockEditor(): Editor {
   });
 }
 
-function createMockFile(path: string): TFile {
-  const name = path.split('/').pop() ?? '';
-  const parentPath = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
-  return strictProxy<TFile>({
-    extension: 'md',
-    name,
-    parent: strictProxy<TFolder>({
-      getParentPrefix: () => parentPath ? `${parentPath}/` : '',
-      path: parentPath
-    }),
-    path,
-    stat: strictProxy({ mtime: 0 })
-  });
-}
-
 function createMockLeaf(): WorkspaceLeaf {
   return strictProxy<WorkspaceLeaf>({ openFile: vi.fn().mockResolvedValue(undefined) });
 }
@@ -399,6 +384,19 @@ function createMockSelectionHighlightComponent(): SelectionHighlightComponent {
   });
 }
 
+function createMockSourceFile(): TFile {
+  return strictProxy<TFile>({
+    extension: 'md',
+    name: 'source.md',
+    parent: strictProxy<TFolder>({
+      getParentPrefix: () => 'folder/',
+      path: 'folder'
+    }),
+    path: 'folder/source.md',
+    stat: strictProxy({ mtime: 0 })
+  });
+}
+
 function createMockWorkspace(): Workspace {
   return strictProxy<Workspace>({
     getLeaf: castTo<Workspace['getLeaf']>(vi.fn().mockReturnValue(createMockLeaf())),
@@ -450,7 +448,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should return null when modal is cancelled', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -463,7 +461,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should use extractHeading when heading is undefined', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -479,7 +477,7 @@ describe('prepareForSplitFile', () => {
     // Switching to smart cut from the picker must NOT open any note (issue #141): the picker only has a
     // merely-highlighted suggestion the user never chose, so the active note must stay put.
     shouldAutoSwitchToSmartCut = true;
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -499,7 +497,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should treat empty string heading as undefined', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -512,7 +510,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should use provided heading', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -525,7 +523,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should skip modal when shouldSkipModal is true', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -538,7 +536,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should return all settings when shouldSkipModal and not shouldAskBeforeSplitting', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -556,7 +554,7 @@ describe('prepareForSplitFile', () => {
   it('reports a refused name transform and cancels, instead of letting it escape (issue #203)', async () => {
     // With the picker skipped there is no prompt to report into, so this is the only place the user can
     // learn that their `Name transform template` is the reason nothing happened.
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -571,7 +569,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('lets an unexpected failure through, so a real bug is not reported as a configuration problem', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -586,7 +584,7 @@ describe('prepareForSplitFile', () => {
   it('should create the new note in the source folder when the caller forces it', async () => {
     // The recursive split (issue #79) needs each pass's new note to land beside its source, whatever the
     // `Should allow only current folder by default` setting says — that is what makes the tree nest.
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -612,7 +610,7 @@ describe('prepareForSplitFile', () => {
     // The override is a TRI-state resolved with `??`, so `false` is not "do not override" — it forces
     // Obsidian's own new-file location even with the setting on. That is the lever the recursive split's
     // root pass pulls to root its tree in the `Default location for new notes`.
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -635,7 +633,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should fall back to the setting when no override is given', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -647,7 +645,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should pass the forced folder split through to the item selector', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -669,7 +667,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should create the target of a heading-driven split whatever the default mode is', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -685,7 +683,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should not force the folder split for an ordinary heading-driven split', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -699,7 +697,7 @@ describe('prepareForSplitFile', () => {
   it('should skip the confirmation when the caller already confirmed the whole operation', async () => {
     // The recursive split confirms once up front and then runs many splits; confirming each would be
     // unusable. `shouldAskBeforeSplitting` stays on, so this proves the override and not the setting.
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -724,7 +722,7 @@ describe('prepareForSplitFile', () => {
   it('should skip the confirmation for a heading-driven split when splitting headings automatically', async () => {
     // Issue #79: a heading-driven split must run start-to-finish without prompting when the setting is on,
     // even though `shouldAskBeforeSplitting` would otherwise open the confirmation dialog.
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -739,7 +737,7 @@ describe('prepareForSplitFile', () => {
   it('should still confirm a manually-targeted split when splitting headings automatically', async () => {
     // The setting only covers heading-driven splits (`shouldSkipModal`); an ordinary split keeps asking.
     shouldAutoSelect = true;
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -754,7 +752,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should return null when confirm dialog is rejected', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -767,7 +765,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should trash new target file when confirm rejected and file is new', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -786,7 +784,7 @@ describe('prepareForSplitFile', () => {
 
   it('should return result when user selects item via modal and shouldAskBeforeSplitting is false', async () => {
     shouldAutoSelect = true;
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -801,7 +799,7 @@ describe('prepareForSplitFile', () => {
 
   it('should return null when confirm dialog rejects after modal selection', async () => {
     shouldAutoSelect = true;
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -815,7 +813,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should lock the source note while the modal is open and unlock it afterwards', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -830,7 +828,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should lock the target note while the confirmation dialog is open and unlock both notes afterwards', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();
@@ -854,7 +852,7 @@ describe('prepareForSplitFile', () => {
 
     it('should not ask when the setting is off', async () => {
       shouldAutoSelect = true;
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -872,7 +870,7 @@ describe('prepareForSplitFile', () => {
     it('should ask once the name is chosen and hand the folder to the item selector', async () => {
       shouldAutoSelect = true;
       mockSelectFolder.mockResolvedValue(pickedFolder);
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -894,7 +892,7 @@ describe('prepareForSplitFile', () => {
     it('should not ask when the picker never opened', async () => {
       // A heading-driven split derives everything from the heading and asks the user nothing, so it must
       // not grow a prompt of its own.
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -909,7 +907,7 @@ describe('prepareForSplitFile', () => {
     it('should not ask when merging into an existing note', async () => {
       // A `Merge` writes into a note that already exists, so there is no folder left to choose.
       shouldAutoSelect = true;
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -933,7 +931,7 @@ describe('prepareForSplitFile', () => {
       // back to the picker and asks again, rather than returning null.
       shouldAutoSelect = true;
       mockSelectFolder.mockResolvedValueOnce(null).mockResolvedValueOnce(pickedFolder);
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -959,7 +957,7 @@ describe('prepareForSplitFile', () => {
     it('should ask for the folder and then the name, and never open the picker', async () => {
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -985,7 +983,7 @@ describe('prepareForSplitFile', () => {
 
     it('should abandon the split when the folder prompt is dismissed', async () => {
       mockSelectFolder.mockResolvedValue(null);
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1004,7 +1002,7 @@ describe('prepareForSplitFile', () => {
     it('should abandon the split when the name prompt is dismissed', async () => {
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue(null);
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1022,7 +1020,7 @@ describe('prepareForSplitFile', () => {
       // Someone whose default is `Merge` is asking for the picker, and since issue #280 the pair has
       // nothing to offer them that the picker does not — its `Switch to merge` leads straight back here.
       shouldAutoSelect = true;
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1048,7 +1046,7 @@ describe('prepareForSplitFile', () => {
       // `Create` it could not leave, with the setting on and doing nothing.
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1076,7 +1074,7 @@ describe('prepareForSplitFile', () => {
     });
 
     it('should stay out of the way of a heading-driven split', async () => {
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1113,7 +1111,7 @@ describe('prepareForSplitFile', () => {
       shouldAutoSelect = true;
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.SwitchToMerge, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1136,7 +1134,7 @@ describe('prepareForSplitFile', () => {
       shouldAutoSelect = true;
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.SwitchToMerge, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1161,7 +1159,7 @@ describe('prepareForSplitFile', () => {
     it('should tell the name box whether merging is available at all', async () => {
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1187,7 +1185,7 @@ describe('prepareForSplitFile', () => {
       mockOpenSplitNoteNameModal
         .mockResolvedValueOnce({ action: SplitNoteNameAction.ChangeFolder, name: 'edited name' })
         .mockResolvedValueOnce({ action: SplitNoteNameAction.Create, name: 'edited name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1207,7 +1205,7 @@ describe('prepareForSplitFile', () => {
     it('should abandon the split when the reopened folder prompt is dismissed', async () => {
       mockSelectFolder.mockResolvedValueOnce(chosenFolder).mockResolvedValueOnce(null);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.ChangeFolder, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1237,7 +1235,7 @@ describe('prepareForSplitFile', () => {
     it('should hand the pass to the picker in Merge when the folder prompt switches, without asking for a name', async () => {
       shouldAutoSelect = true;
       mockSelectFolderForNewNote.mockResolvedValue({ kind: 'switch-to-merge' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1258,7 +1256,7 @@ describe('prepareForSplitFile', () => {
     it('should tell the folder prompt whether merging is available at all', async () => {
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1285,7 +1283,7 @@ describe('prepareForSplitFile', () => {
       autoSwitchToFolderThenNameName = 'typed name';
       mockSelectFolder.mockResolvedValue(chosenFolder);
       mockOpenSplitNoteNameModal.mockResolvedValue({ action: SplitNoteNameAction.Create, name: 'typed name' });
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1305,7 +1303,7 @@ describe('prepareForSplitFile', () => {
 
     it('should tell the picker to come back only while the setting is on', async () => {
       shouldAutoSelect = true;
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1350,7 +1348,7 @@ describe('prepareForSplitFile', () => {
 
     it('should save the mode the target was chosen in', async () => {
       shouldAutoSelect = true;
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1370,7 +1368,7 @@ describe('prepareForSplitFile', () => {
     it('should save nothing when the picker never opened', async () => {
       // A heading-driven split SYNTHESIZES `Create` for its heading-named note without ever showing a
       // switch, so saving it would reset a `Merge` default from a screen the user never saw.
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1397,7 +1395,7 @@ describe('prepareForSplitFile', () => {
       // `Create empty note at cursor...` forces `Create` because it has nothing to merge (issue #244).
       // That is the flow's constraint, not the user's answer, so it must not overwrite their `Merge`.
       shouldAutoSelect = true;
-      const sourceFile = createMockFile('folder/source.md');
+      const sourceFile = createMockSourceFile();
       const editor = createMockEditor();
       const resourceLockComponent = createMockResourceLockComponent();
       const app = createMockApp();
@@ -1424,7 +1422,7 @@ describe('prepareForSplitFile', () => {
   });
 
   it('should cancel and unlock when the lock is aborted while the modal is open', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const editor = createMockEditor();
     const resourceLockComponent = createMockResourceLockComponent();
     const app = createMockApp();

@@ -57,11 +57,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function apply(template: string, notePath = NOTE_PATH, runTemplater: DestinationTemplaterRunner | null = null): Promise<void> {
+async function apply(template: string, runTemplater: DestinationTemplaterRunner | null = null): Promise<void> {
   await applySplitTemplateToNotes({
     app,
     folderNameTemplate: FOLDER_NAME_TEMPLATE,
-    notes: [{ file: getFile(notePath), sourceFile: getFile(PARENT_PATH) }],
+    notes: [{ file: getFile(NOTE_PATH), sourceFile: getFile(PARENT_PATH) }],
     resourceLockComponent,
     runTemplater,
     template
@@ -76,8 +76,8 @@ async function read(path = NOTE_PATH): Promise<string> {
   return await app.vault.read(getFile(path));
 }
 
-async function setContent(content: string, path = NOTE_PATH): Promise<void> {
-  await app.vault.modify(getFile(path), content);
+async function setContent(content: string): Promise<void> {
+  await app.vault.modify(getFile(NOTE_PATH), content);
 }
 
 describe('applySplitTemplateToNotes', () => {
@@ -181,7 +181,7 @@ describe('applySplitTemplateToNotes', () => {
       contentsSeenByTemplater.push(await app.vault.read(file));
     });
 
-    await apply('{{content}}\n\n<% tp.date.now() %>', NOTE_PATH, runTemplater);
+    await apply('{{content}}\n\n<% tp.date.now() %>', runTemplater);
 
     expect(runTemplater).toHaveBeenCalledTimes(1);
     expect(contentsSeenByTemplater).toEqual(['## Child\n\nchild body\n\n<% tp.date.now() %>']);
@@ -192,7 +192,7 @@ describe('applySplitTemplateToNotes', () => {
       // Never called.
     });
 
-    await apply(CONTENT_ONLY_TEMPLATE, NOTE_PATH, runTemplater);
+    await apply(CONTENT_ONLY_TEMPLATE, runTemplater);
 
     expect(runTemplater).not.toHaveBeenCalled();
   });

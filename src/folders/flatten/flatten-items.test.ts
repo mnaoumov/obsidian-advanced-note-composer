@@ -36,38 +36,42 @@ afterEach(() => {
 let excludedPaths: string[] = [];
 
 /**
- * Asks {@link canFlattenModeBeDistinctSync} about a folder, with the inputs `canExecuteFolder` hands it.
+ * The folder every test flattens.
+ */
+const FLATTENED_FOLDER_PATH = 'parent/a';
+
+/**
+ * Asks {@link canFlattenModeBeDistinctSync} about the flattened folder, with the inputs `canExecuteFolder` hands it.
  *
- * @param folderPath - The folder being flattened.
  * @param mode - The mode to judge.
  * @returns Whether the mode may still move something a simpler one would not.
  */
-function canBeDistinctSync(folderPath: string, mode: FlattenMode): boolean {
+function canBeDistinctSync(mode: FlattenMode): boolean {
   return canFlattenModeBeDistinctSync({
     app,
     attachmentExtensions: ATTACHMENT_EXTENSIONS,
-    folder: getFolder(folderPath),
+    folder: getFlattenedFolder(),
     isPathIgnored,
     mode
   });
 }
 
-async function collectPaths(folderPath: string, mode: FlattenMode): Promise<string[]> {
+async function collectPaths(mode: FlattenMode): Promise<string[]> {
   const items = await collectFlattenItems({
     app,
     attachmentExtensions: ATTACHMENT_EXTENSIONS,
-    folder: getFolder(folderPath),
+    folder: getFlattenedFolder(),
     isPathIgnored,
     mode
   });
   return items.map((item) => item.path);
 }
 
-function collectPathsSyncOrNull(folderPath: string, mode: FlattenMode): null | string[] {
+function collectPathsSyncOrNull(mode: FlattenMode): null | string[] {
   const items = collectFlattenItemsSyncOrNull({
     app,
     attachmentExtensions: ATTACHMENT_EXTENSIONS,
-    folder: getFolder(folderPath),
+    folder: getFlattenedFolder(),
     isPathIgnored,
     mode
   });
@@ -84,8 +88,8 @@ function excludePaths(...paths: string[]): void {
   excludedPaths = paths;
 }
 
-function getFolder(path: string): TFolder {
-  return ensureNonNullable(app.vault.getFolderByPath(path));
+function getFlattenedFolder(): TFolder {
+  return ensureNonNullable(app.vault.getFolderByPath(FLATTENED_FOLDER_PATH));
 }
 
 function initApp(files: Record<string, string>, attachmentFolderPath = './'): void {
@@ -95,15 +99,14 @@ function initApp(files: Record<string, string>, attachmentFolderPath = './'): vo
 }
 
 /**
- * Asks {@link isFlattenModeDistinct} about a folder, collecting the mode's items first exactly as
+ * Asks {@link isFlattenModeDistinct} about the flattened folder, collecting the mode's items first exactly as
  * `canExecuteFolder` does.
  *
- * @param folderPath - The folder being flattened.
  * @param mode - The mode to judge.
  * @returns Whether the mode moves something a simpler one would not.
  */
-function isDistinct(folderPath: string, mode: FlattenMode): boolean {
-  const folder = getFolder(folderPath);
+function isDistinct(mode: FlattenMode): boolean {
+  const folder = getFlattenedFolder();
   const items = ensureNonNullable(collectFlattenItemsSyncOrNull({
     app,
     attachmentExtensions: ATTACHMENT_EXTENSIONS,
@@ -153,14 +156,14 @@ describe('canFlattenModeBeDistinctSync', () => {
   it('should always allow AllChildren, since nothing is simpler', () => {
     initApp({ 'parent/a/sub/deep.md': 'deep' });
 
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllChildren)).toBe(true);
+    expect(canBeDistinctSync(FlattenMode.AllChildren)).toBe(true);
   });
 
   it('should refuse both folder-only modes when there is no child folder at all', () => {
     initApp({ 'parent/a/note.md': 'note' });
 
-    expect(canBeDistinctSync('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(canBeDistinctSync(FlattenMode.ChildFoldersOnly)).toBe(false);
+    expect(canBeDistinctSync(FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
   it('should refuse only the recursive mode when a child folder nests nothing', () => {
@@ -171,8 +174,8 @@ describe('canFlattenModeBeDistinctSync', () => {
 
     // The reported case. `ChildFoldersOnly` stays possible: a folder resolved asynchronously as an
     // attachment folder would be left behind and make it differ from `Flatten folder...`.
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
-    expect(canBeDistinctSync('parent/a', FlattenMode.ChildFoldersOnly)).toBe(true);
+    expect(canBeDistinctSync(FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(canBeDistinctSync(FlattenMode.ChildFoldersOnly)).toBe(true);
   });
 
   it('should allow the recursive mode as soon as a child folder nests', () => {
@@ -181,7 +184,7 @@ describe('canFlattenModeBeDistinctSync', () => {
       'parent/a/sub/deeper/deepest.md': 'deepest'
     });
 
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+    expect(canBeDistinctSync(FlattenMode.AllFoldersRecursively)).toBe(true);
   });
 
   it('should refuse the recursive mode when the nested folder is excluded', () => {
@@ -193,7 +196,7 @@ describe('canFlattenModeBeDistinctSync', () => {
     excludePaths('parent/a/sub/hidden');
 
     // Exclusion is synchronous, so it counts here: the only nesting is one the flatten would never promote.
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(canBeDistinctSync(FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
   it('should refuse the recursive mode when the folder that nests is itself excluded', () => {
@@ -204,7 +207,7 @@ describe('canFlattenModeBeDistinctSync', () => {
     excludePaths('parent/a/hidden');
 
     // An excluded folder takes its whole subtree with it, so what it nests is out of reach too.
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(canBeDistinctSync(FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
   it('should refuse the recursive mode when the nested folder is the configured attachment folder', () => {
@@ -215,7 +218,7 @@ describe('canFlattenModeBeDistinctSync', () => {
 
     // The other synchronous skip: `parent/a/sub/assets` holds the attachments of `parent/a/sub/deep.md`,
     // which stays inside `sub` as it is promoted.
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(canBeDistinctSync(FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
   it('should keep allowing the recursive mode when only an asynchronous resolution could rule it out', () => {
@@ -227,7 +230,7 @@ describe('canFlattenModeBeDistinctSync', () => {
 
     // Necessary, not sufficient: whether `parent/a/sub/deeper` is somebody's attachment folder is exactly
     // what this cannot know, so it defers to the collection rather than guessing.
-    expect(canBeDistinctSync('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+    expect(canBeDistinctSync(FlattenMode.AllFoldersRecursively)).toBe(true);
   });
 });
 
@@ -242,7 +245,7 @@ describe('collectFlattenItems', () => {
 
       // The original behavior is untouched by the attachment rule: an emptied folder has nothing to keep
       // its attachments beside, so the attachment folder is promoted like any other child.
-      const paths = await collectPaths('parent/a', FlattenMode.AllChildren);
+      const paths = await collectPaths(FlattenMode.AllChildren);
       expect(paths.sort()).toStrictEqual([
         'parent/a/attachments',
         'parent/a/note.md',
@@ -254,7 +257,7 @@ describe('collectFlattenItems', () => {
       initApp({ 'parent/keep.md': 'keep' });
       await app.vault.createFolder('parent/a');
 
-      expect(await collectPaths('parent/a', FlattenMode.AllChildren)).toStrictEqual([]);
+      expect(await collectPaths(FlattenMode.AllChildren)).toStrictEqual([]);
     });
   });
 
@@ -266,7 +269,7 @@ describe('collectFlattenItems', () => {
         'parent/a/sub/deep.md': 'deep'
       });
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
     });
 
     it('should not take the attachment folder of a note that stays behind (issue #170)', async () => {
@@ -276,7 +279,7 @@ describe('collectFlattenItems', () => {
         'parent/a/sub/deep.md': 'deep'
       }, './attachments');
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
     });
 
     it('should take nothing when the only child folder is the attachment folder', async () => {
@@ -285,7 +288,7 @@ describe('collectFlattenItems', () => {
         'parent/a/note.md': 'note'
       }, './attachments');
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
     });
 
     it('should take a child folder that holds both a note and that note\'s own attachment folder', async () => {
@@ -297,7 +300,7 @@ describe('collectFlattenItems', () => {
         'parent/a/sub/deep.md': 'deep'
       }, './attachments');
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
     });
 
     it('should protect nothing when attachments live beside their note', async () => {
@@ -307,7 +310,7 @@ describe('collectFlattenItems', () => {
         'parent/a/sub/deep.md': 'deep'
       }, './');
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
     });
 
     it('should protect nothing when attachments live in a folder outside the flattened folder', async () => {
@@ -318,7 +321,7 @@ describe('collectFlattenItems', () => {
         'parent/a/note.md': 'note'
       }, 'Vault attachments');
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/attachments']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/attachments']);
     });
 
     it('should protect a nested attachment folder through the child folder that contains it', async () => {
@@ -328,7 +331,7 @@ describe('collectFlattenItems', () => {
         'parent/a/sub/deep.md': 'deep'
       }, './assets/img');
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
     });
 
     it('should protect the per-note folder an attachment-location plugin resolves', async () => {
@@ -341,7 +344,7 @@ describe('collectFlattenItems', () => {
       // case no native mode can produce — resolved for free through `getAttachmentFolderPath` (issue #161).
       stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
     });
 
     it('should not treat a markdown-shaped attachment as a note owning an attachment folder', async () => {
@@ -352,7 +355,7 @@ describe('collectFlattenItems', () => {
         'parent/a/drawing.excalidraw.md': 'EXCALIDRAW'
       }, './attachments');
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/attachments']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/attachments']);
     });
   });
 
@@ -366,7 +369,7 @@ describe('collectFlattenItems', () => {
 
       // Shallowest-first IS the move order: `b` is promoted before `b/c`, and Obsidian's rename cascades,
       // so `c` is simply at its promoted parent's new path by the time its turn comes.
-      expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([
+      expect(await collectPaths(FlattenMode.AllFoldersRecursively)).toStrictEqual([
         'parent/a/b',
         'parent/a/b/c'
       ]);
@@ -383,7 +386,7 @@ describe('collectFlattenItems', () => {
 
       // `a/attachments` stays with `note.md`; `b` moves and carries `deep.md`, so `b/attachments` must not
       // be promoted away from it; `b/c` is an ordinary folder and moves.
-      expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([
+      expect(await collectPaths(FlattenMode.AllFoldersRecursively)).toStrictEqual([
         'parent/a/b',
         'parent/a/b/c'
       ]);
@@ -396,7 +399,7 @@ describe('collectFlattenItems', () => {
       }, './attachments');
 
       // The attachment folder is left exactly as it is, contents included.
-      expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+      expect(await collectPaths(FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
     });
   });
 });
@@ -418,10 +421,10 @@ describe('collectFlattenItemsSyncOrNull', () => {
       'parent/a/note.md': 'note'
     }, './attachments');
 
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllChildren)).toStrictEqual(await collectPaths('parent/a', FlattenMode.AllChildren));
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly));
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual(
-      await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)
+    expect(collectPathsSyncOrNull(FlattenMode.AllChildren)).toStrictEqual(await collectPaths(FlattenMode.AllChildren));
+    expect(collectPathsSyncOrNull(FlattenMode.ChildFoldersOnly)).toStrictEqual(await collectPaths(FlattenMode.ChildFoldersOnly));
+    expect(collectPathsSyncOrNull(FlattenMode.AllFoldersRecursively)).toStrictEqual(
+      await collectPaths(FlattenMode.AllFoldersRecursively)
     );
   });
 
@@ -431,8 +434,8 @@ describe('collectFlattenItemsSyncOrNull', () => {
       'parent/a/note.md': 'note'
     }, './attachments');
 
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+    expect(collectPathsSyncOrNull(FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
+    expect(collectPathsSyncOrNull(FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
   });
 
   it('should answer null for a folder-only mode once an attachment-location plugin owns the resolution', () => {
@@ -443,8 +446,8 @@ describe('collectFlattenItemsSyncOrNull', () => {
     stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
     // Not "nothing to flatten" — "ask the asynchronous collector", which is what keeps the command offered.
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toBeNull();
+    expect(collectPathsSyncOrNull(FlattenMode.ChildFoldersOnly)).toBeNull();
+    expect(collectPathsSyncOrNull(FlattenMode.AllFoldersRecursively)).toBeNull();
   });
 
   it('should still answer AllChildren with an attachment-location plugin installed', () => {
@@ -455,7 +458,7 @@ describe('collectFlattenItemsSyncOrNull', () => {
     });
     stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
 
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllChildren)?.sort()).toStrictEqual([
+    expect(collectPathsSyncOrNull(FlattenMode.AllChildren)?.sort()).toStrictEqual([
       'parent/a/note',
       'parent/a/note.md'
     ]);
@@ -479,13 +482,13 @@ describe('excluded paths', () => {
     });
     excludePaths('parent/a/assets');
 
-    const allChildrenPaths = await collectPaths('parent/a', FlattenMode.AllChildren);
+    const allChildrenPaths = await collectPaths(FlattenMode.AllChildren);
     expect(allChildrenPaths.sort()).toStrictEqual([
       'parent/a/note.md',
       'parent/a/sub'
     ]);
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
-    expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.AllFoldersRecursively)).toStrictEqual(['parent/a/sub']);
   });
 
   it('should skip an excluded folder\'s whole subtree', async () => {
@@ -496,7 +499,7 @@ describe('excluded paths', () => {
     excludePaths('parent/a/assets');
 
     // `nested` is never promoted either — the excluded folder is left exactly as it is, contents included.
-    expect(await collectPaths('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+    expect(await collectPaths(FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
   });
 
   it('should answer an exact empty list, not null, when everything is excluded under an attachment-location plugin', () => {
@@ -509,8 +512,8 @@ describe('excluded paths', () => {
 
     // The whole point of testing exclusion BEFORE resolving: this is the reporter's vault, and the answer
     // here is what hides the command instead of offering one that would do nothing.
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
+    expect(collectPathsSyncOrNull(FlattenMode.ChildFoldersOnly)).toStrictEqual([]);
+    expect(collectPathsSyncOrNull(FlattenMode.AllFoldersRecursively)).toStrictEqual([]);
   });
 
   it('should still answer null under an attachment-location plugin while a non-excluded candidate remains', () => {
@@ -522,7 +525,7 @@ describe('excluded paths', () => {
     stubAttachmentLocationPlugin((notePath) => notePath.replace(/\.md$/, ''));
     excludePaths('parent/a/assets');
 
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
+    expect(collectPathsSyncOrNull(FlattenMode.ChildFoldersOnly)).toBeNull();
   });
 
   it('should still protect the attachment folder of an EXCLUDED note', async () => {
@@ -535,7 +538,7 @@ describe('excluded paths', () => {
 
     // Exclusion says "do not move this", not "this note has no attachments": dropping an excluded note from
     // the resolution would UNPROTECT `attachments` and scatter the very files the note still owns.
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 });
 
@@ -554,7 +557,7 @@ describe('configured attachment folder', () => {
 
     // Nothing under `parent/a` is a note, so the exact resolution has no entry to protect `Files` with — it
     // only ever walks notes INSIDE the flattened folder. The configured path is what catches it.
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
   it('should protect a child folder that merely CONTAINS the fixed attachment folder', async () => {
@@ -565,7 +568,7 @@ describe('configured attachment folder', () => {
 
     // Promoting `x` separates `x/assets` from every note in the vault just as surely as promoting the
     // attachment folder itself would.
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
   it('should match a fixed attachment folder case-insensitively', async () => {
@@ -575,7 +578,7 @@ describe('configured attachment folder', () => {
     }, 'parent/a/FILES');
 
     // `@mnaoumov/obsidian-lib` resolves the configured folder case-insensitively, so this has to agree with it.
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
   it('should match a note-relative attachment folder by name, case-insensitively', async () => {
@@ -585,7 +588,7 @@ describe('configured attachment folder', () => {
       'parent/a/sub/deep.md': 'deep'
     }, './Assets');
 
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
   it('should not protect a folder that only shares the configured name beside no note', async () => {
@@ -596,7 +599,7 @@ describe('configured attachment folder', () => {
 
     // A note-relative attachment folder belongs to the notes NEXT to it. With none staying behind there is
     // nothing to be separated from, so an unrelated folder of that name keeps flattening.
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/assets']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/assets']);
   });
 
   it('should protect nothing when attachments go to the vault root', async () => {
@@ -606,7 +609,7 @@ describe('configured attachment folder', () => {
         'parent/a/sub/deep.md': 'deep'
       }, attachmentFolderPath);
 
-      expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+      expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
     }
   });
 
@@ -622,8 +625,8 @@ describe('configured attachment folder', () => {
      * does: the plugin owning the resolution also owns that setting, so reading it answers a question
      * nobody asked. `null` is the honest answer — resolve asynchronously and offer the command meanwhile.
      */
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toBeNull();
+    expect(collectPathsSyncOrNull(FlattenMode.ChildFoldersOnly)).toBeNull();
+    expect(collectPathsSyncOrNull(FlattenMode.AllFoldersRecursively)).toBeNull();
   });
 
   it('should not mistake a candidate folder for the attachment folder when a plugin parks its own path in the setting (issue #213)', () => {
@@ -640,8 +643,8 @@ describe('configured attachment folder', () => {
      */
     app.vault.setConfig('attachmentFolderPath', 'parent/a/sub/@');
 
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.ChildFoldersOnly)).toBeNull();
-    expect(collectPathsSyncOrNull('parent/a', FlattenMode.AllFoldersRecursively)).toBeNull();
+    expect(collectPathsSyncOrNull(FlattenMode.ChildFoldersOnly)).toBeNull();
+    expect(collectPathsSyncOrNull(FlattenMode.AllFoldersRecursively)).toBeNull();
   });
 
   it('should promote the folder the parked path pointed at, once resolved asynchronously (issue #213)', async () => {
@@ -654,7 +657,7 @@ describe('configured attachment folder', () => {
 
     // The exact per-note resolution keeps `sub` promotable: its own note travels inside it, so nothing is
     // separated from its attachments. Offering the command was therefore right, not merely permissive.
-    expect(await collectPaths('parent/a', FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
+    expect(await collectPaths(FlattenMode.ChildFoldersOnly)).toStrictEqual(['parent/a/sub']);
   });
 
   it('should give the same answer synchronously and asynchronously', async () => {
@@ -667,7 +670,7 @@ describe('configured attachment folder', () => {
 
     // The menu and the executor read the same collector, so they can never disagree about what would move.
     for (const mode of [FlattenMode.AllChildren, FlattenMode.ChildFoldersOnly, FlattenMode.AllFoldersRecursively]) {
-      expect(collectPathsSyncOrNull('parent/a', mode)).toStrictEqual(await collectPaths('parent/a', mode));
+      expect(collectPathsSyncOrNull(mode)).toStrictEqual(await collectPaths(mode));
     }
   });
 });
@@ -681,14 +684,14 @@ describe('isFlattenModeDistinct', () => {
   it('should always call AllChildren distinct, since nothing is simpler', () => {
     initApp({ 'parent/a/sub/deep.md': 'deep' });
 
-    expect(isDistinct('parent/a', FlattenMode.AllChildren)).toBe(true);
+    expect(isDistinct(FlattenMode.AllChildren)).toBe(true);
   });
 
   it('should call ChildFoldersOnly a duplicate when the folder holds nothing but folders', () => {
     initApp({ 'parent/a/sub/deep.md': 'deep' });
 
     // Both modes move `parent/a/sub` and nothing else, so the second entry only repeats the first.
-    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
+    expect(isDistinct(FlattenMode.ChildFoldersOnly)).toBe(false);
   });
 
   it('should call ChildFoldersOnly distinct when a file of the folder stays behind', () => {
@@ -698,7 +701,7 @@ describe('isFlattenModeDistinct', () => {
     });
 
     // `AllChildren` would take the note too — leaving it is exactly what this mode is for.
-    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(true);
+    expect(isDistinct(FlattenMode.ChildFoldersOnly)).toBe(true);
   });
 
   it('should call ChildFoldersOnly distinct when a child folder is left behind as an attachment folder', () => {
@@ -708,7 +711,7 @@ describe('isFlattenModeDistinct', () => {
       'parent/a/sub/deep.md': 'deep'
     }, './assets');
 
-    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(true);
+    expect(isDistinct(FlattenMode.ChildFoldersOnly)).toBe(true);
   });
 
   it('should call AllFoldersRecursively a duplicate when no child folder holds a folder of its own', () => {
@@ -719,7 +722,7 @@ describe('isFlattenModeDistinct', () => {
 
     // The reported case: there is a folder to promote, but nothing nested under it, so the recursive
     // variant can only repeat `ChildFoldersOnly`.
-    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(isDistinct(FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
   it('should call AllFoldersRecursively distinct when a child folder holds a folder of its own', () => {
@@ -728,7 +731,7 @@ describe('isFlattenModeDistinct', () => {
       'parent/a/sub/deeper/deepest.md': 'deepest'
     });
 
-    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+    expect(isDistinct(FlattenMode.AllFoldersRecursively)).toBe(true);
   });
 
   it('should judge the recursive mode by what would move, not by the shape of the tree', () => {
@@ -741,7 +744,7 @@ describe('isFlattenModeDistinct', () => {
 
     // The tree IS nested, but the only nested folder is excluded, so the recursive mode would move exactly
     // what `ChildFoldersOnly` moves.
-    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(false);
+    expect(isDistinct(FlattenMode.AllFoldersRecursively)).toBe(false);
   });
 
   it('should keep the recursive mode distinct even when ChildFoldersOnly is itself a duplicate', () => {
@@ -749,8 +752,8 @@ describe('isFlattenModeDistinct', () => {
 
     // A folder of folders only: `ChildFoldersOnly` repeats `Flatten folder...` and drops out, while the
     // recursive variant still promotes the nested folder neither of them would.
-    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
-    expect(isDistinct('parent/a', FlattenMode.AllFoldersRecursively)).toBe(true);
+    expect(isDistinct(FlattenMode.ChildFoldersOnly)).toBe(false);
+    expect(isDistinct(FlattenMode.AllFoldersRecursively)).toBe(true);
   });
 
   it('should ignore an excluded child on both sides of the comparison', () => {
@@ -761,6 +764,6 @@ describe('isFlattenModeDistinct', () => {
     excludePaths('parent/a/hidden');
 
     // The excluded folder is dropped by both modes, so it cannot make them look different.
-    expect(isDistinct('parent/a', FlattenMode.ChildFoldersOnly)).toBe(false);
+    expect(isDistinct(FlattenMode.ChildFoldersOnly)).toBe(false);
   });
 });

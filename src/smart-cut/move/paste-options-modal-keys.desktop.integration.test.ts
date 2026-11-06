@@ -56,7 +56,7 @@ describe('paste options modal keyboard paths', () => {
 
         await waitUntil({
           message: 'paste options modal did not open',
-          predicate: () => findButton('Move') !== null,
+          predicate: () => findMoveButton() !== null,
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -91,7 +91,7 @@ describe('paste options modal keyboard paths', () => {
         }
 
         return {
-          isModalClosed: findButton('Move') === null,
+          isModalClosed: findMoveButton() === null,
           sourceContent: await readFile('paste-options-keys-source.md'),
           targetContent: await readFile('paste-options-keys-target.md'),
           wasDefaultPrevented
@@ -103,9 +103,9 @@ describe('paste options modal keyboard paths', () => {
           }
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findMoveButton(): HTMLButtonElement | null {
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Move') {
               return el;
             }
           }
@@ -214,7 +214,7 @@ describe('paste options modal keyboard paths', () => {
 
           await waitUntil({
             message: 'paste options modal did not open',
-            predicate: () => findButton('Move') !== null,
+            predicate: () => findMoveButton() !== null,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
@@ -230,7 +230,7 @@ describe('paste options modal keyboard paths', () => {
 
             await waitUntil({
               message: 'Escape did not close the paste options modal',
-              predicate: () => findButton('Move') === null,
+              predicate: () => findMoveButton() === null,
               timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
             });
           } finally {
@@ -279,9 +279,9 @@ describe('paste options modal keyboard paths', () => {
           }
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findMoveButton(): HTMLButtonElement | null {
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Move') {
               return el;
             }
           }

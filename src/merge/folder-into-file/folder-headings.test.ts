@@ -26,10 +26,10 @@ describe('buildFolderHeadingPlan', () => {
     return { isFolder: true, path };
   }
 
-  // Every folder down to (and including) the last segment, outermost first — what the walk visits before
-  // reaching a note that deep.
-  function folderChain(rootPath: string, ...names: string[]): FolderHeadingPlanItem[] {
-    return names.map((_name, index) => folder([rootPath, ...names.slice(0, index + 1)].join('/')));
+  // Every folder under `Docs` down to (and including) the last segment, outermost first — what the walk
+  // visits before reaching a note that deep.
+  function folderChain(...names: string[]): FolderHeadingPlanItem[] {
+    return names.map((_name, index) => folder(['Docs', ...names.slice(0, index + 1)].join('/')));
   }
 
   function note(path: string): FolderHeadingPlanItem {
@@ -59,7 +59,7 @@ describe('buildFolderHeadingPlan', () => {
   });
 
   it('should deepen the heading level with the folder depth', () => {
-    expect(plan([...folderChain('Docs', 'api', 'v2'), note('Docs/api/v2/put.md')])).toEqual({
+    expect(plan([...folderChain('api', 'v2'), note('Docs/api/v2/put.md')])).toEqual({
       entries: [{ depth: 2, headings: ['# api', '## v2'] }],
       trailingHeadings: []
     });
@@ -87,7 +87,7 @@ describe('buildFolderHeadingPlan', () => {
 
   it('should re-head a sibling folder after leaving the previous one', () => {
     expect(plan([
-      ...folderChain('Docs', 'api', 'v2'),
+      ...folderChain('api', 'v2'),
       note('Docs/api/v2/put.md'),
       folder('Docs/guides'),
       note('Docs/guides/start.md')
@@ -103,7 +103,7 @@ describe('buildFolderHeadingPlan', () => {
   it('should emit nothing extra when climbing back to an already-open folder', () => {
     // The real walk takes a folder's own notes before its sub-folders, so it never climbs back; this
     // guards the plan against an input that does.
-    expect(plan([...folderChain('Docs', 'api', 'v2'), note('Docs/api/v2/put.md'), note('Docs/api/get.md')])).toEqual({
+    expect(plan([...folderChain('api', 'v2'), note('Docs/api/v2/put.md'), note('Docs/api/get.md')])).toEqual({
       entries: [
         { depth: 2, headings: ['# api', '## v2'] },
         { depth: 1, headings: [] }
@@ -117,7 +117,7 @@ describe('buildFolderHeadingPlan', () => {
      * Issue #160: markdown stops at six, but clamping there made every folder from depth 6 downward
      * share `######`, so an ancestor and its descendants read as siblings. The depth is encoded instead.
      */
-    expect(plan([...folderChain('Docs', 'a', 'b', 'c', 'd', 'e', 'f', 'g'), note('Docs/a/b/c/d/e/f/g/note.md')])).toEqual({
+    expect(plan([...folderChain('a', 'b', 'c', 'd', 'e', 'f', 'g'), note('Docs/a/b/c/d/e/f/g/note.md')])).toEqual({
       entries: [{ depth: 7, headings: ['# a', '## b', '### c', '#### d', '##### e', '###### f', '####### g'] }],
       trailingHeadings: []
     });
@@ -125,7 +125,7 @@ describe('buildFolderHeadingPlan', () => {
 
   it('should keep sibling folders distinguishable past six levels', () => {
     expect(plan([
-      ...folderChain('Docs', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'),
+      ...folderChain('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'),
       note('Docs/a/b/c/d/e/f/g/h/deep.md'),
       folder('Docs/a/b/c/d/e/f/i'),
       note('Docs/a/b/c/d/e/f/i/other.md')
@@ -173,7 +173,7 @@ describe('buildFolderHeadingPlan', () => {
   });
 
   it('should head a whole note-less subtree', () => {
-    expect(plan([note('Docs/intro.md'), ...folderChain('Docs', 'empty', 'deeper')])).toEqual({
+    expect(plan([note('Docs/intro.md'), ...folderChain('empty', 'deeper')])).toEqual({
       entries: [{ depth: 0, headings: [] }],
       trailingHeadings: ['# empty', '## deeper']
     });

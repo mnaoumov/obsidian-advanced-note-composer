@@ -39,8 +39,6 @@ import { prepareForSplitFile } from '../picker/split-file-modal.ts';
 import { SplitComposer } from '../split-composer.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './split-note-by-headings-editor-command-handler.ts';
 
-type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
-
 interface TestableHandler {
   readonly canExecuteEditor: (editor: Editor, context: MarkdownFileInfo) => boolean;
   readonly executeEditor: (editor: Editor, context: MarkdownFileInfo) => Promise<void>;
@@ -110,9 +108,9 @@ function createMockContext(file: null | TFile): MarkdownFileInfo {
   return strictProxy<MarkdownFileInfo>({ file });
 }
 
-function createMockEditor(fromLine = 0, toLine = fromLine): Editor {
+function createMockEditor(fromLine = 0): Editor {
   const getCursor = vi.fn();
-  getCursor.mockImplementation((which?: string) => ({ ch: 0, line: which === 'to' ? toLine : fromLine }));
+  getCursor.mockImplementation(() => ({ ch: 0, line: fromLine }));
   return strictProxy<Editor>({
     getCursor,
     setSelection: vi.fn()
@@ -404,7 +402,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
     let callCount = 0;
     mockGetCacheSafe.mockImplementation(() => {
       callCount++;
-      return callCount === 1 ? Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [createHeading(2, 0)] })) : Promise.resolve(strictProxy<CachedMetadataEx>({ headings: [] }));
+      return Promise.resolve(strictProxy<CachedMetadataEx>(callCount === 1 ? { headings: [createHeading(2, 0)] } : { headings: [] }));
     });
 
     mockGetSelectionUnderHeading.mockReturnValue({
@@ -413,6 +411,7 @@ describe('SplitNoteByHeadingsEditorCommandHandler', () => {
       start: { ch: 0, line: 0 }
     });
 
+    type PrepareForSplitFileResult = NonNullable<Awaited<ReturnType<typeof prepareForSplitFile>>>;
     const splitResult = strictProxy<PrepareForSplitFileResult>({
       capturedSelections: [],
       isNewTargetFile: true,

@@ -64,7 +64,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
         const otherFile = await ensureMarkdownFile(OTHER_NOTE, 'delta echo foxtrot');
 
         // Flat menu items (no submenu) so the added command is directly in `menu.items`.
-        await setToggle('Should add commands to submenu', false);
+        await setSubmenuToggle(false);
 
         // --- Nothing configured: the command is available and in the editor menu everywhere.
         const noPathsConfigured = await probeCommand(blockedFile);
@@ -88,7 +88,7 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
 
         // Restore the shared instance to a clean default state.
         await setPaths('Smart cut & paste command include paths', '');
-        await setToggle('Should add commands to submenu', true);
+        await setSubmenuToggle(true);
 
         return {
           commandExcluded,
@@ -155,7 +155,8 @@ describe('block commands on excluded paths (issues #93, #198)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
 
-        async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
+        async function setSubmenuToggle(shouldEnable: boolean): Promise<void> {
+          const settingName = 'Should add commands to submenu';
           const settingTab = await openSettingTab();
           const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');

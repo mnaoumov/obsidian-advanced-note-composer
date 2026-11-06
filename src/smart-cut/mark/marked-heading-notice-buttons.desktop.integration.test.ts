@@ -66,7 +66,7 @@ describe('marked heading notice buttons', () => {
      * The recursive split's up-front confirmation is what this suite drives instead of letting the split
      * run, so the dialog must be on even if another suite left the toggle off in the shared vault.
      */
-    const wasOriginalShouldAsk = await didSetToggle(ASK_BEFORE_SPLITTING_TOGGLE, true);
+    const wasOriginalShouldAsk = await didSetAskBeforeSplittingToggle(true);
     try {
       // A plain SELECTION mark: the two heading actions must NOT be offered, since there is no heading
       // the buttons could act on.
@@ -93,18 +93,17 @@ describe('marked heading notice buttons', () => {
       expect(reorder.dialogText).toContain('NoticeB');
       expect(reorder.wasMarkReleased).toBe(true);
     } finally {
-      await didSetToggle(ASK_BEFORE_SPLITTING_TOGGLE, wasOriginalShouldAsk);
+      await didSetAskBeforeSplittingToggle(wasOriginalShouldAsk);
     }
   });
 });
 
 /**
- * Flips one toggle through the REAL settings tab, reporting what it was set to before.
- * @param toggleName - The toggle's displayed name.
+ * Flips the `Should ask before splitting` toggle through the REAL settings tab, reporting what it was set to before.
  * @param isEnabledWanted - What to leave it set to.
  * @returns Whether the toggle was enabled before this call.
  */
-async function didSetToggle(toggleName: string, isEnabledWanted: boolean): Promise<boolean> {
+async function didSetAskBeforeSplittingToggle(isEnabledWanted: boolean): Promise<boolean> {
   return evalInObsidian({
     async callback({ app, findSettingItem, name, pluginId, shouldEnable }): Promise<boolean> {
       const RENDER_DELAY_IN_MILLISECONDS = 400;
@@ -131,7 +130,7 @@ async function didSetToggle(toggleName: string, isEnabledWanted: boolean): Promi
       await sleep(RENDER_DELAY_IN_MILLISECONDS);
       return wasEnabled;
     },
-    input: { findSettingItem: findSettingItemInObsidian, name: toggleName, pluginId: PLUGIN_ID, shouldEnable: isEnabledWanted },
+    input: { findSettingItem: findSettingItemInObsidian, name: ASK_BEFORE_SPLITTING_TOGGLE, pluginId: PLUGIN_ID, shouldEnable: isEnabledWanted },
     vaultPath: getTemporaryVault().path
   });
 }

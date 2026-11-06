@@ -5,7 +5,6 @@ import type {
   App as AppOriginal,
   Editor,
   EditorPosition,
-  EditorSelection,
   MarkdownView,
   TFile,
   WorkspaceLeaf
@@ -87,10 +86,6 @@ interface CreateComposerOptions {
   readonly targetCursorOffset?: number;
   readonly templateOverride?: string;
   readonly vaultTransaction?: VaultTransaction;
-}
-
-interface EditorDoubleOptions {
-  readonly listSelections?: EditorSelection[];
 }
 
 interface MockPosition {
@@ -250,8 +245,8 @@ function createComposer(options?: CreateComposerOptions): SplitComposer {
   });
 }
 
-function createEditorDouble(options?: EditorDoubleOptions): Editor {
-  const selections = options?.listSelections ?? [
+function createEditorDouble(): Editor {
+  const selections = [
     { anchor: { ch: 0, line: 0 }, head: { ch: 11, line: 0 } }
   ];
   return strictProxy<Editor>({

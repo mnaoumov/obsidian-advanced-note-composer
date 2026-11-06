@@ -40,18 +40,16 @@ function initApp(files: Record<string, string>): void {
 }
 
 /**
- * Runs one sequence over the named items, in order, and returns the names it hands out — which is how both
- * callers use it.
+ * Runs one sequence over the named items, in order, moving them into `dst`, and returns the names it hands
+ * out — which is how both callers use it.
  *
  * @param files - The vault to build.
- * @param targetFolderPath - The destination folder.
  * @param itemPaths - The items about to be relocated, in move order.
  * @param nameTemplates - The templates for this case.
  * @returns One name per item, in the same order.
  */
 function resolveNames(
   files: Record<string, string>,
-  targetFolderPath: string,
   itemPaths: readonly string[],
   nameTemplates: NameTemplates = {}
 ): string[] {
@@ -59,7 +57,7 @@ function resolveNames(
   const sequence = createMovedNameSequence({
     folderNameTemplate: nameTemplates.folderNameTemplate ?? '',
     noteNameTemplate: nameTemplates.noteNameTemplate ?? '',
-    targetFolder: getFolder(targetFolderPath)
+    targetFolder: getFolder('dst')
   });
   return itemPaths.map((itemPath) => sequence.resolveName(getItem(itemPath)));
 }
@@ -72,7 +70,6 @@ describe('createMovedNameSequence', () => {
           'dst/1. one/x.md': 'one',
           'src/b/y.md': 'b'
         },
-        'dst',
         ['src/b']
       )).toStrictEqual(['b']);
     });
@@ -83,7 +80,6 @@ describe('createMovedNameSequence', () => {
           'dst/1. one.md': 'one',
           'src/b.md': 'b'
         },
-        'dst',
         ['src/b.md']
       )).toStrictEqual(['b.md']);
     });
@@ -96,7 +92,6 @@ describe('createMovedNameSequence', () => {
           'dst/keep.md': 'keep',
           'src/b/y.md': 'b'
         },
-        'dst',
         ['src/b'],
         { folderNameTemplate: ' ' }
       )).toStrictEqual(['b']);
@@ -111,7 +106,6 @@ describe('createMovedNameSequence', () => {
           'dst/3. three/y.md': 'three',
           'src/b/z.md': 'b'
         },
-        'dst',
         ['src/b'],
         { folderNameTemplate: DEFAULT_FOLDER_NAME_TEMPLATE }
       )).toStrictEqual(['4. b']);
@@ -126,7 +120,6 @@ describe('createMovedNameSequence', () => {
           'dst/4. C/z.md': 'c',
           'src/D/w.md': 'd'
         },
-        'dst',
         ['src/D'],
         { folderNameTemplate: DEFAULT_FOLDER_NAME_TEMPLATE }
       )).toStrictEqual(['5. D']);
@@ -138,7 +131,6 @@ describe('createMovedNameSequence', () => {
           'dst/Notes/x.md': 'notes',
           'src/b/y.md': 'b'
         },
-        'dst',
         ['src/b'],
         { folderNameTemplate: DEFAULT_FOLDER_NAME_TEMPLATE }
       )).toStrictEqual(['1. b']);
@@ -150,7 +142,6 @@ describe('createMovedNameSequence', () => {
           'dst/7. seven/x.md': 'seven',
           'src/3. B/y.md': 'b'
         },
-        'dst',
         ['src/3. B'],
         { folderNameTemplate: DEFAULT_FOLDER_NAME_TEMPLATE }
       )).toStrictEqual(['8. B']);
@@ -166,7 +157,6 @@ describe('createMovedNameSequence', () => {
           'src/c/z.md': 'c',
           'src/d/w.md': 'd'
         },
-        'dst',
         ['src/b', 'src/c', 'src/d'],
         { folderNameTemplate: DEFAULT_FOLDER_NAME_TEMPLATE }
       ))
@@ -179,7 +169,6 @@ describe('createMovedNameSequence', () => {
           'dst/one (4)/x.md': 'one',
           'src/b/y.md': 'b'
         },
-        'dst',
         ['src/b'],
         { folderNameTemplate: '{{safeFolderName}} ({{index:000}})' }
       )).toStrictEqual(['b (005)']);
@@ -191,7 +180,6 @@ describe('createMovedNameSequence', () => {
           'dst/x.md': 'x',
           'src/b/y.md': 'b'
         },
-        'dst',
         ['src/b'],
         { folderNameTemplate: '{{index}}. {{parentFolder}} {{safeFolderName}}' }
       ))
@@ -206,7 +194,6 @@ describe('createMovedNameSequence', () => {
           'dst/2. two.md': 'two',
           'src/note.md': 'note'
         },
-        'dst',
         ['src/note.md'],
         { noteNameTemplate: DEFAULT_NOTE_NAME_TEMPLATE }
       )).toStrictEqual(['3. note.md']);
@@ -218,7 +205,6 @@ describe('createMovedNameSequence', () => {
           'dst/5. five.md': 'five',
           'src/2. note.md': 'note'
         },
-        'dst',
         ['src/2. note.md'],
         { noteNameTemplate: DEFAULT_NOTE_NAME_TEMPLATE }
       )).toStrictEqual(['6. note.md']);
@@ -234,7 +220,6 @@ describe('createMovedNameSequence', () => {
           'src/b/y.md': 'b',
           'src/note.md': 'note'
         },
-        'dst',
         ['src/b', 'src/note.md'],
         {
           folderNameTemplate: DEFAULT_FOLDER_NAME_TEMPLATE,
@@ -252,7 +237,6 @@ describe('createMovedNameSequence', () => {
           'src/diagram.png': 'binary',
           'src/note.md': 'note'
         },
-        'dst',
         ['src/diagram.png', 'src/note.md'],
         { noteNameTemplate: DEFAULT_NOTE_NAME_TEMPLATE }
       ))

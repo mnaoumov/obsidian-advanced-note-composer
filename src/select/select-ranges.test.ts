@@ -39,9 +39,9 @@ function createEditor(range = ''): Editor {
   });
 }
 
-function headingInfo(startLine: number, endLine: number, endCh = 10): HeadingInfo {
+function headingInfo(startLine: number, endLine: number): HeadingInfo {
   return {
-    end: { ch: endCh, line: endLine },
+    end: { ch: 10, line: endLine },
     heading: 'Heading',
     start: { ch: 0, line: startLine }
   };

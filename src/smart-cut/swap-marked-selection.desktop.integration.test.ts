@@ -36,7 +36,7 @@ describe('swap marked selection from the smart cut & paste notice', () => {
 
         // Mark "BBB" in the source note for smart cut & paste.
         await openFile(sourceFile);
-        selectRange(4, 7);
+        selectMiddleWord();
         app.commands.executeCommandById(`${pluginId}:mark-selection-to-move`);
         await waitUntil({
           message: 'smart cut & paste notice did not open',
@@ -46,7 +46,7 @@ describe('swap marked selection from the smart cut & paste notice', () => {
 
         // Select "YYY" in the target note; the Swap button should become enabled.
         await openFile(targetFile);
-        selectRange(4, 7);
+        selectMiddleWord();
         await waitUntil({
           message: 'Swap with selection button did not become enabled',
           predicate: () => {
@@ -98,7 +98,10 @@ describe('swap marked selection from the smart cut & paste notice', () => {
           return app.vault.create(path, content);
         }
 
-        function selectRange(startOffset: number, endOffset: number): void {
+        // Both notes hold three three-letter words, so offsets 4-7 are the middle one in each.
+        function selectMiddleWord(): void {
+          const startOffset = 4;
+          const endOffset = 7;
           const editor = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor;
           if (!editor) {
             throw new Error('No active editor to select in.');

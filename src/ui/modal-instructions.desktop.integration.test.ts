@@ -281,10 +281,10 @@ describe('shouldShowModalInstructions', () => {
 
         const source = await resetFile('anc-overrides-split.md', 'AAA BBB CCC');
 
-        await setToggle(overridesSettingName, false);
+        await setOverridesToggle(false);
         const withoutOverrides = await openPickerAndPressAltM();
 
-        await setToggle(overridesSettingName, true);
+        await setOverridesToggle(true);
         const withOverrides = await openPickerAndPressAltM();
 
         return { withoutOverrides, withOverrides };
@@ -353,7 +353,7 @@ describe('shouldShowModalInstructions', () => {
           return app.vault.create(path, content);
         }
 
-        async function setToggle(name: string, shouldEnable: boolean): Promise<void> {
+        async function setOverridesToggle(shouldEnable: boolean): Promise<void> {
           app.setting.open();
           app.setting.openTabById(pluginId);
           const settingTab = app.setting.pluginTabs.find((tab) => tab.id === pluginId);
@@ -362,10 +362,10 @@ describe('shouldShowModalInstructions', () => {
           }
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          const settingItem = await findSettingItem({ app, name, settingTab });
+          const settingItem = await findSettingItem({ app, name: overridesSettingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new TypeError(`"${name}" toggle was not found.`);
+            throw new TypeError(`"${overridesSettingName}" toggle was not found.`);
           }
 
           if (toggleEl.classList.contains('is-enabled') !== shouldEnable) {

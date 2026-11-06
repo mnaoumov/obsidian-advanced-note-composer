@@ -22,6 +22,7 @@ import {
 import { CommandCategory } from '../settings/plugin-settings.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
@@ -161,7 +162,7 @@ export class RenameHeadingEditorCommandHandler extends EditorCommandHandler {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     // One notice rather than two: the updated-link count is a detail OF the rename, not a separate

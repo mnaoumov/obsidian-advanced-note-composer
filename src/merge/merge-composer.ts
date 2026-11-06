@@ -25,6 +25,7 @@ import { openFileAfterOperation } from '../composers/open-after-operation.ts';
 import { movePermanentLinksKeys } from '../integrations/permanent-links.ts';
 import { Action } from '../settings/plugin-settings.ts';
 import {
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
@@ -172,7 +173,7 @@ export class MergeComposer extends ComposerBase {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
   }
 

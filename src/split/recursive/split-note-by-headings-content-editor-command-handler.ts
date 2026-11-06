@@ -26,6 +26,7 @@ import {
 import { CommandCategory } from '../../settings/plugin-settings.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../../ui/operation-notices.ts';
@@ -175,7 +176,7 @@ export class SplitNoteByHeadingsContentEditorCommandHandler extends EditorComman
         }
       }
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     if (createdFiles.length > 0) {

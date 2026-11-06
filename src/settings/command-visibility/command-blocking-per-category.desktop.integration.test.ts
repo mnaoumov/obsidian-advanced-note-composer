@@ -49,11 +49,11 @@ describe('per-category command blocking (issue #249)', () => {
         const nothingConfigured = await probeCategories(blockedFile);
 
         // The reporter's first example: one category loses its commands on the path, the rest stay.
-        await setPaths('Smart cut & paste command exclude paths', BLOCKED_FOLDER);
+        await setSmartCutAndPasteCommandExcludePaths(BLOCKED_FOLDER);
         const oneCategoryBlocked = await probeCategories(blockedFile);
         const oneCategoryBlockedElsewhere = await probeCategories(otherFile);
 
-        await setPaths('Smart cut & paste command exclude paths', '');
+        await setSmartCutAndPasteCommandExcludePaths('');
 
         return { nothingConfigured, oneCategoryBlocked, oneCategoryBlockedElsewhere };
 
@@ -98,12 +98,13 @@ describe('per-category command blocking (issue #249)', () => {
           return view.editor;
         }
 
-        async function setPaths(settingName: string, value: string): Promise<void> {
+        async function setSmartCutAndPasteCommandExcludePaths(value: string): Promise<void> {
+          const SETTING_NAME = 'Smart cut & paste command exclude paths';
           const settingTab = await openSettingTab();
-          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
+          const settingItem = await findSettingItem({ app, name: SETTING_NAME, settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new TypeError(`"${settingName}" text area was not found.`);
+            throw new TypeError(`"${SETTING_NAME}" text area was not found.`);
           }
           textAreaEl.value = value;
           textAreaEl.dispatchEvent(new Event('input'));
@@ -163,18 +164,18 @@ describe('per-category command blocking (issue #249)', () => {
         await setPaths('Create command exclude paths', BLOCKED_FOLDER);
         await setPaths('Swap command exclude paths', BLOCKED_FOLDER);
         await setPaths('Split/extract command exclude paths', BLOCKED_FOLDER);
-        const restBlocked = await probeCategories(blockedFile);
+        const restBlocked = await probeCategories();
 
         // Since issue #271 there is no all-commands list to reach the kept category with: hiding it too
         // means naming it, which is exactly the change — every path is listed under the commands it
         // affects and nowhere else.
         await setPaths('Smart cut & paste command exclude paths', BLOCKED_FOLDER);
-        const everyCategoryBlocked = await probeCategories(blockedFile);
+        const everyCategoryBlocked = await probeCategories();
 
         // Within a category the exclude list wins over its own include list, so listing the path in both
         // is not an exception that brings the commands back.
         await setPaths('Create command include paths', BLOCKED_FOLDER);
-        const categoryExcludeWinsOverItsInclude = await probeCategories(blockedFile);
+        const categoryExcludeWinsOverItsInclude = await probeCategories();
 
         // Restore the shared instance to a clean default state.
         await setPaths('Create command include paths', '');
@@ -182,12 +183,12 @@ describe('per-category command blocking (issue #249)', () => {
         await setPaths('Create command exclude paths', '');
         await setPaths('Swap command exclude paths', '');
         await setPaths('Split/extract command exclude paths', '');
-        const restored = await probeCategories(blockedFile);
+        const restored = await probeCategories();
 
         return { categoryExcludeWinsOverItsInclude, everyCategoryBlocked, restBlocked, restored };
 
-        async function probeCategories(file: TFile): Promise<CategoryAvailability> {
-          const editor = await openAndGetEditor(file);
+        async function probeCategories(): Promise<CategoryAvailability> {
+          const editor = await openAndGetEditor(blockedFile);
           editor.setSelection(editor.offsetToPos(0), editor.offsetToPos(5));
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {

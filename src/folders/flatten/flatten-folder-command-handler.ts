@@ -35,6 +35,7 @@ import { ConfirmDialogModal } from '../../ui/confirm-dialog-modal.ts';
 import { openConfirmDialogModal } from '../../ui/open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../../ui/operation-notices.ts';
@@ -318,7 +319,7 @@ export class FlattenFolderCommandHandler extends FolderCommandHandler {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     // The flatten landed, so the folder its items were promoted into counts as clicked-on for the next

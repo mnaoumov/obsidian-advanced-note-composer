@@ -21,7 +21,6 @@ import {
   vi
 } from 'vitest';
 
-import type { Selection } from '../composers/composer-base.ts';
 import type { ExtractCurrentSelectionEditorCommandHandler } from '../split/extract/extract-current-selection-editor-command-handler.ts';
 
 import { MoveSelectionBuffer } from './mark/move-selection-buffer.ts';
@@ -72,10 +71,10 @@ function getSourceFile(): TFile {
   return ensureNonNullable(app.vault.getFileByPath('source.md'));
 }
 
-function markSelection(sourceFile: TFile, capturedSelections: Selection[] = [{ endOffset: 1, startOffset: 0 }]): void {
+function markSelection(sourceFile: TFile): void {
   moveSelectionBuffer.mark({
     abortController: new AbortController(),
-    capturedSelections,
+    capturedSelections: [{ endOffset: 1, startOffset: 0 }],
     highlight: { [Symbol.dispose]: vi.fn() },
     lock: { [Symbol.dispose]: vi.fn() },
     markedHeading: null,

@@ -48,17 +48,6 @@ function createMockApp(): App {
   });
 }
 
-function createMockFile(path: string): TFile {
-  const name = path.split('/').pop() ?? '';
-  const parentPath = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
-  return strictProxy<TFile>({
-    extension: 'md',
-    name,
-    parent: strictProxy<TFolder>({ path: parentPath }),
-    path
-  });
-}
-
 function createMockPluginSettingsComponent(options?: MockPluginSettingsComponentOptions): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({
     editAndSave: vi.fn().mockResolvedValue(undefined),
@@ -66,6 +55,15 @@ function createMockPluginSettingsComponent(options?: MockPluginSettingsComponent
       isPathIgnored: vi.fn().mockReturnValue(false),
       shouldAskBeforeSwapping: options?.shouldAskBeforeSwapping ?? true
     })
+  });
+}
+
+function createMockSourceFile(): TFile {
+  return strictProxy<TFile>({
+    extension: 'md',
+    name: 'source.md',
+    parent: strictProxy<TFolder>({ path: 'folder' }),
+    path: 'folder/source.md'
   });
 }
 
@@ -79,7 +77,7 @@ describe('selectFileForSwap', () => {
   });
 
   it('should return null when modal is cancelled', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
@@ -90,7 +88,7 @@ describe('selectFileForSwap', () => {
   });
 
   it('should return null when shouldAskBeforeSwapping is false and modal cancelled', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: false });
 
@@ -102,7 +100,7 @@ describe('selectFileForSwap', () => {
   });
 
   it('should return null when shouldAskBeforeSwapping is true and modal cancelled', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: true });
 

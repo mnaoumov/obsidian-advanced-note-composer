@@ -420,13 +420,10 @@ export abstract class ComposerBase {
       // A folder merge relocates each merged note through the transaction staging folder, and the metadata
       // cache can still report such a note as a backlink source after it is gone. Editing links in a file
       // that no longer exists throws and aborts (and rolls back) the whole merge, so skip vanished sources.
-      if (!this.app.vault.getFileByPath(backlinkPath)) {
-        continue;
-      }
-
-      // The source note's links to itself are not backlinks to fix on disk: its content is being rewritten
-      // through the editor in the same operation, which would overwrite a write made here (issue #291).
-      if (backlinkPath === this.sourceFile.path) {
+      // The source note's links to itself are not backlinks to fix on disk either: its content is being
+      // rewritten through the editor in the same operation, which would overwrite a write made here
+      // (issue #291).
+      if (!this.app.vault.getFileByPath(backlinkPath) || backlinkPath === this.sourceFile.path) {
         continue;
       }
 
@@ -758,11 +755,7 @@ export abstract class ComposerBase {
   /* v8 ignore stop */
 
   private async includeFrontmatter(targetContentToInsert: string): Promise<string> {
-    if (!this.shouldIncludeFrontmatter) {
-      return targetContentToInsert;
-    }
-
-    if (!await this.canIncludeFrontmatter()) {
+    if (!this.shouldIncludeFrontmatter || !await this.canIncludeFrontmatter()) {
       return targetContentToInsert;
     }
 

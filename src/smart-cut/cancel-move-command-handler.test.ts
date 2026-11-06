@@ -28,7 +28,8 @@ interface TestableHandler {
   readonly name: string;
 }
 
-function createHandler(moveSelectionBuffer: MoveSelectionBuffer, showNotice = vi.fn()): CreateHandlerResult {
+function createHandler(moveSelectionBuffer: MoveSelectionBuffer): CreateHandlerResult {
+  const showNotice = vi.fn();
   const handler = new CancelMoveCommandHandler({
     moveSelectionBuffer,
     pluginNoticeComponent: strictProxy<PluginNoticeComponent>({ showNotice })

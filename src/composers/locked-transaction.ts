@@ -3,6 +3,7 @@ import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock
 import type { App } from 'obsidian';
 
 import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import { dispose } from '@mnaoumov/typescript-lib/disposable';
 
 /**
  * A resource to lock for the duration of an operation.
@@ -111,7 +112,7 @@ export async function runLockedTransaction(params: RunLockedTransactionParams): 
     throw error;
   } finally {
     for (const lockDisposable of lockDisposables) {
-      lockDisposable[Symbol.dispose]();
+      dispose(lockDisposable);
     }
   }
 }

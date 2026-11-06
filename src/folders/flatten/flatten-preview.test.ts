@@ -28,15 +28,20 @@ interface NameTemplates {
   readonly noteNameTemplate?: string;
 }
 
+/**
+ * The folder every case flattens.
+ */
+const FLATTENED_FOLDER_PATH = 'parent/a';
+
 let app: AppOriginal;
 
-function buildRows(folderPath: string, nameTemplates: NameTemplates = {}): FlattenPreviewRow[] {
-  const folder = getFolder(folderPath);
-  return buildRowsFor(folderPath, [...folder.children], nameTemplates);
+function buildRows(nameTemplates: NameTemplates = {}): FlattenPreviewRow[] {
+  const folder = getFolder(FLATTENED_FOLDER_PATH);
+  return buildRowsFor([...folder.children], nameTemplates);
 }
 
-function buildRowsFor(folderPath: string, children: readonly TAbstractFile[], nameTemplates: NameTemplates = {}): FlattenPreviewRow[] {
-  const folder = getFolder(folderPath);
+function buildRowsFor(children: readonly TAbstractFile[], nameTemplates: NameTemplates = {}): FlattenPreviewRow[] {
+  const folder = getFolder(FLATTENED_FOLDER_PATH);
   const parentFolder = ensureNonNullable(folder.parent);
   return buildFlattenPreviewRows({
     app,
@@ -83,7 +88,7 @@ describe('buildFlattenPreviewRows', () => {
     });
 
     // The vault decides the order children come back in; only the mapping matters here.
-    const rows = buildRows('parent/a');
+    const rows = buildRows();
     expect(rows).toHaveLength(2);
     expect(rows).toContainEqual({ isRenamed: false, name: 'note.md', targetName: 'note.md' });
     expect(rows).toContainEqual({ isRenamed: false, name: 'sub', targetName: 'sub' });
@@ -95,7 +100,7 @@ describe('buildFlattenPreviewRows', () => {
       'parent/note.md': 'existing'
     });
 
-    expect(buildRows('parent/a')).toStrictEqual([{ isRenamed: true, name: 'note.md', targetName: 'note 1.md' }]);
+    expect(buildRows()).toStrictEqual([{ isRenamed: true, name: 'note.md', targetName: 'note 1.md' }]);
   });
 
   it('should not hand the same name to two children', () => {
@@ -107,7 +112,7 @@ describe('buildFlattenPreviewRows', () => {
       'parent/note.md': 'existing'
     });
 
-    const rows = buildRows('parent/a');
+    const rows = buildRows();
     const targetNames = rows.map((row) => row.targetName);
     expect(new Set(targetNames).size).toBe(rows.length);
     // Exactly what the flatten itself produces: the first rename occupies `note 1.md`, so the second child
@@ -122,14 +127,14 @@ describe('buildFlattenPreviewRows', () => {
       'parent/sub/other.md': 'other'
     });
 
-    expect(buildRows('parent/a')).toStrictEqual([{ isRenamed: true, name: 'sub', targetName: 'sub 1' }]);
+    expect(buildRows()).toStrictEqual([{ isRenamed: true, name: 'sub', targetName: 'sub 1' }]);
   });
 
   it('should return no rows for an empty folder', async () => {
     initApp({ 'parent/keep.md': 'keep' });
     await app.vault.createFolder('parent/a');
 
-    expect(buildRows('parent/a')).toStrictEqual([]);
+    expect(buildRows()).toStrictEqual([]);
   });
 
   it('should append a folder\'s de-duplication counter after a dot in its name, not inside it', () => {
@@ -140,7 +145,7 @@ describe('buildFlattenPreviewRows', () => {
       'parent/v1.2/other.md': 'other'
     });
 
-    expect(buildRows('parent/a')).toStrictEqual([{ isRenamed: true, name: 'v1.2', targetName: 'v1.2 1' }]);
+    expect(buildRows()).toStrictEqual([{ isRenamed: true, name: 'v1.2', targetName: 'v1.2 1' }]);
   });
 
   it('should name a deeply nested item by its path relative to the flattened folder', () => {
@@ -151,7 +156,7 @@ describe('buildFlattenPreviewRows', () => {
       'parent/a/y/x/other.md': 'other'
     });
 
-    const rows = buildRowsFor('parent/a', collectFoldersRecursively(getFolder('parent/a')));
+    const rows = buildRowsFor(collectFoldersRecursively(getFolder('parent/a')));
     expect(rows).toContainEqual({ isRenamed: false, name: 'b', targetName: 'b' });
     // A nested item's `name` is its relative path, so it differs from `targetName` without being renamed —
     // which is exactly why the dialog's arrow reads `isRenamed` instead of comparing the two.
@@ -171,7 +176,7 @@ describe('buildFlattenPreviewRows', () => {
       'parent/a/c/deep.md': 'deep'
     });
 
-    const rows = buildRows('parent/a', { folderNameTemplate: '{{index}}. {{safeFolderName}}' });
+    const rows = buildRows({ folderNameTemplate: '{{index}}. {{safeFolderName}}' });
     const targetNames = rows.map((row) => row.targetName);
     expect(new Set(targetNames)).toStrictEqual(new Set(['4. b', '5. c']));
     expect(rows.every((row) => row.isRenamed)).toBe(true);
@@ -183,7 +188,7 @@ describe('buildFlattenPreviewRows', () => {
       'parent/a/3. b/deep.md': 'deep'
     });
 
-    expect(buildRows('parent/a', { folderNameTemplate: '{{index}}. {{safeFolderName}}' }))
+    expect(buildRows({ folderNameTemplate: '{{index}}. {{safeFolderName}}' }))
       .toStrictEqual([{ isRenamed: true, name: '3. b', targetName: '8. b' }]);
   });
 
@@ -197,7 +202,7 @@ describe('buildFlattenPreviewRows', () => {
       'parent/a/note.md': 'note'
     });
 
-    const rows = buildRows('parent/a', { noteNameTemplate: '{{index}}. {{safeName}}' });
+    const rows = buildRows({ noteNameTemplate: '{{index}}. {{safeName}}' });
     expect(rows).toContainEqual({ isRenamed: true, name: 'note.md', targetName: '6. note.md' });
     expect(rows).toContainEqual({ isRenamed: false, name: 'diagram.png', targetName: 'diagram.png' });
   });

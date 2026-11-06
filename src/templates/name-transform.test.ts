@@ -106,7 +106,7 @@ describe('applyNameTransform', () => {
     const app = createApp({ files: { 'newest.md': 'newest', 'recent.md': 'recent' } });
     const templater = installTemplater(app);
     templater.parseTemplate.mockResolvedValue('A - B');
-    touch(app, 'newest.md', LATER_MTIME);
+    touch(app, 'newest.md');
     installRecentFiles(app, ['recent.md']);
     vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
 
@@ -133,7 +133,7 @@ describe('applyNameTransform', () => {
     const app = createApp({ files: { 'newest.md': 'newest', 'older.md': 'older' } });
     const templater = installTemplater(app);
     templater.parseTemplate.mockResolvedValue('A - B');
-    touch(app, 'newest.md', LATER_MTIME);
+    touch(app, 'newest.md');
     installRecentFiles(app, []);
     vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
 
@@ -149,8 +149,8 @@ describe('applyNameTransform', () => {
     const app = createApp({ files: { 'b.md': 'b', 'a.md': 'a' } });
     const templater = installTemplater(app);
     templater.parseTemplate.mockResolvedValue('A - B');
-    touch(app, 'a.md', LATER_MTIME);
-    touch(app, 'b.md', LATER_MTIME);
+    touch(app, 'a.md');
+    touch(app, 'b.md');
     installRecentFiles(app, []);
     vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
 
@@ -303,6 +303,6 @@ function installTemplater(app: AppOriginal): TemplaterMock {
   return templaterMock;
 }
 
-function touch(app: AppOriginal, path: string, mtime: number): void {
-  getFile(app, path).stat.mtime = mtime;
+function touch(app: AppOriginal, path: string): void {
+  getFile(app, path).stat.mtime = LATER_MTIME;
 }

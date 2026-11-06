@@ -33,6 +33,7 @@ import { ConfirmDialogModal } from '../../ui/confirm-dialog-modal.ts';
 import { openConfirmDialogModal } from '../../ui/open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../../ui/operation-notices.ts';
@@ -256,7 +257,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
             rootHeadingLine: run.rootHeadingLine
           });
         } finally {
-          progressNotice?.[Symbol.dispose]();
+          disposeOperationProgressNotice(progressNotice);
           /*
            * The recursion walks the leaf down through every note it creates, so it ends up parked on the
            * deepest one. Bring the user back to the note they invoked the command on, whether the run
@@ -394,11 +395,11 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
    * @returns The folder the root pass would create its notes in.
    */
   private resolveDefaultRootFolder(sourceFile: TFile): TFolder {
-    if (this.pluginSettingsComponent.settings.shouldSplitRecursivelyIntoDefaultNewNoteFolder) {
-      return this.app.fileManager.getNewFileParent(sourceFile.path);
-    }
+    const folder = this.pluginSettingsComponent.settings.shouldSplitRecursivelyIntoDefaultNewNoteFolder
+      ? this.app.fileManager.getNewFileParent(sourceFile.path)
+      : sourceFile.parent;
     /* v8 ignore next -- a note in the vault always has a parent folder. */
-    return sourceFile.parent ?? this.app.vault.getRoot();
+    return folder ?? this.app.vault.getRoot();
   }
 
   /**

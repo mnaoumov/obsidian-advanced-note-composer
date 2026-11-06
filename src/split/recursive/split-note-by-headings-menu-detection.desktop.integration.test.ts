@@ -87,19 +87,19 @@ describe('better split detection on right click (issue #94)', () => {
         const file = await ensureMarkdownFile(NOTE_PATH, NOTE_CONTENT);
 
         // Flat menu items (no submenu) so the split items are directly in `menu.items`.
-        await setToggle('Should add commands to submenu', false);
+        await setShouldAddCommandsToSubmenu(false);
 
         // Cursor inside the H2 (Section A) section: the H2 item is shown and the palette command available.
-        const insideSectionA = await probe(file, SECTION_A_BODY_LINE, SECTION_A_BODY_LINE);
+        const insideSectionA = await probe(SECTION_A_BODY_LINE, SECTION_A_BODY_LINE);
         // A real selection spanning inside the same H2 section: still shown.
-        const selectionInSectionA = await probe(file, SECTION_A_BODY_LINE, SECTION_A_BODY_LINE, 4);
+        const selectionInSectionA = await probe(SECTION_A_BODY_LINE, SECTION_A_BODY_LINE, 4);
         // Cursor in the H1 body before any H2: the H2 item is hidden/unavailable, the H1 item stays shown.
-        const insideChapterOnly = await probe(file, CHAPTER_BODY_LINE, CHAPTER_BODY_LINE);
+        const insideChapterOnly = await probe(CHAPTER_BODY_LINE, CHAPTER_BODY_LINE);
         // Cursor in the intro, under no heading at all: neither the H1 nor the H2 item is shown.
-        const insideIntro = await probe(file, INTRO_LINE, INTRO_LINE);
+        const insideIntro = await probe(INTRO_LINE, INTRO_LINE);
 
         // Restore the shared instance to a clean default state.
-        await setToggle('Should add commands to submenu', true);
+        await setShouldAddCommandsToSubmenu(true);
 
         return {
           insideChapterOnly,
@@ -108,8 +108,8 @@ describe('better split detection on right click (issue #94)', () => {
           selectionInSectionA
         };
 
-        async function probe(targetFile: TFile, fromLine: number, toLine: number, toCh = 0): Promise<ProbeResult> {
-          const editor = await openAndGetEditor(targetFile);
+        async function probe(fromLine: number, toLine: number, toCh = 0): Promise<ProbeResult> {
+          const editor = await openAndGetEditor(file);
           editor.setSelection({ ch: 0, line: fromLine }, { ch: toCh, line: toLine });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -162,12 +162,13 @@ describe('better split detection on right click (issue #94)', () => {
           return view.editor;
         }
 
-        async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
+        async function setShouldAddCommandsToSubmenu(shouldEnable: boolean): Promise<void> {
+          const SETTING_NAME = 'Should add commands to submenu';
           const settingTab = await openSettingTab();
-          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
+          const settingItem = await findSettingItem({ app, name: SETTING_NAME, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');
           if (!(toggleEl instanceof HTMLElement)) {
-            throw new TypeError(`"${settingName}" toggle was not found.`);
+            throw new TypeError(`"${SETTING_NAME}" toggle was not found.`);
           }
           const isEnabled = toggleEl.classList.contains('is-enabled');
           if (isEnabled !== shouldEnable) {

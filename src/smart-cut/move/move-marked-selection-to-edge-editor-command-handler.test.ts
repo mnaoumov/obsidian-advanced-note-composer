@@ -113,10 +113,10 @@ function createMockEditor(value = 'one two three'): Editor {
   });
 }
 
-function createMockFile(path: string, mtime = SOURCE_MTIME): TFile {
+function createMockFile(path: string): TFile {
   return strictProxy<TFile>({
     path,
-    stat: strictProxy({ mtime })
+    stat: strictProxy({ mtime: SOURCE_MTIME })
   });
 }
 
