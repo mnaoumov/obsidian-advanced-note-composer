@@ -469,6 +469,7 @@ describe('PluginSettingsTab', () => {
       'Attachment extensions'
     ]);
     expect(containers.get('Merge file')).toEqual([
+      'Should merge at the link to the source by default',
       'Should open note after merge',
       'Should move attachments when merging a file'
     ]);

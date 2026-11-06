@@ -111,7 +111,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function createComposer(settingsOverrides?: Partial<PluginSettings>, isNewTargetFile = false): MergeComposer {
+function createComposer(settingsOverrides?: Partial<PluginSettings>, isNewTargetFile = false, shouldMergeAtSourceLink = false): MergeComposer {
   return new MergeComposer({
     app,
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
@@ -119,6 +119,7 @@ function createComposer(settingsOverrides?: Partial<PluginSettings>, isNewTarget
     pluginNoticeComponent: createPluginNoticeComponentStub(),
     pluginSettingsComponent: createPluginSettingsComponentStub(settingsOverrides),
     resourceLockComponent,
+    shouldMergeAtSourceLink,
     sourceFile: getSourceFile(),
     targetFile: getTargetFile()
   });
@@ -168,6 +169,49 @@ function getTargetFile(): TFile {
 }
 
 describe('MergeComposer', () => {
+  // Discussion #310: the way back from an extract is a merge into the place the extract's residual link holds.
+  describe('merge at the link to the source', () => {
+    it('should put the source in place of its sole link, dropping the template\'s padding line breaks', async () => {
+      await app.vault.modify(getTargetFile(), 'before\n[[source]]\nafter');
+
+      await createComposer({ mergeTemplate: '\n\n{{content}}\n\n' }, false, true).mergeFile();
+
+      expect(extractFrontmatter(await app.vault.adapter.read('target.md')).content).toBe('before\nsource body\nafter');
+      expect(await app.vault.adapter.exists('source.md')).toBe(false);
+    });
+
+    it('should replace an embed the same way', async () => {
+      await app.vault.modify(getTargetFile(), 'before\n![[source]]\nafter');
+
+      await createComposer(undefined, false, true).mergeFile();
+
+      expect(extractFrontmatter(await app.vault.adapter.read('target.md')).content).toBe('before\nsource body\nafter');
+    });
+
+    it('should append as usual when the target links to the source twice', async () => {
+      app.vault.setConfig('newLinkFormat', 'absolute');
+      app.vault.setConfig('useMarkdownLinks', false);
+      await app.vault.modify(getTargetFile(), '[[source]]\n[[source]]');
+
+      await createComposer(undefined, false, true).mergeFile();
+
+      const content = await app.vault.adapter.read('target.md');
+      expect(content.endsWith('source body')).toBe(true);
+    });
+
+    it('should leave the link alone when merging at the link is off', async () => {
+      app.vault.setConfig('newLinkFormat', 'absolute');
+      app.vault.setConfig('useMarkdownLinks', false);
+      await app.vault.modify(getTargetFile(), 'before\n[[source]]\nafter');
+
+      await createComposer(undefined, false, false).mergeFile();
+
+      const content = await app.vault.adapter.read('target.md');
+      expect(extractFrontmatter(content).content.startsWith('before\n')).toBe(true);
+      expect(content.endsWith('source body')).toBe(true);
+    });
+  });
+
   describe('mergeFile', () => {
     it('should retain incoming properties with Replace and a template without frontmatter', async () => {
       await app.vault.modify(getSourceFile(), '---\nsourceOnly: incoming\n---\nsource body');

@@ -5,6 +5,7 @@ import type {
 } from 'obsidian';
 
 import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { parseLinktext } from 'obsidian';
 
 /**
@@ -67,8 +68,8 @@ export async function findResidualSourceLink(params: FindResidualSourceLinkParam
     return null;
   }
 
-  const [reference] = sourceReferences;
-  if (!reference || parseLinktext(reference.link).subpath !== '') {
+  const reference = ensureNonNullable(sourceReferences[0]);
+  if (parseLinktext(reference.link).subpath !== '') {
     return null;
   }
 

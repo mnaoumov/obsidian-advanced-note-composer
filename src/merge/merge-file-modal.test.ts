@@ -137,6 +137,10 @@ interface SelectItemResult {
   readonly targetFile: TFile;
 }
 
+vi.mock('./residual-source-link.ts', () => ({
+  findResidualSourceLink: vi.fn().mockResolvedValue({ endOffset: 10, line: 0, original: '[[source]]', startOffset: 0 })
+}));
+
 vi.mock('./merge-item-selector.ts', () => {
   class MockMergeItemSelector {
     public selectItem(): Promise<SelectItemResult> {
@@ -154,10 +158,12 @@ interface MockPlugin {
 
 interface MockPluginOptions {
   readonly shouldAskBeforeMerging?: boolean;
+  readonly shouldMergeAtSourceLinkByDefault?: boolean;
 }
 
 function createMockPlugin(options?: MockPluginOptions): MockPlugin {
   const shouldAskBeforeMerging = options?.shouldAskBeforeMerging ?? false;
+  const shouldMergeAtSourceLinkByDefault = options?.shouldMergeAtSourceLinkByDefault ?? false;
 
   return {
     app: strictProxy<App>({
@@ -172,7 +178,8 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
       vault: strictProxy<Vault>({
         getFileByPath: vi.fn().mockReturnValue(null),
         getFiles: vi.fn().mockReturnValue([]),
-        getMarkdownFiles: vi.fn().mockReturnValue([])
+        getMarkdownFiles: vi.fn().mockReturnValue([]),
+        read: vi.fn().mockResolvedValue('[[source]]')
       }),
 
       viewRegistry: strictProxy<ViewRegistry>({
@@ -192,6 +199,7 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
         shouldAllowSplitIntoUnresolvedPathByDefault: true,
         shouldAskBeforeMerging,
         shouldFixFootnotesByDefault: true,
+        shouldMergeAtSourceLinkByDefault,
         shouldMergeHeadingsByDefault: false,
         // Read by the picker since issue #253: with it on, an excluded note is offered as a destination.
         // It used to read `shouldAlwaysMergeExcludedItems`, which decides only what a merge swallows.
@@ -295,6 +303,18 @@ describe('prepareForMergeFile', () => {
     await vi.advanceTimersByTimeAsync(0);
     const result = await promise;
     expect(result).toBeNull();
+  });
+
+  it('should look up the residual link to name it in the confirmation when merging at the link', async () => {
+    shouldAutoSelect = true;
+    const sourceFile = createMockSourceFile();
+    const plugin = createMockPlugin({ shouldAskBeforeMerging: true, shouldMergeAtSourceLinkByDefault: true });
+
+    const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await promise).toBeNull();
+    expect(plugin.app.vault.read).toHaveBeenCalledWith(mockTargetFile);
   });
 
   it('should lock the source note while the modal is open and unlock it afterwards', async () => {
