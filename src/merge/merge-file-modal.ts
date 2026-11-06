@@ -33,10 +33,16 @@ import {
 } from '../ui/open-minimizable-modal.ts';
 import { SuggestModalBase } from '../ui/suggest-modal-base.ts';
 import { MergeItemSelector } from './merge-item-selector.ts';
+import { findResidualSourceLink } from './residual-source-link.ts';
 
 interface BuildMergeConfirmContentParams {
   readonly app: App;
   readonly fragment: DocumentFragment;
+
+  /**
+   * The zero-based line of the link the source goes in place of, or `null` for an ordinary bottom/top merge.
+   */
+  readonly residualLinkLine: null | number;
   readonly source: TAbstractFile;
   readonly target: TAbstractFile;
 }
@@ -45,6 +51,7 @@ interface ConfirmMergeParams {
   readonly abortController: AbortController;
   readonly app: App;
   readonly resourceLockComponent: ResourceLockComponent;
+  readonly shouldMergeAtSourceLink: boolean;
   readonly sourceFile: TFile;
   readonly targetFile: TFile;
 }
@@ -62,6 +69,7 @@ interface MergeFileModalResult {
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
   readonly shouldFixFootnotes: boolean;
+  readonly shouldMergeAtSourceLink: boolean;
   readonly shouldMergeHeadings: boolean;
 }
 
@@ -79,6 +87,7 @@ interface PrepareForMergeFileResult {
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
   readonly shouldFixFootnotes: boolean;
+  readonly shouldMergeAtSourceLink: boolean;
   readonly shouldMergeHeadings: boolean;
   readonly targetFile: TFile;
 }
@@ -95,6 +104,7 @@ class MergeFileModal extends SuggestModalBase {
   private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private shouldFixFootnotes: boolean;
+  private shouldMergeAtSourceLink: boolean;
   private shouldMergeHeadings: boolean;
 
   public constructor(params: MergeFileModalConstructorParams) {
@@ -104,6 +114,7 @@ class MergeFileModal extends SuggestModalBase {
 
     this.shouldFixFootnotes = this.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
     this.shouldMergeHeadings = this.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
+    this.shouldMergeAtSourceLink = this.pluginSettingsComponent.settings.shouldMergeAtSourceLinkByDefault;
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
@@ -231,6 +242,18 @@ class MergeFileModal extends SuggestModalBase {
       purpose: 'Frontmatter merge strategy'
     });
 
+    builder.addCheckbox({
+      key: '6',
+      modifiers: ['Alt'],
+      onChange: (isChecked: boolean) => {
+        this.shouldMergeAtSourceLink = isChecked;
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.shouldMergeAtSourceLink;
+      },
+      purpose: 'Merge at the link to the source'
+    });
+
     builder.build(this, { shouldShowInstructions: this.pluginSettingsComponent.settings.shouldShowModalInstructions });
   }
 
@@ -257,6 +280,7 @@ class MergeFileModal extends SuggestModalBase {
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: this.shouldFixFootnotes,
+      shouldMergeAtSourceLink: this.shouldMergeAtSourceLink,
       shouldMergeHeadings: this.shouldMergeHeadings
     });
   }
@@ -314,6 +338,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
       shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: result.shouldFixFootnotes,
+      shouldMergeAtSourceLink: result.shouldMergeAtSourceLink,
       shouldMergeHeadings: result.shouldMergeHeadings,
       targetFile: selectItemResult.targetFile
     };
@@ -326,6 +351,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
       abortController,
       app: params.app,
       resourceLockComponent: params.resourceLockComponent,
+      shouldMergeAtSourceLink: prepareForMergeFileResult.shouldMergeAtSourceLink,
       sourceFile: params.sourceFile,
       targetFile: prepareForMergeFileResult.targetFile
     });
@@ -364,6 +390,7 @@ async function buildMergeConfirmContent(params: BuildMergeConfirmContentParams):
   const {
     app,
     fragment,
+    residualLinkLine,
     source,
     target
   } = params;
@@ -384,6 +411,16 @@ async function buildMergeConfirmContent(params: BuildMergeConfirmContentParams):
   appendCodeBlock(fragment, 'Target');
   fragment.appendText(': ');
   fragment.append(await renderInternalLink({ app, pathOrAbstractFile: target }));
+  if (residualLinkLine === null) {
+    return;
+  }
+
+  fragment.createEl('br');
+  fragment.createEl('br');
+  appendCodeBlock(fragment, 'Source');
+  fragment.appendText(` will go in place of its link on line ${String(residualLinkLine + 1)} of `);
+  appendCodeBlock(fragment, 'Target');
+  fragment.appendText('.');
 }
 
 async function confirmMerge(params: ConfirmMergeParams): Promise<ConfirmDialogModalResult> {
@@ -397,11 +434,14 @@ async function confirmMerge(params: ConfirmMergeParams): Promise<ConfirmDialogMo
     sourceFile,
     targetFile
   } = params;
+  const residualLink = params.shouldMergeAtSourceLink
+    ? await findResidualSourceLink({ app, sourceFile, targetContent: await app.vault.read(targetFile), targetFile })
+    : null;
   return await new Promise<ConfirmDialogModalResult>((promiseResolve) => {
     openConfirmDialogModal(
       new ConfirmDialogModal({
         app,
-        buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app, fragment, source: sourceFile, target: targetFile }),
+        buildContent: (fragment): Promise<void> => buildMergeConfirmContent({ app, fragment, residualLinkLine: residualLink?.line ?? null, source: sourceFile, target: targetFile }),
         canReselectTarget: true,
         confirmButtonText: 'Merge',
         promiseResolve,

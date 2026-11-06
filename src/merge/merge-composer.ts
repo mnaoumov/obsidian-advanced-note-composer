@@ -1,4 +1,5 @@
 import type { ConsoleDebugComponent } from '@mnaoumov/obsidian-lib/components/console-debug-component';
+import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 
 import {
@@ -24,15 +25,25 @@ import { runLockedTransaction } from '../composers/locked-transaction.ts';
 import { openFileAfterOperation } from '../composers/open-after-operation.ts';
 import { movePermanentLinksKeys } from '../integrations/permanent-links.ts';
 import { Action } from '../settings/plugin-settings.ts';
+import { createMoveToken } from '../smart-cut/move/move-token.ts';
 import {
   disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
+import { findResidualSourceLink } from './residual-source-link.ts';
 
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  /**
+   * Whether the source note goes in place of the one link or embed to it the target holds (the residual an
+   * extract leaves), instead of being appended or prepended. Applies only when {@link findResidualSourceLink}
+   * finds such a reference; otherwise the merge appends or prepends as usual. Defaults to `false`, so only the
+   * single-file merge, which asks the user, ever merges at a link.
+   */
+  readonly shouldMergeAtSourceLink?: boolean;
 
   /**
    * Whether the source note's own attachments follow it into the target note's attachment folder (issue
@@ -55,6 +66,7 @@ export class MergeComposer extends ComposerBase {
   protected override readonly shouldKeepSourceTitleForNewTargetFile: boolean = true;
 
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly shouldMergeAtSourceLink: boolean;
   private readonly shouldMoveAttachments: boolean;
   private readonly shouldOpenAfterMerge: boolean;
 
@@ -65,6 +77,7 @@ export class MergeComposer extends ComposerBase {
     });
 
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.shouldMergeAtSourceLink = params.shouldMergeAtSourceLink ?? false;
     this.shouldOpenAfterMerge = params.shouldOpenAfterMerge ?? params.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge;
     this.shouldMoveAttachments = params.shouldMoveAttachments ?? params.pluginSettingsComponent.settings.shouldMoveAttachmentsWhenMergingFile;
   }
@@ -133,6 +146,9 @@ export class MergeComposer extends ComposerBase {
               vaultTransaction
             });
             sourceContent = await this.app.vault.read(this.sourceFile);
+          }
+          if (this.shouldMergeAtSourceLink) {
+            await this.replaceResidualSourceLinkWithToken(vaultTransaction);
           }
           await this.insertIntoTargetFile({ contentToInsert: sourceContent, preservedFrontmatter, vaultTransaction });
           await vaultTransaction.trash(this.sourceFile);
@@ -226,5 +242,33 @@ export class MergeComposer extends ComposerBase {
 
   protected override prepareBacklinkSubpaths(): Set<string> {
     return new Set(['']);
+  }
+
+  /**
+   * Swaps the target's residual link to the source for an insert token, so the note is written where that link
+   * was (merge at the link). Read inside the transaction, after the mtime guard, so the offsets describe the
+   * content the write replaces; the swap itself goes through the transaction, so a rollback restores the link.
+   *
+   * @param vaultTransaction - The merge's transaction.
+   */
+  private async replaceResidualSourceLinkWithToken(vaultTransaction: VaultTransaction): Promise<void> {
+    const targetContent = await this.app.vault.read(this.targetFile);
+    const residualLink = await findResidualSourceLink({
+      app: this.app,
+      sourceFile: this.sourceFile,
+      targetContent,
+      targetFile: this.targetFile
+    });
+    if (!residualLink) {
+      return;
+    }
+
+    const insertToken = createMoveToken();
+    await vaultTransaction.modify(
+      this.targetFile,
+      `${targetContent.slice(0, residualLink.startOffset)}${insertToken}${targetContent.slice(residualLink.endOffset)}`
+    );
+    this.insertToken = insertToken;
+    this.shouldTrimLineBreaksAtInsertToken = true;
   }
 }

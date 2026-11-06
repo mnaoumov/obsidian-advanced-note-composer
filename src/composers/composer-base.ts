@@ -253,9 +253,11 @@ export abstract class ComposerBase {
 
   /**
    * When set, {@link insertContent} inserts by replacing this token in the target note (see
-   * {@link ComposerBaseConstructorParamsBase.insertToken}); `null` for the append/prepend flow.
+   * {@link ComposerBaseConstructorParamsBase.insertToken}); `null` for the append/prepend flow. Not
+   * `readonly`: {@link MergeComposer} places a token only once it is inside its transaction, where it replaces
+   * the source's residual link in the target (merge at the link).
    */
-  protected readonly insertToken: null | string;
+  protected insertToken: null | string;
   protected readonly isNewTargetFile: boolean;
 
   protected readonly pluginNoticeComponent: PluginNoticeComponent;
@@ -270,6 +272,13 @@ export abstract class ComposerBase {
    */
   protected readonly shouldKeepSourceTitleForNewTargetFile: boolean = false;
   protected readonly shouldShowNotice: boolean;
+
+  /**
+   * Whether line breaks around content inserted at {@link insertToken} are dropped. A merge at the source's
+   * link puts the note on the link's own line, which already separates it from what surrounds it, so the
+   * blank lines a `Merge template` pads the content with would only add gaps.
+   */
+  protected shouldTrimLineBreaksAtInsertToken = false;
   protected readonly sourceFile: TFile;
   protected readonly targetFile: TFile;
 
@@ -774,8 +783,12 @@ export abstract class ComposerBase {
    * @returns The resulting content.
    */
   private insertContent(params: ComposerBaseInsertContentParams): string {
-    const { contentToInsert, existingContent } = params;
+    const { existingContent } = params;
+    let { contentToInsert } = params;
     if (this.insertToken !== null) {
+      if (this.shouldTrimLineBreaksAtInsertToken) {
+        contentToInsert = contentToInsert.replace(/^(?:\r?\n)+/, '').replace(/(?:\r?\n)+$/, '');
+      }
       // Move (mark → move here) flow: drop the content at the token placed at the paste cursor.
       // Remember the inserted string AND the offset it lands at, so the move flow can select exactly
       // the moved region afterwards rather than the first string that happens to look like it
