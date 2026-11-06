@@ -32,8 +32,8 @@ const DEFAULT_NAME_TEMPLATE = '{{folderName}}';
 
 let app: AppOriginal;
 
-function getFolder(path: string): TFolder {
-  return ensureNonNullable(app.vault.getFolderByPath(path));
+function getCharlieFolder(): TFolder {
+  return ensureNonNullable(app.vault.getFolderByPath('alpha/bravo/charlie'));
 }
 
 function initApp(files: Record<string, string>): void {
@@ -54,7 +54,7 @@ describe('buildFolderNoteOptions', () => {
 
   it('should name the note by rendering the template in this plugin\'s own token vocabulary', () => {
     initApp({ 'alpha/bravo/charlie/note.md': '' });
-    const folder = getFolder('alpha/bravo/charlie');
+    const folder = getCharlieFolder();
 
     // The vocabulary is what obsidian-lib deliberately does not have — it takes a callback precisely so the
     // caller's tokens stay the caller's.
@@ -66,7 +66,7 @@ describe('buildFolderNoteOptions', () => {
   it('should name every folder note alike when the template names no token', () => {
     initApp({ 'alpha/bravo/charlie/note.md': '' });
 
-    expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.InsideFolder, '!')).resolveName?.(getFolder('alpha/bravo/charlie'))).toBe('!');
+    expect(buildFolderNoteOptions(settingsFor(FolderNoteLocation.InsideFolder, '!')).resolveName?.(getCharlieFolder())).toBe('!');
   });
 });
 
@@ -78,22 +78,22 @@ describe('resolveFolderNoteConfigFromSettings', () => {
 
     expect(config.location).toBe(FolderNoteLocation.ParentFolder);
     // The rename flows call exactly this, against the folder's NEW name, to name the note it must move to.
-    expect(config.resolveName(getFolder('alpha/bravo/charlie'))).toBe('index');
+    expect(config.resolveName(getCharlieFolder())).toBe('index');
   });
 });
 
 describe('resolveFolderNoteFromSettings', () => {
-  function resolve(files: Record<string, string>, folderPath: string, settings: FolderNoteSettings): null | string {
+  function resolve(files: Record<string, string>, settings: FolderNoteSettings): null | string {
     initApp(files);
     return resolveFolderNoteFromSettings({
       app,
-      folder: getFolder(folderPath),
+      folder: getCharlieFolder(),
       settings
     })?.path ?? null;
   }
 
   it('should find a note named after its folder, inside it', () => {
-    expect(resolve({ 'alpha/bravo/charlie/charlie.md': '' }, 'alpha/bravo/charlie', settingsFor(FolderNoteLocation.InsideFolder))).toBe(
+    expect(resolve({ 'alpha/bravo/charlie/charlie.md': '' }, settingsFor(FolderNoteLocation.InsideFolder))).toBe(
       'alpha/bravo/charlie/charlie.md'
     );
   });
@@ -104,17 +104,16 @@ describe('resolveFolderNoteFromSettings', () => {
         'alpha/bravo/charlie/other.md': '',
         'alpha/bravo/index.md': ''
       },
-      'alpha/bravo/charlie',
       settingsFor(FolderNoteLocation.ParentFolder, 'index')
     )).toBe('alpha/bravo/index.md');
   });
 
   it('should find nothing when this vault has no folder notes', () => {
-    expect(resolve({ 'alpha/bravo/charlie/charlie.md': '' }, 'alpha/bravo/charlie', settingsFor(FolderNoteLocation.None))).toBeNull();
+    expect(resolve({ 'alpha/bravo/charlie/charlie.md': '' }, settingsFor(FolderNoteLocation.None))).toBeNull();
   });
 
   it('should find nothing when the folder simply has no folder note, and create nothing looking', () => {
-    expect(resolve({ 'alpha/bravo/charlie/other.md': '' }, 'alpha/bravo/charlie', settingsFor(FolderNoteLocation.InsideFolder))).toBeNull();
+    expect(resolve({ 'alpha/bravo/charlie/other.md': '' }, settingsFor(FolderNoteLocation.InsideFolder))).toBeNull();
   });
 });
 

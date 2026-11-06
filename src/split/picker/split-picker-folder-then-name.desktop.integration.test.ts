@@ -94,7 +94,7 @@ describe('choosing the folder before the name (issue #261)', () => {
 
           await ensureFolder(FOLDER_PATH);
           await resetFile(DECOY_PATH, 'decoy body\n');
-          await trashIfExists(EXPECTED_PATH);
+          await trashExpectedNoteIfExists();
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
 
           const editor = await openAndGetEditor(source);
@@ -150,7 +150,7 @@ describe('choosing the folder before the name (issue #261)', () => {
           const createdContent = createdNote instanceof obsidianModule.TFile ? await app.vault.read(createdNote) : '';
           const decoyFile = await resetFileHandle(DECOY_PATH);
           const decoyContent = await app.vault.read(decoyFile);
-          await trashIfExists(EXPECTED_PATH);
+          await trashExpectedNoteIfExists();
 
           return {
             createdContent,
@@ -256,8 +256,8 @@ describe('choosing the folder before the name (issue #261)', () => {
           createButton.click();
         }
 
-        async function trashIfExists(path: string): Promise<void> {
-          const existing = app.vault.getAbstractFileByPath(path);
+        async function trashExpectedNoteIfExists(): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(EXPECTED_PATH);
           if (existing) {
             await app.fileManager.trashFile(existing);
           }

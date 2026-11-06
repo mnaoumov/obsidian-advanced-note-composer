@@ -55,13 +55,13 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           const shippedDefaultBottom = await markAndMoveToEdge('anc-179-default-bottom', 'bottom');
 
           // The reporter's configuration, which merges at the other end.
-          await setTemplate('Smart cut & paste template', '{{content}}\n');
+          await setSmartCutTemplate('{{content}}\n');
           const reporterTemplateBottom = await markAndMoveToEdge('anc-179-reporter-bottom', 'bottom');
 
           return { reporterTemplateBottom, shippedDefaultBottom, shippedDefaultTop };
         } finally {
           // Leave the shared instance in its default (empty-template) state.
-          await setTemplate('Smart cut & paste template', '');
+          await setSmartCutTemplate('');
         }
 
         async function markAndMoveToEdge(baseName: string, edge: 'bottom' | 'top'): Promise<string> {
@@ -91,7 +91,8 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           return editorValueFor(targetPath) ?? '';
         }
 
-        async function setTemplate(settingName: string, value: string): Promise<void> {
+        async function setSmartCutTemplate(value: string): Promise<void> {
+          const settingName = 'Smart cut & paste template';
           app.setting.open();
           app.setting.openTabById(pluginId);
           const settingTab = app.setting.pluginTabs.find((tab) => tab.id === pluginId);

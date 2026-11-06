@@ -168,9 +168,9 @@ describe('swap confirmation dialog', () => {
           await chooseInPicker('swap-d/shared');
 
           // The confirmation dialog appears; cancel it.
-          await waitUntil({ predicate: () => findButton('Cancel') !== null });
+          await waitUntil({ predicate: () => findCancelButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          findButton('Cancel')?.click();
+          findCancelButton()?.click();
           await waitUntil({ predicate: () => document.querySelector('.modal-button-container') === null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
@@ -185,10 +185,10 @@ describe('swap confirmation dialog', () => {
           await didSetAskBeforeSwapping(isOriginalShouldAsk);
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findCancelButton(): HTMLButtonElement | null {
           // Every control of the confirmation dialog sits in its one action row (issue #281).
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Cancel') {
               return el;
             }
           }
@@ -279,9 +279,9 @@ describe('swap confirmation dialog', () => {
 
           await chooseInPicker('swap-file-tgt.md');
 
-          await waitUntil({ predicate: () => findButton('Swap') !== null });
+          await waitUntil({ predicate: () => findSwapButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          findButton('Swap')?.click();
+          findSwapButton()?.click();
 
           // The files trade paths, so each path ends up holding the other file's content.
           await waitUntil({ predicate: () => app.vault.getAbstractFileByPath('swap-file-src.md') !== null });
@@ -294,10 +294,10 @@ describe('swap confirmation dialog', () => {
           await didSetAskBeforeSwapping(isOriginalShouldAsk);
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findSwapButton(): HTMLButtonElement | null {
           // Every control of the confirmation dialog sits in its one action row (issue #281).
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Swap') {
               return el;
             }
           }

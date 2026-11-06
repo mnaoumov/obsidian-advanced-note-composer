@@ -995,7 +995,6 @@ describe('shouldAskBeforeCreatingFolder', () => {
   });
 });
 
-type AddComponentFunction = (callback: (component: BaseComponent) => void) => Setting;
 type AddComponentMethod = 'addDropdown' | 'addText' | 'addToggle';
 
 /**
@@ -1151,6 +1150,7 @@ function spyOnAdd<T extends BaseComponent>(
   method: AddComponentMethod,
   registry: NamedComponent<T>[]
 ): void {
+  type AddComponentFunction = (callback: (component: BaseComponent) => void) => Setting;
   const prototype = castTo<Record<AddComponentMethod, AddComponentFunction>>(Setting.prototype);
   const original = prototype[method];
   vi.spyOn(prototype, method).mockImplementation(function addComponentSpy(this: Setting, callback: (component: BaseComponent) => void): Setting {

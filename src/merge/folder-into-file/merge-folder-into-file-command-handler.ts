@@ -148,20 +148,18 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
 
   protected override canExecuteFolder(folder: TFolder): boolean {
     super.canExecuteFolder(folder);
-    // Cheapest answers first: both are a property of the folder itself, and they spare the subtree walk
-    // below on every folder-menu open.
-    if (folder.isRoot() || isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent })) {
-      return false;
-    }
     /*
+     * Cheapest answers first: the first two are a property of the folder itself, and they spare the subtree
+     * walk below on every folder-menu open.
+     *
      * Issue #298: a folder that IS an attachment unit, or lies inside one, is part of a single attachment.
      * Merging its notes away is the one thing that cannot keep the unit whole, so the command is not offered
      * there. A folder that merely HOLDS unit folders keeps the command: the walk below treats each of them
      * as one attachment.
      */
-    if (isInsideAttachmentUnitFolder(this.app, folder)) {
-      return false;
-    }
+    const isRuledOut = folder.isRoot()
+      || isFileOrFolderCommandBlocked({ abstractFile: folder, commandCategory: CommandCategory.Merge, pluginSettingsComponent: this.pluginSettingsComponent })
+      || isInsideAttachmentUnitFolder(this.app, folder);
     /*
      * Issue #209: a folder holding a single mergeable note has nothing to merge INTO anything — the run
      * would just reproduce that note under the folder's name — and a folder holding none has nothing at
@@ -170,7 +168,7 @@ export class MergeFolderIntoFileCommandHandler extends FolderCommandHandler {
      * note (same discipline as `FlattenFolderCommandHandler`, issue #185), and it stops at the threshold
      * rather than walking a large subtree to learn a fact two notes already settle.
      */
-    return countMergeableNotes(folder, this.getWalkPredicates(), MIN_MERGEABLE_NOTE_COUNT) >= MIN_MERGEABLE_NOTE_COUNT;
+    return !isRuledOut && countMergeableNotes(folder, this.getWalkPredicates(), MIN_MERGEABLE_NOTE_COUNT) >= MIN_MERGEABLE_NOTE_COUNT;
   }
 
   protected override async executeFolder(folder: TFolder): Promise<void> {

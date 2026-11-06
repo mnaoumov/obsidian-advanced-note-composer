@@ -88,7 +88,7 @@ interface TestableHandler {
 
 let bulkOperationRunnerStub: BulkOperationRunnerStub;
 let capturedConfirmParams: CapturedConfirmParams | null = null;
-let confirmResult: ConfirmDialogModalResult = createConfirmResult(false);
+let confirmResult: ConfirmDialogModalResult = createConfirmResult();
 
 vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
   createFragmentAsync: vi.fn()
@@ -164,11 +164,11 @@ function createCache(headings: HeadingCache[]): CachedMetadataEx {
   return strictProxy<CachedMetadataEx>({ headings });
 }
 
-function createConfirmResult(isConfirmed: boolean, shouldAskAgain = true): ConfirmDialogModalResult {
+function createConfirmResult(): ConfirmDialogModalResult {
   return {
     insertMode: InsertMode.Append,
-    isConfirmed,
-    shouldAskAgain,
+    isConfirmed: false,
+    shouldAskAgain: true,
     shouldReselectTarget: false,
     shouldSwitchToSmartCut: false
   };
@@ -313,7 +313,7 @@ describe('SplitHeadingRecursivelyEditorCommandHandler', () => {
     vi.clearAllMocks();
     useRealFragments();
     capturedConfirmParams = null;
-    confirmResult = createConfirmResult(false);
+    confirmResult = createConfirmResult();
     MockSplitComposer.prototype.splitFile = vi.fn().mockResolvedValue(undefined);
     mockGetEnclosingHeadingLine.mockReturnValue(4);
     mockGetSelectionUnderHeading.mockReturnValue({

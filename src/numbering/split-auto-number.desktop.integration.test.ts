@@ -633,7 +633,7 @@ async function runSplitScenario<ReadInput extends object, ReadResult>(params: Ru
         }
         return {
           isContentMissing,
-          isLinkMissing: expected.link ? !Object.keys(app.metadataCache.resolvedLinks[expected.link.from] ?? {}).includes(expected.link.to) : false,
+          isLinkMissing: !!expected.link && !Object.keys(app.metadataCache.resolvedLinks[expected.link.from] ?? {}).includes(expected.link.to),
           missingPaths: expected.paths.filter((path) => !(app.vault.getAbstractFileByPath(path) instanceof obsidianModule.TFile))
         };
       },

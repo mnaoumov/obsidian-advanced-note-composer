@@ -632,14 +632,14 @@ function resolveDateTimeToken(key: string, format: string | undefined): string {
  * @returns The folder tokens' values, with `index` `null` when the folder carries no number.
  */
 function resolveTargetFolderTokens(params: ResolveTemplateTokensParams): TargetFolderTokens {
-  const { folderNameTemplate, folderPath, targetFile } = params;
+  // An absent template describes no numbered name at all, so `parseNumberedName` reports the name whole
+  // with no index — which IS "this folder is not numbered".
+  const { folderNameTemplate = '', folderPath, targetFile } = params;
   const folderName = folderPath === undefined ? getParentFolderName(targetFile) : basename(folderPath);
   const { baseName, index } = parseNumberedName({
     baseTokenKey: FOLDER_BASE_TOKEN_KEY,
     name: folderName,
-    // An absent template describes no numbered name at all, so `parseNumberedName` reports the name whole
-    // with no index — which IS "this folder is not numbered".
-    nameTemplate: folderNameTemplate ?? ''
+    nameTemplate: folderNameTemplate
   });
 
   return {

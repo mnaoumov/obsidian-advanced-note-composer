@@ -86,11 +86,11 @@ describe('merge folder skips ignored files (issue #72)', () => {
           await chooseFolderInPicker('ign-dst');
           await waitUntil({
             message: 'merge confirm button did not appear',
-            predicate: () => findButton('Merge') !== null,
+            predicate: () => findMergeButton() !== null,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
-          findButton('Merge')?.click();
+          findMergeButton()?.click();
 
           // The normal file lands in the target; the ignored file never produces a target entry.
           await waitUntil({
@@ -129,9 +129,9 @@ describe('merge folder skips ignored files (issue #72)', () => {
           return null;
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findMergeButton(): HTMLButtonElement | null {
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Merge') {
               return el;
             }
           }

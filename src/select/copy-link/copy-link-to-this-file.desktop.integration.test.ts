@@ -1,3 +1,4 @@
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -39,9 +40,7 @@ describe('copy link to this file (issue #308)', () => {
         const state: CopyState = { copied: null };
         clipboard.writeText = (text: string): Promise<void> => {
           state.copied = text;
-          return new Promise<void>((resolve) => {
-            resolve();
-          });
+          return noopAsync();
         };
         try {
           app.commands.executeCommandById(`${pluginId}:copy-link-to-this-file`);

@@ -74,15 +74,12 @@ export class SplitHeadingRecursivelyEditorCommandHandler extends SplitRecursivel
       return false;
     }
     const headingLine = getEnclosingHeadingLine({ app: this.app, cursorLine: editor.getCursor().line, file });
-    if (headingLine === null) {
-      return false;
-    }
     /*
      * A heading with no sub-headings is deliberately still offered: it produces `X/X.md`, which is exactly
      * what the whole-note recursive split does when it reaches a leaf. What IS checked is that the heading
      * owns a resolvable range, so the command is never offered where the split would only report failure.
      */
-    return getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine }) !== null;
+    return headingLine !== null && getSelectionUnderHeading({ app: this.app, editor, file, lineNumber: headingLine }) !== null;
   }
 
   protected override resolveRun(editor: Editor, file: TFile, cache: CachedMetadata): null | RecursiveSplitRun {

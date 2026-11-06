@@ -31,7 +31,7 @@ Obsidian's core [`Note composer`](https://help.obsidian.md/plugins/note-composer
 
 **The documentation is an interactive demo vault.** Every feature has a note that explains what it does and why you would want it, and walks you through it step by step — most of them with a button that sets the relevant setting for you so you can try it immediately.
 
-**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with nothing installed.
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on `GitHub` with nothing installed.
 
 A copy of the vault ships with every release. You can access it via any of the following:
 
@@ -57,7 +57,7 @@ Each row is one family of commands; its link opens the demo-vault section that w
 | [UI](<./demo-vault/10 UI/README.md>) | Minimizable dialogs, a changeable target, operation notices, and command menu placement |
 | [Select](<./demo-vault/11 Selection/README.md>) | Commands that only set the selection, for the phone, where selecting by hand fails |
 
-On desktop, for a vault kept in a git repository, the opt-in `Should commit bulk operations` setting records each folder-wide command and each recursive split as its own git commit, so `git revert` undoes it, and the `Undo a bulk operation...` command does that for you. See [Settings](<./demo-vault/10 UI/36 Settings.md>).
+On desktop, for a vault kept in a `git` repository, the opt-in `Should commit bulk operations` setting records each folder-wide command and each recursive split as its own `git` commit, so `git revert` undoes it, and the `Undo a bulk operation...` command does that for you. See [Settings](<./demo-vault/10 UI/36 Settings.md>).
 
 ## See also
 

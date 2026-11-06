@@ -14,6 +14,7 @@ import { PluginNoticeMode } from '@mnaoumov/obsidian-lib/components/plugin-notic
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
+import { dispose } from '@mnaoumov/typescript-lib/disposable';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 import { normalizeOptionalProperties } from '@mnaoumov/typescript-lib/object-utils';
 import { resolveValue } from '@mnaoumov/typescript-lib/value-provider';
@@ -214,11 +215,11 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
   const {
     app,
     createdPathsOrAbstractFiles,
-    isLoading,
+    isLoading = false,
     onTargetLinkClick,
     pluginSettingsComponent,
-    preposition,
-    shouldLinkSource,
+    preposition = 'into',
+    shouldLinkSource = true,
     sourcePathOrAbstractFile,
     suffix,
     targetPathOrAbstractFile,
@@ -227,7 +228,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
 
   return createFragmentAsync(async (fragmentEl) => {
     fragmentEl.appendText(`${verb} `);
-    if (shouldLinkSource ?? true) {
+    if (shouldLinkSource) {
       fragmentEl.append(await renderOperationNoticeLink({ app, pathOrAbstractFile: sourcePathOrAbstractFile, pluginSettingsComponent }));
     } else {
       // Deliberately NOT `getPath()`: that resolves the path against the vault, and the whole reason this
@@ -235,7 +236,7 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
       appendCodeBlock(fragmentEl, typeof sourcePathOrAbstractFile === 'string' ? sourcePathOrAbstractFile : sourcePathOrAbstractFile.path);
     }
     if (targetPathOrAbstractFile !== undefined) {
-      fragmentEl.appendText(` ${preposition ?? 'into'} `);
+      fragmentEl.appendText(` ${preposition} `);
       fragmentEl.append(
         await renderOperationNoticeLink(normalizeOptionalProperties<RenderOperationNoticeLinkParams>({
           app,
@@ -254,12 +255,28 @@ export function buildOperationNoticeContent(params: BuildOperationNoticeContentP
       fragmentEl,
       pluginSettingsComponent
     });
-    if (isLoading ?? false) {
+    if (isLoading) {
       fragmentEl.createDiv('is-loading');
       return;
     }
     fragmentEl.appendText('.');
   });
+}
+
+/**
+ * Ends a progress notice, if one was shown.
+ *
+ * The show*ProgressNotice functions answer
+ull when operation notices are turned off, so every
+ * operation ends with this one call instead of a null check of its own at each site.
+ *
+ * @param progressNotice - The notice to end, or
+ull when none was shown.
+ */
+export function disposeOperationProgressNotice(progressNotice: Disposable | null): void {
+  if (progressNotice) {
+    dispose(progressNotice);
+  }
 }
 
 /**

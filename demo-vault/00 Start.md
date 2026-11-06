@@ -1,6 +1,6 @@
 # Start here
 
-This is an [Obsidian](https://obsidian.md/) vault that documents the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-advanced-note-composer/) plugin by demonstrating it. Every feature has a note that explains what it is for, and most give you a button that runs it for real. Read it here on GitHub, or open it in Obsidian and click things.
+This is an [Obsidian](https://obsidian.md/) vault that documents the [Advanced Note Composer](https://github.com/mnaoumov/obsidian-advanced-note-composer/) plugin by demonstrating it. Every feature has a note that explains what it is for, and most give you a button that runs it for real. Read it here on `GitHub`, or open it in Obsidian and click things.
 
 Obsidian's core `Note composer` moves text between notes, but it moves it bluntly: relative links come out pointing at nothing, a heading whose title contains a character a file name cannot hold is refused outright, and extracted text is always appended to the target. This plugin fixes those, and then goes much further — whole folders can be merged, split, flattened, reordered and renamed, a note's heading hierarchy can become a folder tree, and a selection can be marked in one note and dropped at an exact cursor position in another.
 

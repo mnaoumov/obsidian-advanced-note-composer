@@ -156,20 +156,6 @@ interface MockPluginOptions {
   readonly shouldAskBeforeMerging?: boolean;
 }
 
-function createMockFile(path: string): TFile {
-  const name = path.split('/').pop() ?? '';
-  const parentPath = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
-  return strictProxy<TFile>({
-    extension: 'md',
-    name,
-    parent: strictProxy<TFolder>({
-      getParentPrefix: () => parentPath ? `${parentPath}/` : '',
-      path: parentPath
-    }),
-    path
-  });
-}
-
 function createMockPlugin(options?: MockPluginOptions): MockPlugin {
   const shouldAskBeforeMerging = options?.shouldAskBeforeMerging ?? false;
 
@@ -231,6 +217,18 @@ function createMockResourceLockComponent(): ResourceLockComponent {
   });
 }
 
+function createMockSourceFile(): TFile {
+  return strictProxy<TFile>({
+    extension: 'md',
+    name: 'source.md',
+    parent: strictProxy<TFolder>({
+      getParentPrefix: () => 'folder/',
+      path: 'folder'
+    }),
+    path: 'folder/source.md'
+  });
+}
+
 describe('prepareForMergeFile', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -242,7 +240,7 @@ describe('prepareForMergeFile', () => {
   });
 
   it('should return null when modal is cancelled', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin();
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
@@ -252,7 +250,7 @@ describe('prepareForMergeFile', () => {
   });
 
   it('should return result when shouldAskBeforeMerging is false', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
     // MergeFileModal auto-closes → onClose → resolves null → prepareForMergeFile returns null
@@ -263,7 +261,7 @@ describe('prepareForMergeFile', () => {
   });
 
   it('should show confirm dialog when shouldAskBeforeMerging is true', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
@@ -275,7 +273,7 @@ describe('prepareForMergeFile', () => {
 
   it('should return result when user selects an item and shouldAskBeforeMerging is false', async () => {
     shouldAutoSelect = true;
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
@@ -287,7 +285,7 @@ describe('prepareForMergeFile', () => {
 
   it('should return null when confirm dialog is rejected after user selects item', async () => {
     shouldAutoSelect = true;
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
@@ -300,7 +298,7 @@ describe('prepareForMergeFile', () => {
   });
 
   it('should lock the source note while the modal is open and unlock it afterwards', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin();
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
@@ -313,7 +311,7 @@ describe('prepareForMergeFile', () => {
 
   it('should lock the target note while the confirmation dialog is open and unlock both notes afterwards', async () => {
     shouldAutoSelect = true;
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });
@@ -328,7 +326,7 @@ describe('prepareForMergeFile', () => {
   });
 
   it('should cancel and unlock when the lock is aborted while the modal is open', async () => {
-    const sourceFile = createMockFile('folder/source.md');
+    const sourceFile = createMockSourceFile();
     const plugin = createMockPlugin();
 
     const promise = prepareForMergeFile({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, resourceLockComponent: plugin.resourceLockComponent, sourceFile });

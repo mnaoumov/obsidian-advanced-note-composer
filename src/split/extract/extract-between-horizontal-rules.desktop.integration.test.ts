@@ -34,10 +34,11 @@ describe('extract between horizontal rules', () => {
         // sections, which is what the command keys off. `middle` sits between them.
         const SOURCE = 'intro\n\n---\n\nmiddle\n\n***\n\nouter';
         const MIDDLE_LINE = 4;
+        const NOTE_PATH = 'extract-hr.md';
 
         const isOriginalShouldAsk = await didSetAskBeforeSplitting(false);
         try {
-          const file = await resetFile('extract-hr.md', SOURCE);
+          const file = await resetFile(NOTE_PATH, SOURCE);
           const editor = await openAndGetEditor(file);
           editor.setCursor({ ch: 0, line: MIDDLE_LINE });
 
@@ -81,11 +82,11 @@ describe('extract between horizontal rules', () => {
 
           await waitUntil({
             message: 'the block between the rules was not extracted to the bottom of the note',
-            predicate: () => editorValueFor('extract-hr.md')?.trimEnd().endsWith('middle') === true
+            predicate: () => editorValueFor()?.trimEnd().endsWith('middle') === true
           });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          return { canRun, note: editorValueFor('extract-hr.md') ?? '' };
+          return { canRun, note: editorValueFor() ?? '' };
         } finally {
           await didSetAskBeforeSplitting(isOriginalShouldAsk);
         }
@@ -133,10 +134,10 @@ describe('extract between horizontal rules', () => {
           return view.editor;
         }
 
-        function editorValueFor(path: string): string | undefined {
+        function editorValueFor(): string | undefined {
           for (const leaf of app.workspace.getLeavesOfType('markdown')) {
             const view = leaf.view;
-            if (view instanceof obsidianModule.MarkdownView && view.file?.path === path) {
+            if (view instanceof obsidianModule.MarkdownView && view.file?.path === NOTE_PATH) {
               return view.editor.getValue();
             }
           }

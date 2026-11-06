@@ -25,6 +25,7 @@ import { ConfirmDialogModal } from '../ui/confirm-dialog-modal.ts';
 import { openConfirmDialogModal } from '../ui/open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
@@ -139,7 +140,7 @@ export class MoveFolderCommandHandler extends FolderCommandHandler {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     // The move landed, so the destination counts as clicked-on for the next picker (issue #206).

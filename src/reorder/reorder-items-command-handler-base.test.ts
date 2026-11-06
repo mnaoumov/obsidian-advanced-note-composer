@@ -151,7 +151,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     // What `/(^|.*\/)parent$/` matches: the folder, and nothing inside it.
     const { handler } = createChildHandler({ isPathIgnored: (path: string) => path === 'parent' });
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     expect(handler.canExecuteFolder(getFolder('parent'))).toBe(true);
@@ -168,8 +168,8 @@ describe('ReorderChildFoldersCommandHandler', () => {
     });
     const { handler } = createChildHandler();
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -237,7 +237,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     });
     const { handler } = createChildHandler();
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -255,7 +255,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     initApp({ 'parent/1. Alpha/1. Alpha.md': '---\ntitle: 1. Alpha\n---\n\nbody\n', 'parent/2. Beta/2. Beta.md': '---\ntitle: 2. Beta\n---\n' });
     const { handler } = createChildHandler({ folderNoteTitleTemplate: '' });
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -267,7 +267,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     initApp({ 'parent/1. Alpha/1. Alpha.md': '---\ntitle: 1. Alpha\n---\n\nbody\n', 'parent/2. Beta/2. Beta.md': '---\ntitle: 2. Beta\n---\n' });
     const { handler } = createChildHandler({ folderNoteTitleTemplate: '  ' });
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -280,7 +280,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     initApp({ 'parent/1. Alpha/1. Alpha.md': '---\ntitle: 1. Alpha\n---\n', 'parent/2. Beta/2. Beta.md': '---\ntitle: 2. Beta\n---\n' });
     const { handler, showNotice } = createChildHandler({ folderNoteTitleTemplate: '{{folderName}}\n{{folderName}}' });
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -297,7 +297,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     });
     const { handler } = createChildHandler({ folderNoteLocation: FolderNoteLocation.None });
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -317,7 +317,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent'));
 
-    expect(getChildFileNames('parent')).toEqual(['1. Draft.md', '2. Notes.md']);
+    expect(getParentChildFileNames()).toEqual(['1. Draft.md', '2. Notes.md']);
     // The folders keep their own 1..N sequence — the two kinds never share one numbering.
     expect(getChildFolderNames('parent')).toEqual(['1. Alpha', '2. Beta']);
   });
@@ -332,7 +332,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent'));
 
-    expect(getChildFileNames('parent')).toEqual(['Draft.md']);
+    expect(getParentChildFileNames()).toEqual(['Draft.md']);
   });
 
   it('should write a file title when that template is filled in', async () => {
@@ -364,7 +364,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent'));
 
-    expect(getChildFileNames('parent')).toEqual(['1. Draft.md']);
+    expect(getParentChildFileNames()).toEqual(['1. Draft.md']);
   });
 
   it('should offer the checkbox while per-operation overrides are shown', async () => {
@@ -403,7 +403,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
 
     expect(hasToggle).toBe(false);
     // Hiding the control must not change what the reorder does — the seeded default still includes the files.
-    expect(getChildFileNames('parent')).toEqual(['1. Draft.md']);
+    expect(getParentChildFileNames()).toEqual(['1. Draft.md']);
   });
 
   it('should offer the already-numbered items before the unnumbered ones, whichever order they come in', async () => {
@@ -432,7 +432,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     });
     const { handler } = createChildHandler({ folderNoteNameTemplate: '!' });
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -488,7 +488,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     });
     const { handler } = createChildHandler({ folderNoteLocation: FolderNoteLocation.ParentFolder });
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -512,7 +512,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent'));
 
-    expect(getChildFileNames('parent')).toEqual(['1. Notes.md', '2. Notes.md']);
+    expect(getParentChildFileNames()).toEqual(['1. Notes.md', '2. Notes.md']);
     expect(await readNote('parent/2. Notes.md')).toBe('first');
     expect(await readNote('parent/1. Notes.md')).toBe('second');
   });
@@ -524,7 +524,7 @@ describe('ReorderChildFoldersCommandHandler', () => {
     });
     const { handler } = createChildHandler();
     driveModal = (params): void => {
-      moveRowDown(params, 'Alpha');
+      moveAlphaRowDown(params);
     };
 
     await handler.executeFolder(getFolder('parent'));
@@ -699,16 +699,16 @@ function createSiblingHandler(settingsOverrides?: Partial<PluginSettings>): Hand
   return toHandlerContext(handler, showNotice);
 }
 
-function getChildFileNames(path: string): string[] {
-  return getFolder(path).children.filter((child) => 'extension' in child).map((child) => child.name).sort();
-}
-
 function getChildFolderNames(path: string): string[] {
   return getFolder(path).children.filter((child) => !('extension' in child)).map((child) => child.name).sort();
 }
 
 function getFolder(path: string): TFolder {
   return path === '/' ? app.vault.getRoot() : ensureNonNullable(app.vault.getFolderByPath(path));
+}
+
+function getParentChildFileNames(): string[] {
+  return getFolder('parent').children.filter((child) => 'extension' in child).map((child) => child.name).sort();
 }
 
 function initApp(files: Record<string, string> = {}): void {
@@ -728,14 +728,14 @@ function initApp(files: Record<string, string> = {}): void {
 }
 
 /**
- * Moves a row down one place on the REAL model the handler handed the modal — the same call the arrow
+ * Moves the `Alpha` row down one place on the REAL model the handler handed the modal — the same call the arrow
  * button makes.
  *
  * @param params - The captured modal params.
- * @param rowLabel - The row's label, which is its name without the index.
  */
-function moveRowDown(params: DidConfirmReorderModalParams, rowLabel: string): void {
-  const row = params.model.buildRows().find((candidate) => candidate.label === rowLabel);
+function moveAlphaRowDown(params: DidConfirmReorderModalParams): void {
+  // The row's label is its name without the index.
+  const row = params.model.buildRows().find((candidate) => candidate.label === 'Alpha');
   params.model.didMove({ delta: 1, id: ensureNonNullable(row).id });
 }
 

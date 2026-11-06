@@ -81,16 +81,16 @@ describe('command menu placement (issues #252, #254)', () => {
         const file = await ensureMarkdownFile(NOTE_PATH, NOTE_CONTENT);
 
         // Flat menu items (no submenu) so the split item sits directly in `menu.items`.
-        await setToggle('Should add commands to submenu', false);
+        await setToggle(false);
 
-        const whileInEditorMenu = await probe(file);
-        await setMenuToggles(ITEM_TITLE, false, true);
-        const whileOnMargin = await probe(file);
+        const whileInEditorMenu = await probe();
+        await setMenuToggles(false, true);
+        const whileOnMargin = await probe();
 
         // Restore the shared instance: this vault is reused by every other suite.
-        await setMenuToggles(ITEM_TITLE, true, false);
-        await setToggle('Should add commands to submenu', true);
-        const afterRestore = await probe(file);
+        await setMenuToggles(true, false);
+        await setToggle(true);
+        const afterRestore = await probe();
 
         return {
           afterRestore,
@@ -101,8 +101,8 @@ describe('command menu placement (issues #252, #254)', () => {
           whileOnMargin
         };
 
-        async function probe(targetFile: TFile): Promise<ProbeResult> {
-          await openNote(targetFile);
+        async function probe(): Promise<ProbeResult> {
+          await openNote();
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
             throw new Error('No active markdown view.');
@@ -141,17 +141,17 @@ describe('command menu placement (issues #252, #254)', () => {
           return app.vault.create(path, content);
         }
 
-        async function openNote(targetFile: TFile): Promise<void> {
-          await app.workspace.getLeaf(false).openFile(targetFile);
+        async function openNote(): Promise<void> {
+          await app.workspace.getLeaf(false).openFile(file);
           await waitUntil({
-            message: `markdown view for ${targetFile.path} did not become active`,
-            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === targetFile.path,
+            message: `markdown view for ${file.path} did not become active`,
+            predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file?.path === file.path,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           // The menu gate reads the note's headings from `metadataCache`; wait for them to be indexed.
           await waitUntil({
-            message: `headings for ${targetFile.path} were not indexed`,
-            predicate: () => (app.metadataCache.getFileCache(targetFile)?.headings?.length ?? 0) >= 2,
+            message: `headings for ${file.path} were not indexed`,
+            predicate: () => (app.metadataCache.getFileCache(file)?.headings?.length ?? 0) >= 2,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
@@ -161,13 +161,12 @@ describe('command menu placement (issues #252, #254)', () => {
          * its control area holds the editor-menu toggle first and the margin toggle second — the order
          * `plugin-settings-tab.ts` renders them in.
          *
-         * @param commandName - The command's display name, which is the row name.
          * @param shouldBeInEditorMenu - Whether the editor menu should offer it.
          * @param shouldBeOnMargin - Whether the margin menu should offer it.
          */
-        async function setMenuToggles(commandName: string, shouldBeInEditorMenu: boolean, shouldBeOnMargin: boolean): Promise<void> {
+        async function setMenuToggles(shouldBeInEditorMenu: boolean, shouldBeOnMargin: boolean): Promise<void> {
           for (const [index, shouldEnable] of [shouldBeInEditorMenu, shouldBeOnMargin].entries()) {
-            await setMenuToggle(commandName, index, shouldEnable);
+            await setMenuToggle(index, shouldEnable);
           }
         }
 
@@ -180,11 +179,11 @@ describe('command menu placement (issues #252, #254)', () => {
          * placement re-renders the settings tab, which detaches the element the second click would land on
          * — and a click on a detached toggle is a silent no-op that reads as "the setting did not work".
          *
-         * @param commandName - The command's display name, which is the row name.
          * @param toggleIndex - 0 for the editor menu, 1 for the margin.
          * @param shouldEnable - Whether that menu should offer the command.
          */
-        async function setMenuToggle(commandName: string, toggleIndex: number, shouldEnable: boolean): Promise<void> {
+        async function setMenuToggle(toggleIndex: number, shouldEnable: boolean): Promise<void> {
+          const commandName = ITEM_TITLE;
           const settingTab = await openSettingTab();
           const settingItem = await findSettingItem({ app, name: commandName, settingTab });
           const toggleEls = [...settingItem?.querySelectorAll('.checkbox-container') ?? []];
@@ -203,7 +202,8 @@ describe('command menu placement (issues #252, #254)', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
         }
 
-        async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
+        async function setToggle(shouldEnable: boolean): Promise<void> {
+          const settingName = 'Should add commands to submenu';
           const settingTab = await openSettingTab();
           const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');

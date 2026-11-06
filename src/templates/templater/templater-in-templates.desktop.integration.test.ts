@@ -233,7 +233,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
             }
           };
 
-          await trashIfExists(ROOT);
+          await trashRootIfExists();
           await app.vault.createFolder(ROOT);
           await app.vault.createFolder(`${ROOT}/${OLD_FOLDER_NAME}`);
           await app.vault.create(`${ROOT}/${OLD_FOLDER_NAME}/${OLD_FOLDER_NAME}.md`, '---\naliases:\n  - "ALPHA"\n  - "my own alias"\n---\n\nbody\n');
@@ -302,7 +302,7 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
             settings.folderNoteAliasesTemplate = original.folderNoteAliasesTemplate;
             settings.shouldAddCommandsToSubmenu = original.shouldAddCommandsToSubmenu;
           });
-          await trashIfExists(ROOT);
+          await trashRootIfExists();
         }
 
         function findMenuItem(menuLike: MenuLike, isMatch: (text: string) => boolean): MenuItemLike | undefined {
@@ -327,8 +327,8 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
           throw new Error('Settings component was not found.');
         }
 
-        async function trashIfExists(path: string): Promise<void> {
-          const existing = app.vault.getAbstractFileByPath(path);
+        async function trashRootIfExists(): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(ROOT);
           if (existing) {
             await app.fileManager.trashFile(existing);
           }

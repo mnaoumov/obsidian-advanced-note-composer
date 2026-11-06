@@ -385,7 +385,7 @@ describe('minimize button', () => {
           });
 
           app.commands.executeCommandById(`${pluginId}:flatten-folder`);
-          await waitUntil({ message: 'flatten dialog did not open', predicate: () => findButton('Flatten') !== null });
+          await waitUntil({ message: 'flatten dialog did not open', predicate: () => findFlattenButton() !== null });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           const minimizeButton = document.querySelector('.modal-container .minimize-button');
@@ -415,8 +415,8 @@ describe('minimize button', () => {
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           // The parked operation is still the same one, and still able to run.
-          const isDialogUsable = !(findButton('Flatten')?.disabled ?? true);
-          findButton('Flatten')?.click();
+          const isDialogUsable = !(findFlattenButton()?.disabled ?? true);
+          findFlattenButton()?.click();
           await waitUntil({
             message: 'the restored dialog did not flatten',
             predicate: () => app.vault.getAbstractFileByPath('mb-park-child.md') !== null
@@ -436,9 +436,9 @@ describe('minimize button', () => {
           await trashIfExists('mb-park-child.md');
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findFlattenButton(): HTMLButtonElement | null {
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Flatten') {
               return el;
             }
           }

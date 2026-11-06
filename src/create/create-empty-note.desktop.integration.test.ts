@@ -290,7 +290,7 @@ describe('create an empty note (issue #244)', () => {
 
           await trashIfExists(NOTE_PATH);
           await trashIfExists(`${FOLDER_PATH}/${FOLDER_NOTE_NAME}`);
-          await ensureFolder(FOLDER_PATH);
+          await ensureFolder();
 
           const isMenuItemPresent = await didFolderMenuOfferCreate(NOTE_NAME, NOTE_PATH);
           const note = app.vault.getAbstractFileByPath(NOTE_PATH);
@@ -323,7 +323,7 @@ describe('create an empty note (issue #244)', () => {
          * @returns Whether the folder menu carried the command's item.
          */
         async function didFolderMenuOfferCreate(name: string, expectedPath: string): Promise<boolean> {
-          const folder = await ensureFolder(FOLDER_PATH);
+          const folder = await ensureFolder();
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('file-menu', menu, folder, 'file-explorer-context-menu');
           const menuItem = findMenuItem(menu, MENU_ITEM_TITLE);
@@ -383,8 +383,8 @@ describe('create an empty note (issue #244)', () => {
           return menuLike.items.find((item) => (item.dom?.textContent ?? '').includes(title));
         }
 
-        async function ensureFolder(path: string): Promise<TFolder> {
-          return app.vault.getFolderByPath(path) ?? (await app.vault.createFolder(path));
+        async function ensureFolder(): Promise<TFolder> {
+          return app.vault.getFolderByPath(FOLDER_PATH) ?? (await app.vault.createFolder(FOLDER_PATH));
         }
 
         async function submitName(name: string): Promise<void> {

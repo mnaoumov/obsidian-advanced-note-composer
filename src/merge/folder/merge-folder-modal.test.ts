@@ -52,15 +52,6 @@ interface MockPluginOptions {
   readonly shouldAskBeforeMerging?: boolean;
 }
 
-function createMockFolder(path: string): TFolder {
-  const name = path.split('/').pop() ?? path;
-  return strictProxy<TFolder>({
-    children: [],
-    name,
-    path
-  });
-}
-
 function createMockPlugin(options?: MockPluginOptions): MockPlugin {
   const shouldAskBeforeMerging = options?.shouldAskBeforeMerging ?? false;
   const folders = autoSelectFolder ? [autoSelectFolder] : [];
@@ -91,6 +82,14 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
   };
 }
 
+function createMockSourceFolder(): TFolder {
+  return strictProxy<TFolder>({
+    children: [],
+    name: 'source',
+    path: 'source'
+  });
+}
+
 describe('selectTargetFolderForMergeFolder', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -103,7 +102,7 @@ describe('selectTargetFolderForMergeFolder', () => {
   });
 
   it('should return null when folder modal is cancelled', async () => {
-    const sourceFolder = createMockFolder('source');
+    const sourceFolder = createMockSourceFolder();
     const plugin = createMockPlugin();
 
     const promise = selectTargetFolderForMergeFolder({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFolder });
@@ -113,7 +112,7 @@ describe('selectTargetFolderForMergeFolder', () => {
   });
 
   it('should return null when shouldAskBeforeMerging is false and modal cancelled', async () => {
-    const sourceFolder = createMockFolder('source');
+    const sourceFolder = createMockSourceFolder();
     const plugin = createMockPlugin({ shouldAskBeforeMerging: false });
 
     const promise = selectTargetFolderForMergeFolder({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFolder });
@@ -123,7 +122,7 @@ describe('selectTargetFolderForMergeFolder', () => {
   });
 
   it('should return null when shouldAskBeforeMerging is true and modal cancelled', async () => {
-    const sourceFolder = createMockFolder('source');
+    const sourceFolder = createMockSourceFolder();
     const plugin = createMockPlugin({ shouldAskBeforeMerging: true });
 
     const promise = selectTargetFolderForMergeFolder({ app: plugin.app, pluginSettingsComponent: plugin.pluginSettingsComponent, sourceFolder });

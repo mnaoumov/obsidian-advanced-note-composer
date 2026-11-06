@@ -160,12 +160,12 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
         await waitUntil({
           message: `the extract did not write ${targetPath}`,
           predicate: async () => {
-            const content = await readIfExists(targetPath);
+            const content = await readTargetIfExists();
             return content.includes('fragment');
           },
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
-        const contentAfterExtract = await readIfExists(targetPath);
+        const contentAfterExtract = await readTargetIfExists();
 
         if (!shouldOpenTargetNoteAfterSplit) {
           /*
@@ -230,8 +230,8 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
         return view.editor;
       }
 
-      async function readIfExists(path: string): Promise<string> {
-        const file = app.vault.getFileByPath(path);
+      async function readTargetIfExists(): Promise<string> {
+        const file = app.vault.getFileByPath(targetPath);
         return file ? await app.vault.read(file) : '';
       }
 

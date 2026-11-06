@@ -22,8 +22,8 @@ const DEFAULT_NAME_TEMPLATE = '{{index}}. {{safeFolderName}}';
 
 let app: AppOriginal;
 
-function getFolder(path: string): TFolder {
-  return ensureNonNullable(app.vault.getFolderByPath(path));
+function getParentFolder(): TFolder {
+  return ensureNonNullable(app.vault.getFolderByPath('parent'));
 }
 
 function initApp(files: Record<string, string>): void {
@@ -32,12 +32,12 @@ function initApp(files: Record<string, string>): void {
 
 function nextFileIndex(files: Record<string, string>, nameTemplate = DEFAULT_FILE_NAME_TEMPLATE): number {
   initApp(files);
-  return resolveNextSiblingIndex({ kind: ReorderItemKind.File, nameTemplate, parentFolder: getFolder('parent') });
+  return resolveNextSiblingIndex({ kind: ReorderItemKind.File, nameTemplate, parentFolder: getParentFolder() });
 }
 
 function nextIndex(files: Record<string, string>, nameTemplate = DEFAULT_NAME_TEMPLATE): number {
   initApp(files);
-  return resolveNextSiblingIndex({ kind: ReorderItemKind.Folder, nameTemplate, parentFolder: getFolder('parent') });
+  return resolveNextSiblingIndex({ kind: ReorderItemKind.Folder, nameTemplate, parentFolder: getParentFolder() });
 }
 
 describe('buildNumberedSiblingRegExp', () => {

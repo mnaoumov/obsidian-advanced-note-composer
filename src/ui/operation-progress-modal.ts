@@ -25,6 +25,7 @@ import {
   invokeAsyncSafely,
   sleep
 } from '@mnaoumov/typescript-lib/async';
+import { CallbackDisposable } from '@mnaoumov/typescript-lib/disposable';
 import {
   App,
   ButtonComponent,
@@ -176,18 +177,8 @@ export function showOperationProgressModal(params: ShowOperationProgressModalPar
 
   let isDisposed = false;
 
-  return {
-    setContent(content: DocumentFragment | string): void {
-      if (isDisposed) {
-        return;
-      }
-
-      modal.setBody(content);
-    },
-    [Symbol.dispose](): void {
-      if (isDisposed) {
-        return;
-      }
+  const disposable = new CallbackDisposable({
+    callback(): void {
       isDisposed = true;
 
       modal.setBody('Finishing up...');
@@ -208,5 +199,15 @@ export function showOperationProgressModal(params: ShowOperationProgressModalPar
         }
       });
     }
-  };
+  });
+
+  return Object.assign(disposable, {
+    setContent(content: DocumentFragment | string): void {
+      if (isDisposed) {
+        return;
+      }
+
+      modal.setBody(content);
+    }
+  });
 }

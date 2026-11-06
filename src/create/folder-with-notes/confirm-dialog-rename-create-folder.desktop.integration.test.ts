@@ -89,7 +89,7 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           await submitName('Alpha');
 
-          await waitUntil({ message: 'create dialog did not open', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await waitUntil({ message: 'create dialog did not open', predicate: () => findCreateButton() !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
           // One beside the folder name and one beside each note, which is the layout the reporter asked for.
           const renameButtonCount = document.querySelectorAll(RENAME_BUTTON_SELECTOR).length;
@@ -101,7 +101,7 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           const seededNoteName = readPromptValue();
           await submitName('Plan');
 
-          await waitUntil({ message: 'create dialog did not reopen after the note rename', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await waitUntil({ message: 'create dialog did not reopen after the note rename', predicate: () => findCreateButton() !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
           clickRenameButton(0);
@@ -110,10 +110,10 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           const seededFolderName = readPromptValue();
           await submitName('Beta');
 
-          await waitUntil({ message: 'create dialog did not reopen after the folder rename', predicate: () => findButton('Create') !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
+          await waitUntil({ message: 'create dialog did not reopen after the folder rename', predicate: () => findCreateButton() !== null, timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS });
           await sleep(RENDER_DELAY_IN_MILLISECONDS);
 
-          findButton('Create')?.click();
+          findCreateButton()?.click();
 
           // A throwing wait would discard everything observed so far, so give up quietly and let the
           // assertions outside Obsidian report what actually happened.
@@ -155,9 +155,9 @@ describe('rename from the create-folder confirmation dialog (issue #200)', () =>
           buttonEl.click();
         }
 
-        function findButton(text: string): HTMLButtonElement | null {
+        function findCreateButton(): HTMLButtonElement | null {
           for (const el of document.querySelectorAll('.modal-button-container button')) {
-            if (el.instanceOf(HTMLButtonElement) && el.textContent === text) {
+            if (el.instanceOf(HTMLButtonElement) && el.textContent === 'Create') {
               return el;
             }
           }

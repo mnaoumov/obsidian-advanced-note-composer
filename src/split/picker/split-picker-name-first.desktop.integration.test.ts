@@ -313,7 +313,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
 
           await ensureFolder(FOLDER_PATH);
           const sibling = await resetFile(SIBLING_PATH, 'picked sibling body\n');
-          await trashIfExists(EXPECTED_PATH);
+          await trashExpectedNoteIfExists();
           const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
 
           const editor = await openAndGetEditor(source);
@@ -361,7 +361,7 @@ describe('the split/extract picker asks for a name before a destination (issue #
           const siblingContent = await app.vault.read(sibling);
           const wasSiblingMergedInto = siblingContent.includes('picked body one');
 
-          await trashIfExists(EXPECTED_PATH);
+          await trashExpectedNoteIfExists();
 
           return {
             wasCreatedAtTheDefaultLocation,
@@ -416,8 +416,8 @@ describe('the split/extract picker asks for a name before a destination (issue #
           }
         }
 
-        async function trashIfExists(path: string): Promise<void> {
-          const existing = app.vault.getAbstractFileByPath(path);
+        async function trashExpectedNoteIfExists(): Promise<void> {
+          const existing = app.vault.getAbstractFileByPath(EXPECTED_PATH);
           if (existing) {
             await app.fileManager.trashFile(existing);
           }

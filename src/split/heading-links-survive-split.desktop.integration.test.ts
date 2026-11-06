@@ -1,3 +1,4 @@
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -37,7 +38,7 @@ interface SettingsCarrier {
  */
 describe('heading links survive a split (issue #291)', () => {
   it('should point every heading and block link at the note that holds its target after a recursive split', async () => {
-    const result = await evalInObsidian({
+    const { contents } = await evalInObsidian({
       async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
         /*
          * Under the transport's ~30s per-closure cap: four waits at the ceiling below (20000) plus one
@@ -107,13 +108,13 @@ describe('heading links survive a split (issue #291)', () => {
           });
           await sleep(SETTLE_DELAY_IN_MILLISECONDS);
 
-          const contents: Record<string, string> = {};
+          const readContents: Record<string, string> = {};
           for (const path of [SOURCE_PATH, ...paths]) {
             const file = app.vault.getFileByPath(path);
-            contents[path] = file ? await app.vault.read(file) : '<missing>';
+            readContents[path] = file ? await app.vault.read(file) : '<missing>';
           }
 
-          return { contents };
+          return { contents: readContents };
         } finally {
           await settingsComponent.editAndSave((settings) => {
             Object.assign(settings, original);
@@ -142,7 +143,6 @@ describe('heading links survive a split (issue #291)', () => {
       vaultPath: getTemporaryVault().path
     });
 
-    const { contents } = result;
     // What stayed in the source now points at the notes its headings became, including a heading whose link
     // text differs from the heading (`HlE: x` is linked as `HlE x`, the way Obsidian writes it, and its note is
     // `HlE_ x` once the invalid character is replaced).
@@ -301,9 +301,7 @@ describe('heading links survive a split (issue #291)', () => {
         let copied: null | string = null;
         clipboard.writeText = (text: string): Promise<void> => {
           copied = text;
-          return new Promise<void>((resolve) => {
-            resolve();
-          });
+          return noopAsync();
         };
         try {
           app.commands.executeCommandById(`${pluginId}:copy-link-to-this-heading`);

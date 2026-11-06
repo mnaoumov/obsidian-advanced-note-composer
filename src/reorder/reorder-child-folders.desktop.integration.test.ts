@@ -57,9 +57,9 @@ describe('reorder child folders', () => {
           .map((indexEl) => indexEl.textContent);
 
         // Alpha down twice -> Beta, Gamma, Alpha.
-        moveDown('Alpha');
+        moveAlphaDown();
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
-        moveDown('Alpha');
+        moveAlphaDown();
         await sleep(RENDER_DELAY_IN_MILLISECONDS);
         clickReorder();
 
@@ -121,12 +121,12 @@ describe('reorder child folders', () => {
           itemEl.click();
         }
 
-        function moveDown(rowLabel: string): void {
+        function moveAlphaDown(): void {
           const button = document.querySelector(
-            `.advanced-note-composer-reorder-item[data-row-label="${CSS.escape(rowLabel)}"] .advanced-note-composer-reorder-down`
+            '.advanced-note-composer-reorder-item[data-row-label="Alpha"] .advanced-note-composer-reorder-down'
           );
           if (!(button instanceof HTMLButtonElement)) {
-            throw new TypeError(`No move-down button for "${rowLabel}".`);
+            throw new TypeError('No move-down button for "Alpha".');
           }
           button.click();
         }

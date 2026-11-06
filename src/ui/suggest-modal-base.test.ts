@@ -775,13 +775,10 @@ describe('SuggestModalBase', () => {
     it('should render bookmark url item with webviewer plugin', () => {
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
-      vi.mocked(plugin.app.internalPlugins.getEnabledPluginById).mockImplementation(castTo<InternalPlugins['getEnabledPluginById']>((id: string) => {
-        if (id === 'webviewer') {
-          // eslint-disable-next-line unicorn/name-replacements -- `db` is the Obsidian Web viewer plugin's own member name.
-          return { db: { setIcon: vi.fn() } };
-        }
-        return null;
-      }));
+      vi.mocked(plugin.app.internalPlugins.getEnabledPluginById).mockImplementation(castTo<InternalPlugins['getEnabledPluginById']>((id: string) =>
+        // eslint-disable-next-line unicorn/name-replacements -- `db` is the Obsidian Web viewer plugin's own member name.
+        id === 'webviewer' ? { db: { setIcon: vi.fn() } } : null
+      ));
       const modal = createTestSuggestModal(plugin, sourceFile);
       const el = createDiv();
       const item: Item = {

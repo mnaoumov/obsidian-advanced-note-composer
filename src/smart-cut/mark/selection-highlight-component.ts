@@ -15,6 +15,7 @@ import {
   EditorView
 } from '@codemirror/view';
 import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
+import { CallbackDisposable } from '@mnaoumov/typescript-lib/disposable';
 import { MarkdownView } from 'obsidian';
 
 import type { Selection } from '../../composers/composer-base.ts';
@@ -108,12 +109,12 @@ export class SelectionHighlightComponent extends ComponentEx {
     const key = Symbol('highlight');
     this.highlights.set(key, { file, ranges });
     this.refresh();
-    return {
-      [Symbol.dispose]: (): void => {
+    return new CallbackDisposable({
+      callback: (): void => {
         this.highlights.delete(key);
         this.refresh();
       }
-    };
+    });
   }
 
   /**

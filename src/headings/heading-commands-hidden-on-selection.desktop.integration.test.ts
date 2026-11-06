@@ -81,20 +81,20 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
         const file = await ensureMarkdownFile(NOTE_PATH, NOTE_CONTENT);
 
         // Flat menu items (no submenu) so the plugin's items are directly in `menu.items`.
-        await setToggle('Should add commands to submenu', false);
+        await setSubmenuToggle(false);
 
         // Caret inside the heading's body, nothing selected: both heading commands are offered.
-        const caretInBody = await probe(file, 0);
+        const caretInBody = await probe(0);
         // A real selection on that same line: both are gone, the selection command takes over.
-        const selectionInBody = await probe(file, SELECTION_END_CH);
+        const selectionInBody = await probe(SELECTION_END_CH);
 
         // Restore the shared instance to a clean default state.
-        await setToggle('Should add commands to submenu', true);
+        await setSubmenuToggle(true);
 
         return { caretInBody, selectionInBody };
 
-        async function probe(targetFile: TFile, toCh: number): Promise<ProbeResult> {
-          const editor = await openAndGetEditor(targetFile);
+        async function probe(toCh: number): Promise<ProbeResult> {
+          const editor = await openAndGetEditor(file);
           editor.setSelection({ ch: 0, line: SECTION_A_BODY_LINE }, { ch: toCh, line: SECTION_A_BODY_LINE });
           const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
           if (!view) {
@@ -154,7 +154,8 @@ describe('heading commands hidden when a selection is made (issue #188)', () => 
           return view.editor;
         }
 
-        async function setToggle(settingName: string, shouldEnable: boolean): Promise<void> {
+        async function setSubmenuToggle(shouldEnable: boolean): Promise<void> {
+          const settingName = 'Should add commands to submenu';
           const settingTab = await openSettingTab();
           const settingItem = await findSettingItem({ app, name: settingName, settingTab });
           const toggleEl = settingItem?.querySelector('.checkbox-container');

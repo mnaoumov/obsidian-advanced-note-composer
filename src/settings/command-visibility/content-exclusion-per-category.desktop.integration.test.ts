@@ -45,7 +45,7 @@ describe('per-category content exclusion (issue #270)', () => {
 
         // Three numbered siblings, the same fixture shape `reorder-child-folders` uses — the modal lists
         // them by name without their numbers.
-        await removeFolder(ROOT);
+        await removeRootFolder();
         await app.vault.createFolder(ROOT);
         for (const [index, name] of ['Alpha', 'Beta', 'Gamma'].entries()) {
           await app.vault.createFolder(`${ROOT}/${(index + 1).toString()}. ${name}`);
@@ -70,7 +70,7 @@ describe('per-category content exclusion (issue #270)', () => {
         await setPaths('Merge exclude paths', '');
         const restored = await readReorderRows();
 
-        await removeFolder(ROOT);
+        await removeRootFolder();
 
         return { mergeExcludedOnly, nothingConfigured, reorderExcluded, restored };
 
@@ -130,8 +130,8 @@ describe('per-category content exclusion (issue #270)', () => {
           return rowLabels;
         }
 
-        async function removeFolder(path: string): Promise<void> {
-          const existing = app.vault.getFolderByPath(path);
+        async function removeRootFolder(): Promise<void> {
+          const existing = app.vault.getFolderByPath(ROOT);
           if (existing) {
             await app.fileManager.trashFile(existing);
           }
@@ -186,27 +186,27 @@ describe('excluding a folder by itself alone (issue #279)', () => {
         const INBOX_CHILD = `${INBOX}/Alpha`;
         const REORDER_SIBLINGS = 'Reorder sibling folders...';
 
-        await removeFolder(ROOT);
+        await removeRootFolder();
         await app.vault.createFolder(ROOT);
         await app.vault.createFolder(INBOX);
         await app.vault.createFolder(INBOX_CHILD);
         await app.vault.createFolder(`${INBOX}/Beta`);
 
         // The reporter's exact value: anchored with `$`, so it matches `Inbox` and nothing inside it.
-        await setPaths('Reorder exclude paths', String.raw`/(^|.*\/)Inbox$/`);
+        await setReorderExcludePaths(String.raw`/(^|.*\/)Inbox$/`);
         const noticeCountBefore = readNoticeTexts().length;
         const regexRows = await readSiblingRows();
         const regexNotices = readNoticeTexts().slice(noticeCountBefore);
 
         // The control: a plain path covers the folder AND its subtree, so every sibling is excluded and the
         // command has nothing left to reorder there.
-        await setPaths('Reorder exclude paths', INBOX);
+        await setReorderExcludePaths(INBOX);
         const isOfferedUnderPlainPath = buildMenuTitles().includes(REORDER_SIBLINGS);
 
-        await setPaths('Reorder exclude paths', '');
+        await setReorderExcludePaths('');
         const isOfferedWithNothingConfigured = buildMenuTitles().includes(REORDER_SIBLINGS);
 
-        await removeFolder(ROOT);
+        await removeRootFolder();
 
         return { isOfferedUnderPlainPath, isOfferedWithNothingConfigured, regexNotices, regexRows };
 
@@ -273,19 +273,20 @@ describe('excluding a folder by itself alone (issue #279)', () => {
           return rowLabels;
         }
 
-        async function removeFolder(path: string): Promise<void> {
-          const existing = app.vault.getFolderByPath(path);
+        async function removeRootFolder(): Promise<void> {
+          const existing = app.vault.getFolderByPath(ROOT);
           if (existing) {
             await app.fileManager.trashFile(existing);
           }
         }
 
-        async function setPaths(settingName: string, value: string): Promise<void> {
+        async function setReorderExcludePaths(value: string): Promise<void> {
+          const SETTING_NAME = 'Reorder exclude paths';
           const settingTab = await openSettingTab();
-          const settingItem = await findSettingItem({ app, name: settingName, settingTab });
+          const settingItem = await findSettingItem({ app, name: SETTING_NAME, settingTab });
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
-            throw new TypeError(`"${settingName}" text area was not found.`);
+            throw new TypeError(`"${SETTING_NAME}" text area was not found.`);
           }
           textAreaEl.value = value;
           textAreaEl.dispatchEvent(new Event('input'));

@@ -50,7 +50,7 @@ vi.mock('../swap/swap-selection-runner.ts', () => ({
   swapWithSelection: vi.fn()
 }));
 
-const mockCanSwapWithSelection = vi.mocked(canSwapWithSelection);
+const canSwapWithSelectionMock = vi.mocked(canSwapWithSelection);
 const mockSwapWithSelection = vi.mocked(swapWithSelection);
 
 const SOURCE_FILE = castTo<TFile>({ path: 'source.md' });
@@ -106,14 +106,14 @@ describe('SwapMarkedSelectionEditorCommandHandler', () => {
       markMove(params.moveSelectionBuffer, [{ endOffset: 5, startOffset: 0 }]);
       const handler = toTestable(new SwapMarkedSelectionEditorCommandHandler(params));
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(null))).toBe(false);
-      expect(mockCanSwapWithSelection).not.toHaveBeenCalled();
+      expect(canSwapWithSelectionMock).not.toHaveBeenCalled();
     });
 
     it('should be unavailable when nothing is marked', () => {
       const params = createMockParams();
       const handler = toTestable(new SwapMarkedSelectionEditorCommandHandler(params));
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(SOURCE_FILE))).toBe(false);
-      expect(mockCanSwapWithSelection).not.toHaveBeenCalled();
+      expect(canSwapWithSelectionMock).not.toHaveBeenCalled();
     });
 
     it('should be unavailable when the mark has no captured selection', () => {
@@ -121,7 +121,7 @@ describe('SwapMarkedSelectionEditorCommandHandler', () => {
       markMove(params.moveSelectionBuffer, []);
       const handler = toTestable(new SwapMarkedSelectionEditorCommandHandler(params));
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(SOURCE_FILE))).toBe(false);
-      expect(mockCanSwapWithSelection).not.toHaveBeenCalled();
+      expect(canSwapWithSelectionMock).not.toHaveBeenCalled();
     });
 
     it('should be unavailable when the mark covers more than one selection', () => {
@@ -129,13 +129,13 @@ describe('SwapMarkedSelectionEditorCommandHandler', () => {
       markMove(params.moveSelectionBuffer, [{ endOffset: 5, startOffset: 0 }, { endOffset: 20, startOffset: 10 }]);
       const handler = toTestable(new SwapMarkedSelectionEditorCommandHandler(params));
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(SOURCE_FILE))).toBe(false);
-      expect(mockCanSwapWithSelection).not.toHaveBeenCalled();
+      expect(canSwapWithSelectionMock).not.toHaveBeenCalled();
     });
 
     it('should delegate to the runner for a single-selection mark', () => {
       const params = createMockParams();
       markMove(params.moveSelectionBuffer, [{ endOffset: 5, startOffset: 0 }]);
-      mockCanSwapWithSelection.mockReturnValue(true);
+      canSwapWithSelectionMock.mockReturnValue(true);
       const handler = toTestable(new SwapMarkedSelectionEditorCommandHandler(params));
 
       expect(handler.canExecuteEditor(createMockEditor(), createMockContext(SOURCE_FILE))).toBe(true);
@@ -146,7 +146,7 @@ describe('SwapMarkedSelectionEditorCommandHandler', () => {
         sourceMtime: 1000,
         startOffset: 0
       };
-      expect(mockCanSwapWithSelection).toHaveBeenCalledWith(expect.objectContaining({ marked: expectedSide, targetFile: SOURCE_FILE }));
+      expect(canSwapWithSelectionMock).toHaveBeenCalledWith(expect.objectContaining({ marked: expectedSide, targetFile: SOURCE_FILE }));
     });
   });
 

@@ -47,15 +47,6 @@ function createMockApp(): App {
   });
 }
 
-function createMockFolder(path: string): TFolder {
-  const name = path.split('/').pop() ?? path;
-  return strictProxy<TFolder>({
-    children: [],
-    name,
-    path
-  });
-}
-
 function createMockPluginSettingsComponent(options?: MockPluginSettingsComponentOptions): PluginSettingsComponent {
   return strictProxy<PluginSettingsComponent>({
     editAndSave: vi.fn().mockResolvedValue(undefined),
@@ -70,6 +61,14 @@ function createMockPluginSettingsComponent(options?: MockPluginSettingsComponent
   });
 }
 
+function createMockSourceFolder(): TFolder {
+  return strictProxy<TFolder>({
+    children: [],
+    name: 'source',
+    path: 'source'
+  });
+}
+
 describe('selectTargetFolderForSwap', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -80,7 +79,7 @@ describe('selectTargetFolderForSwap', () => {
   });
 
   it('should return null when modal is cancelled', async () => {
-    const sourceFolder = createMockFolder('source');
+    const sourceFolder = createMockSourceFolder();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent();
 
@@ -91,7 +90,7 @@ describe('selectTargetFolderForSwap', () => {
   });
 
   it('should return null when shouldAskBeforeSwapping is false and modal cancelled', async () => {
-    const sourceFolder = createMockFolder('source');
+    const sourceFolder = createMockSourceFolder();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: false });
 
@@ -103,7 +102,7 @@ describe('selectTargetFolderForSwap', () => {
   });
 
   it('should return null when shouldAskBeforeSwapping is true and modal cancelled', async () => {
-    const sourceFolder = createMockFolder('source');
+    const sourceFolder = createMockSourceFolder();
     const app = createMockApp();
     const pluginSettingsComponent = createMockPluginSettingsComponent({ shouldAskBeforeSwapping: true });
 

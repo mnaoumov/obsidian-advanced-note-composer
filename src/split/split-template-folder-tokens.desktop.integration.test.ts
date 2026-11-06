@@ -48,7 +48,7 @@ describe('split template folder tokens (issue #227)', () => {
         const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', false);
         const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', true);
         try {
-          await setTemplate('Split template', TEMPLATE);
+          await setSplitTemplate(TEMPLATE);
 
           // A name the default `Reordered folder name template` recognizes as numbered, and one it does not.
           const numbered = await extractInto('1. Alpha 227', 'numbered');
@@ -56,7 +56,7 @@ describe('split template folder tokens (issue #227)', () => {
 
           return { numbered, unnumbered };
         } finally {
-          await setTemplate('Split template', '');
+          await setSplitTemplate('');
           await didSetToggle('Should ask before splitting', isOriginalShouldAsk);
           await didSetToggle('Should split into folder', isOriginalShouldSplitIntoFolder);
         }
@@ -154,7 +154,8 @@ describe('split template folder tokens (issue #227)', () => {
           return view.editor;
         }
 
-        async function setTemplate(settingName: string, value: string): Promise<void> {
+        async function setSplitTemplate(value: string): Promise<void> {
+          const settingName = 'Split template';
           const settingItem = await openSettingItem(settingName);
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {

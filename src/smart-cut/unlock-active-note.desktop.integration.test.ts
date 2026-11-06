@@ -32,7 +32,7 @@ describe('unlock active note', () => {
         const isHighlightPresentWhileMarked = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length > 0;
 
         // While marked, the source note's mutations are blocked: a direct vault write throws.
-        const isMutationBlockedWhileMarked = await isVaultModifyBlocked(source, 'blocked while marked');
+        const isMutationBlockedWhileMarked = await isSourceModifyBlocked('blocked while marked');
 
         // Run the built-in "Unlock active note" command against the (active, locked) source note.
         const isUnlockCommandRan = app.commands.executeCommandById(`${pluginId}:unlock-active-note`);
@@ -44,7 +44,7 @@ describe('unlock active note', () => {
         const isHighlightGoneAfterUnlock = activeDocument.querySelectorAll('.advanced-note-composer-pending-selection').length === 0;
 
         // ...and the lock is genuinely released — the previously-blocked vault write now succeeds.
-        const isMutationAllowedAfterUnlock = !(await isVaultModifyBlocked(source, 'unlocked'));
+        const isMutationAllowedAfterUnlock = !(await isSourceModifyBlocked('unlocked'));
 
         return {
           highlightGoneAfterUnlock: isHighlightGoneAfterUnlock,
@@ -65,9 +65,9 @@ describe('unlock active note', () => {
           return null;
         }
 
-        async function isVaultModifyBlocked(file: TFile, content: string): Promise<boolean> {
+        async function isSourceModifyBlocked(content: string): Promise<boolean> {
           try {
-            await app.vault.modify(file, content);
+            await app.vault.modify(source, content);
             return false;
           } catch {
             return true;

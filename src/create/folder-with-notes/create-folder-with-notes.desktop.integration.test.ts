@@ -226,7 +226,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
          * Runs because the call under test is the one the modal makes while opening, long before the
          * Input element is reachable from here.
          */
-        const originalReportValidity = HTMLInputElement.prototype.reportValidity;
+        const checkAndReportValidityNatively = HTMLInputElement.prototype.reportValidity;
         let reportValidityCallCount = 0;
         HTMLInputElement.prototype.reportValidity = checkValidityAndCountReport;
 
@@ -276,7 +276,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
 
         function checkValidityAndCountReport(this: HTMLInputElement): boolean {
           reportValidityCallCount++;
-          return originalReportValidity.call(this);
+          return checkAndReportValidityNatively.call(this);
         }
 
         function requirePromptElement(selector: string): HTMLElement {
@@ -296,7 +296,7 @@ describe('create folder with notes... (issues #191, #194, #195, #219, #233)', ()
         }
 
         function restoreReportValidity(): void {
-          HTMLInputElement.prototype.reportValidity = originalReportValidity;
+          HTMLInputElement.prototype.reportValidity = checkAndReportValidityNatively;
         }
       },
       input: { pluginId: PLUGIN_ID }

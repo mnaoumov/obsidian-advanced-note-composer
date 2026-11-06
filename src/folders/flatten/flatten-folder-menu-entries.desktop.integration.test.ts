@@ -1,5 +1,3 @@
-import type { TFolder } from 'obsidian';
-
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -65,10 +63,10 @@ describe('flatten folder menu entries (issue #177)', () => {
 
         try {
           await setSubmenu(true);
-          const flattenTitlesWithSubmenu = collectFlattenTitles(folder);
+          const flattenTitlesWithSubmenu = collectFlattenTitles();
 
           await setSubmenu(false);
-          const flattenTitlesWithoutSubmenu = collectFlattenTitles(folder);
+          const flattenTitlesWithoutSubmenu = collectFlattenTitles();
 
           return { flattenTitlesWithoutSubmenu, flattenTitlesWithSubmenu };
         } finally {
@@ -76,17 +74,16 @@ describe('flatten folder menu entries (issue #177)', () => {
         }
 
         /**
-         * Builds the folder context menu and returns the titles of the plugin's flatten entries.
+         * Builds the context menu of `flat-menu-src` and returns the titles of the plugin's flatten entries.
          *
          * With the submenu setting ON the plugin's items are nested, so the whole section's rendered text
          * is searched rather than only the top-level item titles.
          *
-         * @param targetFolder - The folder to build the menu for.
          * @returns The flatten entry titles found, in menu order.
          */
-        function collectFlattenTitles(targetFolder: TFolder): string[] {
+        function collectFlattenTitles(): string[] {
           const menu = new obsidianModule.Menu();
-          app.workspace.trigger('file-menu', menu, targetFolder, 'file-explorer-context-menu');
+          app.workspace.trigger('file-menu', menu, folder, 'file-explorer-context-menu');
           const sectionText = (menu as MenuLike).items
             .filter((item) => item.section === pluginName)
             .map((item) => item.dom?.textContent ?? '')

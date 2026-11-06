@@ -47,6 +47,7 @@ import { ConfirmDialogModal } from '../../ui/confirm-dialog-modal.ts';
 import { openConfirmDialogModal } from '../../ui/open-minimizable-modal.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../../ui/operation-notices.ts';
@@ -590,7 +591,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     return createdFiles;
@@ -731,12 +732,8 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       valueValidator: async (value: string): Promise<MaybeReturn<string>> => await this.validateTypedNoteName({ otherNoteNames, value })
     });
 
-    if (typedName === null) {
-      return null;
-    }
-
     // Cannot throw: the prompt's validator already ran the same transform over the same text.
-    return await this.normalizeTypedNoteName(typedName);
+    return typedName === null ? null : await this.normalizeTypedNoteName(typedName);
   }
 
   /**

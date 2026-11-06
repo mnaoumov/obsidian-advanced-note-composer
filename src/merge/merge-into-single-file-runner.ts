@@ -166,7 +166,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     pluginSettingsComponent,
     progressLabel,
     resourceLockComponent,
-    shouldRelocateOwnedAttachments,
+    shouldRelocateOwnedAttachments = false,
     sourceFiles,
     targetFile
   } = params;
@@ -198,7 +198,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     attachmentExtensions: settings.attachmentExtensions,
     folder: attachmentSourceFolder,
     noteFiles: notesToMerge,
-    shouldRelocateOwnedAttachments: shouldRelocateOwnedAttachments ?? false
+    shouldRelocateOwnedAttachments
   });
 
   /*

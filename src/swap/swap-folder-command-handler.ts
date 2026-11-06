@@ -17,6 +17,7 @@ import { isFileOrFolderCommandBlocked } from '../settings/command-visibility/com
 import { CommandCategory } from '../settings/plugin-settings.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
@@ -121,7 +122,7 @@ export class SwapFolderCommandHandler extends FolderCommandHandler {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
 
     // The swap landed, so the folder it was swapped with counts as clicked-on for the next picker (issue

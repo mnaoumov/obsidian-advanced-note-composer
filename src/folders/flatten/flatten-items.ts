@@ -358,12 +358,9 @@ function collectFolders(
   items: TAbstractFile[]
 ): void {
   for (const child of folder.children) {
-    if (!isFolder(child)) {
-      continue;
-    }
-    if (isSkippedFolder(child, context) || isProtectedFolder(child, noteAttachmentFolders)) {
-      // An attachment folder is left exactly as it is, contents included — promoting something out of it
-      // would scatter the very attachments the mode exists to keep together. The same goes, subtree
+    if (!isFolder(child) || isSkippedFolder(child, context) || isProtectedFolder(child, noteAttachmentFolders)) {
+      // Only folders are collected here. An attachment folder is left exactly as it is, contents
+      // included — promoting something out of it would scatter the very attachments the mode exists to keep together. The same goes, subtree
       // included, for a folder the user excluded.
       continue;
     }
@@ -536,12 +533,9 @@ function isConfiguredAttachmentFolder(folder: TFolder, context: FlattenContext):
   // parent there is nothing to be separated from, and an unrelated folder that merely shares the configured
   // name keeps flattening normally.
   const parentFolder = folder.parent;
-  /* v8 ignore start -- a non-root folder always has a parent. */
-  if (!parentFolder) {
-    return false;
-  }
+  /* v8 ignore start -- a non-root folder always has a parent, so the `false` arm is unreachable. */
+  return !!parentFolder && hasOwnNote(parentFolder, context.attachmentExtensions);
   /* v8 ignore stop */
-  return hasOwnNote(parentFolder, context.attachmentExtensions);
 }
 
 function isInsideOrEqual(path: string, folderPath: string): boolean {

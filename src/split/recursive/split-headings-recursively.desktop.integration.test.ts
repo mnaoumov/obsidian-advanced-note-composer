@@ -597,6 +597,6 @@ describe('split headings recursively', () => {
  * @param content - The produced note's content.
  * @returns The number of trailers.
  */
-function countTrailers(content: string | undefined): number {
-  return (content ?? '').split('From: [[').length - 1;
+function countTrailers(content = ''): number {
+  return content.split('From: [[').length - 1;
 }

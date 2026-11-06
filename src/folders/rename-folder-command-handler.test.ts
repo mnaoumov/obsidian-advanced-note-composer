@@ -149,7 +149,7 @@ describe('RenameFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/Alpha'));
 
-    expect(getChildFolderNames('parent')).toEqual(['Alpha']);
+    expect(getParentChildFolderNames()).toEqual(['Alpha']);
     expect(showNotice).not.toHaveBeenCalled();
   });
 
@@ -160,7 +160,7 @@ describe('RenameFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/Alpha'));
 
-    expect(getChildFolderNames('parent')).toEqual(['Alpha']);
+    expect(getParentChildFolderNames()).toEqual(['Alpha']);
     expect(showNotice).not.toHaveBeenCalled();
   });
 
@@ -171,7 +171,7 @@ describe('RenameFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/Alpha'));
 
-    expect(getChildFolderNames('parent')).toEqual(['Beta']);
+    expect(getParentChildFolderNames()).toEqual(['Beta']);
     expect(await readNote('parent/Beta/note.md')).toBe('a');
     // The rename is one bulk operation, committed under a summary naming the old and the new path.
     expect(bulkOperationRunnerStub.summaries).toEqual(['Rename folder parent/Alpha to parent/Beta']);
@@ -185,7 +185,7 @@ describe('RenameFolderCommandHandler', () => {
     await handler.executeFolder(getFolder('parent/1. Alpha'));
 
     expect(ensureNonNullable(promptParams).defaultValue).toBe('Alpha');
-    expect(getChildFolderNames('parent')).toEqual(['1. Beta']);
+    expect(getParentChildFolderNames()).toEqual(['1. Beta']);
     const note = await readNote('parent/1. Beta/1. Beta.md');
     expect(note).toContain('title: 1. Beta');
     expect(note).toContain('- Beta');
@@ -309,7 +309,7 @@ describe('RenameFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/Alpha'));
 
-    expect(getChildFolderNames('parent')).toEqual(['Beta', 'Beta 1']);
+    expect(getParentChildFolderNames()).toEqual(['Beta', 'Beta 1']);
     // The de-duplicated name is what the properties describe, not the name that was asked for.
     expect(await readNote('parent/Beta 1/Beta 1.md')).toContain('title: Beta 1');
   });
@@ -321,7 +321,7 @@ describe('RenameFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/iOS notes'));
 
-    expect(getChildFolderNames('parent')).toEqual(['iOS stuff']);
+    expect(getParentChildFolderNames()).toEqual(['iOS stuff']);
   });
 
   it('should refuse a name that normalizes to nothing, through the prompt\'s own validator', async () => {
@@ -357,7 +357,7 @@ describe('RenameFolderCommandHandler', () => {
 
     await expect(handler.executeFolder(folder)).resolves.toBeUndefined();
 
-    expect(getChildFolderNames('parent')).toEqual(['Alpha']);
+    expect(getParentChildFolderNames()).toEqual(['Alpha']);
     expect(await app.vault.adapter.read('parent/Alpha/note.md')).toBe('note body');
   });
 
@@ -368,7 +368,7 @@ describe('RenameFolderCommandHandler', () => {
     vi.spyOn(app.fileManager, 'renameFile').mockRejectedValue(new Error('Disk on fire.'));
 
     await expect(handler.executeFolder(getFolder('parent/Alpha'))).rejects.toThrow('Disk on fire.');
-    expect(getChildFolderNames('parent')).toEqual(['Alpha']);
+    expect(getParentChildFolderNames()).toEqual(['Alpha']);
   });
 
   // Issue #284: a `<%` left after the plugin's own tokens is `Templater`'s, with the folder note as `tp.file`.
@@ -401,7 +401,7 @@ describe('RenameFolderCommandHandler', () => {
 
     await handler.executeFolder(getFolder('parent/Alpha'));
 
-    expect(getChildFolderNames('parent')).toEqual(['Alpha']);
+    expect(getParentChildFolderNames()).toEqual(['Alpha']);
     expect(showNotice.mock.calls.some(([content]) => typeof content !== 'string' && content.textContent.includes('Folder note title template produced a multi-line value.')))
       .toBe(true);
   });
@@ -466,16 +466,16 @@ function createShowNoticeAfterDelayStub(): PluginNoticeComponent['showNoticeAfte
   });
 }
 
-function getChildFolderNames(path: string): string[] {
-  return getFolder(path).children.filter((child) => !('extension' in child)).map((child) => child.name).sort();
-}
-
 function getFile(path: string): TFile {
   return ensureNonNullable(app.vault.getFileByPath(path));
 }
 
 function getFolder(path: string): TFolder {
   return ensureNonNullable(app.vault.getFolderByPath(path));
+}
+
+function getParentChildFolderNames(): string[] {
+  return getFolder('parent').children.filter((child) => !('extension' in child)).map((child) => child.name).sort();
 }
 
 function initApp(files: Record<string, string> = {}): void {

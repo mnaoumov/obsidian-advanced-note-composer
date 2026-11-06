@@ -44,9 +44,9 @@ describe('split template title (issue #276)', () => {
 
         const isOriginalShouldAsk = await didSetToggle('Should ask before splitting', false);
         const isOriginalShouldSplitIntoFolder = await didSetToggle('Should split into folder', true);
-        const originalTitleMode = await setDropdown('Frontmatter title mode', 'UseAlways');
+        const originalTitleMode = await setTitleModeDropdown('UseAlways');
         try {
-          await setTemplate('Split template', TEMPLATE);
+          await setSplitTemplate(TEMPLATE);
 
           await removeIfExists(NOTE_PATH);
           await removeIfExists(NEW_NOTE_NAME);
@@ -74,23 +74,23 @@ describe('split template title (issue #276)', () => {
           await waitUntil({
             message: `split template was not applied to ${NOTE_PATH}`,
             predicate: async () => {
-              const content = await readIfExists(NOTE_PATH);
+              const content = await readNoteIfExists();
               return content.includes('index:');
             },
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
           await sleep(SETTLE_IN_MILLISECONDS);
 
-          return await readIfExists(NOTE_PATH);
+          return await readNoteIfExists();
         } finally {
-          await setTemplate('Split template', '');
-          await setDropdown('Frontmatter title mode', originalTitleMode);
+          await setSplitTemplate('');
+          await setTitleModeDropdown(originalTitleMode);
           await didSetToggle('Should ask before splitting', isOriginalShouldAsk);
           await didSetToggle('Should split into folder', isOriginalShouldSplitIntoFolder);
         }
 
-        async function readIfExists(path: string): Promise<string> {
-          const file = app.vault.getAbstractFileByPath(path);
+        async function readNoteIfExists(): Promise<string> {
+          const file = app.vault.getAbstractFileByPath(NOTE_PATH);
           return file instanceof obsidianModule.TFile ? await app.vault.read(file) : '';
         }
 
@@ -120,7 +120,8 @@ describe('split template title (issue #276)', () => {
           return view.editor;
         }
 
-        async function setTemplate(settingName: string, value: string): Promise<void> {
+        async function setSplitTemplate(value: string): Promise<void> {
+          const settingName = 'Split template';
           const settingItem = await openSettingItem(settingName);
           const textAreaEl = settingItem?.querySelector('textarea');
           if (!(textAreaEl instanceof HTMLTextAreaElement)) {
@@ -136,7 +137,8 @@ describe('split template title (issue #276)', () => {
           await sleep(RENDER_IN_MILLISECONDS);
         }
 
-        async function setDropdown(name: string, value: string): Promise<string> {
+        async function setTitleModeDropdown(value: string): Promise<string> {
+          const name = 'Frontmatter title mode';
           const item = await openSettingItem(name);
           const selectEl = item?.querySelector('select');
           if (!(selectEl instanceof HTMLSelectElement)) {

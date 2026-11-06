@@ -63,9 +63,14 @@ interface SelectionSpec {
 const DOC = 'hello world';
 const COLLAPSED: SelectionSpec = { anchor: 0 };
 
-function anchoredState(offset: number, doc = DOC): EditorState {
-  return EditorState.create({ doc, extensions: [selectionAnchorField] })
-    .update({ effects: replaceSelectionAnchorEffect.of(buildSelectionAnchorDecorations(offset)) }).state;
+/**
+ * The offset every anchored test state anchors at: just before `world` in {@link DOC}.
+ */
+const ANCHOR_OFFSET = 6;
+
+function anchoredState(): EditorState {
+  return EditorState.create({ doc: DOC, extensions: [selectionAnchorField] })
+    .update({ effects: replaceSelectionAnchorEffect.of(buildSelectionAnchorDecorations(ANCHOR_OFFSET)) }).state;
 }
 
 function editorWithState(state: EditorState, dispatch = vi.fn()): Editor {
@@ -115,12 +120,12 @@ describe('the anchor marker widget', () => {
 describe('selectionAnchorField', () => {
   it('starts empty and applies the replace effect', () => {
     expect(EditorState.create({ doc: DOC, extensions: [selectionAnchorField] }).field(selectionAnchorField).size).toBe(0);
-    expect(anchoredState(6).field(selectionAnchorField).size).toBe(1);
+    expect(anchoredState().field(selectionAnchorField).size).toBe(1);
   });
 
   it('ignores unrelated effects', () => {
     const unrelatedEffect = StateEffect.define();
-    expect(getSelectionAnchorOffset(anchoredState(6).update({ effects: unrelatedEffect.of(null) }).state)).toBe(6);
+    expect(getSelectionAnchorOffset(anchoredState().update({ effects: unrelatedEffect.of(null) }).state)).toBe(6);
   });
 
   /*
@@ -131,11 +136,11 @@ describe('selectionAnchorField', () => {
    * exactly that broken implementation.
    */
   it('maps the anchor through an edit made above it', () => {
-    expect(getSelectionAnchorOffset(anchoredState(6).update({ changes: { from: 0, insert: 'XYZ' } }).state)).toBe(9);
+    expect(getSelectionAnchorOffset(anchoredState().update({ changes: { from: 0, insert: 'XYZ' } }).state)).toBe(9);
   });
 
   it('leaves the anchor alone for an edit made below it', () => {
-    expect(getSelectionAnchorOffset(anchoredState(6).update({ changes: { from: 8, insert: 'XYZ' } }).state)).toBe(6);
+    expect(getSelectionAnchorOffset(anchoredState().update({ changes: { from: 8, insert: 'XYZ' } }).state)).toBe(6);
   });
 
   /*
@@ -143,11 +148,11 @@ describe('selectionAnchorField', () => {
    * it ends up INSIDE the range `End selection` will make. Typing there means extending the region.
    */
   it('stays put when text is typed at the anchor, so the new text falls inside the range', () => {
-    expect(getSelectionAnchorOffset(anchoredState(6).update({ changes: { from: 6, insert: 'XYZ' } }).state)).toBe(6);
+    expect(getSelectionAnchorOffset(anchoredState().update({ changes: { from: 6, insert: 'XYZ' } }).state)).toBe(6);
   });
 
   it('maps the anchor back through a deletion above it', () => {
-    expect(getSelectionAnchorOffset(anchoredState(6).update({ changes: { from: 0, to: 3 } }).state)).toBe(3);
+    expect(getSelectionAnchorOffset(anchoredState().update({ changes: { from: 0, to: 3 } }).state)).toBe(3);
   });
 });
 
@@ -219,7 +224,7 @@ describe('getSelectionAnchorOffset', () => {
   });
 
   it('returns the anchored offset', () => {
-    expect(getSelectionAnchorOffset(anchoredState(6))).toBe(6);
+    expect(getSelectionAnchorOffset(anchoredState())).toBe(6);
   });
 });
 
@@ -277,7 +282,7 @@ describe('SelectionAnchorComponent', () => {
   });
 
   it('reads the anchored offset back out of the editor', () => {
-    expect(component.getAnchorOffset(editorWithState(anchoredState(6)))).toBe(6);
+    expect(component.getAnchorOffset(editorWithState(anchoredState()))).toBe(6);
   });
 
   // An anchor set in one note must not enable `End selection` in another — the field is per-editor, but

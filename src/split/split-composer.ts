@@ -57,6 +57,7 @@ import {
 import { createMoveToken } from '../smart-cut/move/move-token.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   renderOperationNoticeLink,
   showOperationCompletionNotice,
   showOperationProgressNotice
@@ -410,7 +411,7 @@ export class SplitComposer extends ComposerBase {
       }
       throw error;
     } finally {
-      progressNotice?.[Symbol.dispose]();
+      disposeOperationProgressNotice(progressNotice);
     }
   }
 
@@ -440,14 +441,10 @@ export class SplitComposer extends ComposerBase {
   protected override getTemplate(): string {
     // An explicit override wins over every setting: the caller is taking templating over entirely (the
     // recursive split defers it — see `applySplitTemplateToNotes`), so it is not padded either.
-    if (this.templateOverride !== undefined) {
-      return this.templateOverride;
-    }
-
-    // Padding is applied to whatever the chain resolves, NOT only to the smart cut & paste branch: the
-    // reported top-move merge happens with the SHIPPED DEFAULTS, where both smart templates are empty and
+    // Otherwise padding is applied to whatever the chain resolves, NOT only to the smart cut & paste branch:
+    // the reported top-move merge happens with the SHIPPED DEFAULTS, where both smart templates are empty and
     // the chain falls all the way through to `mergeTemplate`. See `padEdgeMoveTemplate`.
-    return padEdgeMoveTemplate(this.resolveConfiguredTemplate(), this.smartCutAndPasteMoveKind);
+    return this.templateOverride ?? padEdgeMoveTemplate(this.resolveConfiguredTemplate(), this.smartCutAndPasteMoveKind);
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {

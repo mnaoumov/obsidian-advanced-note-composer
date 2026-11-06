@@ -29,6 +29,7 @@ import type { RenderOperationNoticeLinkParams } from './operation-notices.ts';
 import { PluginSettings } from '../settings/plugin-settings.ts';
 import {
   buildOperationNoticeContent,
+  disposeOperationProgressNotice,
   MAX_LINKED_CREATED_NOTES,
   renderOperationNoticeLink,
   showOperationCompletionNotice,
@@ -338,6 +339,20 @@ describe('renderOperationNoticeLink', () => {
     await vi.waitFor(() => {
       expect(onClick).toHaveBeenCalledOnce();
     });
+  });
+});
+
+describe('disposeOperationProgressNotice', () => {
+  it('should dispose a shown notice', () => {
+    const notice = { [Symbol.dispose]: vi.fn() };
+    disposeOperationProgressNotice(notice);
+    expect(notice[Symbol.dispose]).toHaveBeenCalledTimes(1);
+  });
+
+  it('should do nothing when no notice was shown', () => {
+    expect(() => {
+      disposeOperationProgressNotice(null);
+    }).not.toThrow();
   });
 });
 
