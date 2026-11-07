@@ -25,6 +25,8 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
   - open the target note once a file merge lands. Neither folder merge opens what it merges.
 - `shouldMoveAttachmentsWhenMergingFile`
   - carry a merged note's own attachments with it.
+- `shouldMergeAtSourceLinkByDefault`
+  - put the merged note in place of the one link the target has to it, the one an extract left — see [01 Merge file](<../01 Merge/01 Merge file.md>). The picker's `Merge at the link to the source` checkbox (`Alt+6`) changes it for one merge.
 
 ### Merge folder contents into a single file
 
