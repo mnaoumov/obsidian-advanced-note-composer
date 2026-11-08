@@ -14,788 +14,1085 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 6.2.0
 
-- feat(split): add a Folder for split notes setting (#309)
-- chore(github): add the plugin-version id to the feature request form
-- docs: make issue attachments optional and strongly encouraged
-- docs: link to the Obsidian resources page
+This release has 1 new feature and 2 documentation changes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- **split:** add a Folder for split notes setting (#309)
+
+### Documentation
+
+- make issue attachments optional and strongly encouraged
+- link to the Obsidian resources page
 
 ## 6.1.0
 
-- docs(readme): point bug reports at the Report a bug command
-- docs: add issue-filing instructions for AI agents
-- feat: add a Report a bug command
-- chore(github): give the bug form the field ids bug-report links prefill
-- build(deps): bump `typescript-dev-toolkit` to ^5.4.1
-- build(deps): float `obsidian-dev-toolkit` to ^7.4.0 and override re2js for GHSA-gg6h-894w-4m9c
-- feat: record folder-wide commands as `git` commits for undo
-- refactor: use `obsidian-lib` isPositionInOffsetRange for selection containment
-- build(deps): bump @mnaoumov/typescript-dev-toolkit to ^5.1.0
-- chore(deps): update vulnerable fast-uri dependency
-- fix: retain incoming frontmatter when templates have no properties
-- chore: adopt shared keyword identifier rule
-- refactor: adopt readonly interface members
-- feat: preserve permanent links when merging notes
-- test: drop obsolete text-component probe patches
-- docs(readme): combine related resources and plugin comparisons
-- refactor: group src into feature folders
-- docs(readme): bring the README under the landing-page size budget
-- docs(readme): add a Similar plugins section
-- fix(create-folder): keep the confirm row's colon beside its label
-- test(demo-vault): floor `CodeScript Toolkit` at 15.0.0
+This release has 3 new features, 2 fixes and 5 documentation changes. 11 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- add a Report a bug command
+- record folder-wide commands as `git` commits for undo
+- preserve permanent links when merging notes
+
+### Fixed
+
+- retain incoming frontmatter when templates have no properties
+- **create-folder:** keep the confirm row's colon beside its label
+
+### Documentation
+
+- **readme:** point bug reports at the Report a bug command
+- add issue-filing instructions for AI agents
+- **readme:** combine related resources and plugin comparisons
+- **readme:** bring the README under the landing-page size budget
+- **readme:** add a Similar plugins section
 
 ## 6.0.0
 
-- fix(demo-vault): wait for the automatic heading splits before a button reports
-- chore(deps)!: move to `obsidian-lib` 6 and off the dropped `obsidian-dev-utils` names
-- docs: name `obsidian-lib` where comments said dev-utils
-- docs: point leftover `obsidian-dev-utils` mentions at the packages that hold the APIs now
-- chore(deps): move to `obsidian-dev-toolkit` 4 and its demo-vault directive spelling
-- fix: drop the plugin name from notice text
-- docs: shorten the debugging section
-- docs(changelog): escape the issue-title tags so `markdownlint` and `cspell` pass
-- docs(changelog): name the issue each released entry resolved
-- fix(demo-vault): load the demo setup helpers from @mnaoumov/obsidian-lib
-- docs(readme): lead the Debugging section with `Advanced Debug Mode`
+This release has 1 breaking change, 3 fixes and 6 documentation changes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Breaking changes
+
+- **deps:** move to `obsidian-lib` 6 and off the dropped `obsidian-dev-utils` names
+
+### Fixed
+
+- **demo-vault:** wait for the automatic heading splits before a button reports
+- drop the plugin name from notice text
+- **demo-vault:** load the demo setup helpers from @mnaoumov/obsidian-lib
+
+### Documentation
+
+- name `obsidian-lib` where comments said dev-utils
+- point leftover `obsidian-dev-utils` mentions at the packages that hold the APIs now
+- shorten the debugging section
+- **changelog:** escape the issue-title tags so `markdownlint` and `cspell` pass
+- **changelog:** name the issue each released entry resolved
+- **readme:** lead the Debugging section with `Advanced Debug Mode`
 
 ## 5.20.0
 
-- build(deps): clear the brace-expansion, sharp and fast-uri advisories
-- feat(path-settings): accept globs and match include/exclude paths case-insensitively
-- docs: mark plugin names as code
+This release has 1 new feature and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- **path-settings:** accept globs and match include/exclude paths case-insensitively
+
+### Documentation
+
+- mark plugin names as code
 
 ## 5.19.2
 
-- fix(split): refuse when the source tab navigates away mid-split
-- test: stop the `Templater` cursor test racing the extract it drives
-- build(deps): merge taking `obsidian-lib` 4.3.0 and its validation debug switch
-- docs(demo-vault): give every settings button a way back to the shipped default
-- docs(demo-vault): give every Try it section buttons for its setup and steps
-- chore(github): point questions to Discussions from the new-issue page
-- fix(split): merge naming a note after a heading's text, not the space after its hashes
-- ci: merge attesting release assets through the toolkit's reusable workflow
+This release has 2 fixes and 2 documentation changes. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- **split:** refuse when the source tab navigates away mid-split
+- **split:** merge naming a note after a heading's text, not the space after its hashes
+
+### Documentation
+
+- **demo-vault:** give every settings button a way back to the shipped default
+- **demo-vault:** give every Try it section buttons for its setup and steps
 
 ## 5.19.1
 
-- refactor(deps): merge moving off `obsidian-dev-utils` onto the @mnaoumov packages
-- refactor(api): merge re-copying the providers' contracts in their short `typescript-lib` form
-- refactor(api): merge using the providers' copied plugin API contracts, with full schemas
-- fix(ui): render plugin names as code in notices, settings, docs and comments
-- build: merge loading `obsidian-typings`' ESM copy for the `Templater` augmentation
-- refactor: merge the keyed getConfig read of attachmentFolderPath
-- test: merge using the `obsidian-typings` declarations of Obsidian internals
+This release has 1 fix. 6 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- **ui:** render plugin names as code in notices, settings, docs and comments
 
 ## 5.19.0
 
-- feat(select): merge Copy link to this file (#308)
+This release has 1 new feature.
+
+### New
+
+- **select:** merge Copy link to this file (#308)
 
 ## 5.18.0
 
-- feat(reorder): merge reversing a heading level and the end drop zone (#307)
+This release has 1 new feature.
+
+### New
+
+- **reorder:** merge reversing a heading level and the end drop zone (#307)
 
 ## 5.17.0
 
-- feat(reorder): merge sorting headings by created, modified or recently seen time (#306)
-- docs(screenshots): merge the five-frame mobile set
-- feat(reorder): sort a heading level by name in Reorder headings (#306)
+This release has 2 new features and 1 documentation change.
+
+### New
+
+- **reorder:** merge sorting headings by created, modified or recently seen time (#306)
+- **reorder:** sort a heading level by name in Reorder headings (#306)
+
+### Documentation
+
+- **screenshots:** merge the five-frame mobile set
 
 ## 5.16.0
 
-- feat(selection): finish an interrupted selection with End selection alone (#305)
+This release has 1 new feature.
+
+### New
+
+- **selection:** finish an interrupted selection with End selection alone (#305)
 
 ## 5.15.0
 
-- feat(pickers): optionally show a folder note by its folder's path (#304)
+This release has 1 new feature.
+
+### New
+
+- **pickers:** optionally show a folder note by its folder's path (#304)
 
 ## 5.14.0
 
-- test(screenshots): apply the dark theme through applyObsidianTheme
-- fix(split): keep the create/merge switch steady across the folder prompt and the picker (#303)
-- fix(templater): consume the cursor marker when a created note opens (#301)
-- fix(smart-cut): re-select the moved content from the completion notice link (re #300 - \[FR\] Highlight the content with continuous clicking)
-- feat: rename the split/extract wording to extract (#299)
+This release has 1 new feature and 3 fixes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- rename the split/extract wording to extract (#299)
+
+### Fixed
+
+- **split:** keep the create/merge switch steady across the folder prompt and the picker (#303)
+- **templater:** consume the cursor marker when a created note opens (#301)
+- **smart-cut:** re-select the moved content from the completion notice link (re #300 - \[FR\] Highlight the content with continuous clicking)
 
 ## 5.13.0
 
-- test(split-target-mode): merge setting spellcheck after the source note opens
-- chore(`cspell`): merge accepting repoint for the changelog spellcheck
-- refactor(release-notes): merge moving the popup onto the shared ReleaseNotesComponent
-- test(split-auto-number): merge running each case in phases driven from `node`
-- feat(merge-folder): merge keeping attachment unit folders whole (#298)
-- feat(split): merge offering the create/merge switch before the folder is chosen (#297)
-- feat(merge-folder): keep same-named folders separate by path (re #296 - \[FR\] `Folder names to keep separate` adjustment)
-- feat(reorder-headings): number headings the way folders and notes are numbered (re #295 - \[FR\] Reorder Headings Enhancement)
-- feat(reorder-headings): move headings under a different parent (re #295 - \[FR\] Reorder Headings Enhancement)
-- chore: merge caret-free desktop screenshot capture
-- test(integration): merge per-test Obsidian error recording for the desktop aggregate
-- feat(rename-folder): merge several folder note aliases per template (re #294 - \[FR\] Allow folder note aliases to enter multiple `aliases`)
-- refactor(notices): merge the move onto the library file-explorer reveal
-- chore: merge the `obsidian-integration-testing` 17 float
-- docs: merge updating five JSDoc links whose targets were renamed or removed
+This release has 6 new features and 1 documentation change. 8 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **merge-folder:** merge keeping attachment unit folders whole (#298)
+- **split:** merge offering the create/merge switch before the folder is chosen (#297)
+- **merge-folder:** keep same-named folders separate by path (re #296 - \[FR\] `Folder names to keep separate` adjustment)
+- **reorder-headings:** number headings the way folders and notes are numbered (re #295 - \[FR\] Reorder Headings Enhancement)
+- **reorder-headings:** move headings under a different parent (re #295 - \[FR\] Reorder Headings Enhancement)
+- **rename-folder:** merge several folder note aliases per template (re #294 - \[FR\] Allow folder note aliases to enter multiple `aliases`)
+
+### Documentation
+
+- merge updating five JSDoc links whose targets were renamed or removed
 
 ## 5.12.0
 
-- chore(spellcheck): merge accepting headlessly in the changelog
-- test(settings): merge expecting the command menus sections on the Swap and Smart cut & paste pages (#278)
-- fix(release-notes): merge waiting for the settings before deciding what was shown (#293)
-- feat(settings): merge moving each command menus section onto its command page (#278)
-- fix(split): merge keeping the title a split template writes on a new note (re #276 - \[BUG\] `{{index}}` doesn't work in properties)
-- refactor: merge reaching `Custom Attachment Location` through its published API
-- feat(settings): merge folding the strategies group into Common (re #275 - \[FR\] Settings Enhancement)
-- fix: merge keeping the editor focused after every extract-notice click (re #263 - \[FR\] Continuous clicking on notification should keep highlighting the selection)
-- test: merge floating `obsidian-test-mocks` to ^7.0.0
-- test(demo-vault): merge installing `CodeScript Toolkit` headlessly in the demo-vault setup
-- docs(screenshots): merge recapturing the recursive-split mobile frames
-- fix(merge): merge merging a folder into its destination, not beneath it
-- fix(deps): merge restoring the lockfile's missing resolved and integrity fields
-- test(split-composer): merge elapsing the whitespace-only give-up in fake time
-- fix(split): merge gating the folder-then-name pair on the effective mode
-- test(coverage): merge re-pairing the orphaned v8 ignore ranges in the modals
-- docs(settings): merge naming the commands the strategies heading leaves out
-- fix(links): merge keeping heading and block links pointing at their target through a split (#291)
-- docs(settings): merge the Attachment extensions pointer to the path lists (#290)
-- fix(progress): merge making Cancel roll an operation back whole (#289)
-- style(comments): stop capitalizing the middle of a wrapped comment
-- feat(paths): merge letting commands run on a path the content filter excludes (#288)
-- feat(select): merge resuming a live selection instead of dropping it (#287)
-- docs(agents): correct the stale raiseSoftKeyboard warning in the keyboard notes
-- fix(release-notes): merge naming the plugin in the release notes popup (#286)
-- fix(settings): merge keeping an emptied folder-note property template empty (#285)
-- feat(templates): merge `Templater` in the split and folder-note templates (#284)
-- feat(create-note): merge typed-name cleaning for the create-empty-note commands (#283)
-- feat(settings): merge nested settings sections (#282)
-- fix(confirm-dialog): merge the single action row restoration (#281)
-- fix(reorder): keep a folder's contents reorderable when only the folder is excluded (#279)
-- test(screenshots): restore the extract and merge picker mobile frames
-- feat(merge): keep named folders out of a same-named destination folder (#267)
-- feat(split): keep create/merge reachable and enrich the naming box (#280)
-- build(`markdownlint`): forbid hard-wrapped markdown paragraphs
-- chore: raise `obsidian-dev-utils` to 105 and clear what held the range back
-- test(split-composer): elapse the reveal poll's give-up budget in fake time
-- docs(settings): record why the two root setting groups stay at the root (#274)
-- feat(move): auto-number what a move or a flatten relocates (#273)
-- fix(deps): float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
-- test: record why the desktop suites' default-wait budgets are left alone
-- chore(deps): drop the dead markdown-it override
-- chore(deps): drop the dead js-yaml override
-- docs: replace the private rule-id citations with what they assert
-- docs: name the library and the sibling plugins so a reader can resolve them
-- docs: replace the private tracker references with what they pointed at
-- docs: record why the rename-heading frame does not raise the soft keyboard
-- refactor(rename-heading): adopt editBacklinks instead of re-deriving its loop
-- chore: adopt the `npm` run gate branch gate
-- docs: say where the debug command is run
-- test: bring the in-closure wait ceiling under the transport's per-eval cap
-- docs(agents): record where the picker's spellcheck rule now lives
-- refactor(modals): take the picker's spellcheck rule from `obsidian-dev-utils`
-- refactor(android): drive the Android suites with trusted input
+This release has 10 new features, 13 fixes and 11 documentation changes. 20 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **settings:** merge moving each command menus section onto its command page (#278)
+- **settings:** merge folding the strategies group into Common (re #275 - \[FR\] Settings Enhancement)
+- **paths:** merge letting commands run on a path the content filter excludes (#288)
+- **select:** merge resuming a live selection instead of dropping it (#287)
+- **templates:** merge `Templater` in the split and folder-note templates (#284)
+- **create-note:** merge typed-name cleaning for the create-empty-note commands (#283)
+- **settings:** merge nested settings sections (#282)
+- **merge:** keep named folders out of a same-named destination folder (#267)
+- **split:** keep create/merge reachable and enrich the naming box (#280)
+- **move:** auto-number what a move or a flatten relocates (#273)
+
+### Fixed
+
+- **release-notes:** merge waiting for the settings before deciding what was shown (#293)
+- **split:** merge keeping the title a split template writes on a new note (re #276 - \[BUG\] `{{index}}` doesn't work in properties)
+- merge keeping the editor focused after every extract-notice click (re #263 - \[FR\] Continuous clicking on notification should keep highlighting the selection)
+- **merge:** merge merging a folder into its destination, not beneath it
+- **deps:** merge restoring the lockfile's missing resolved and integrity fields
+- **split:** merge gating the folder-then-name pair on the effective mode
+- **links:** merge keeping heading and block links pointing at their target through a split (#291)
+- **progress:** merge making Cancel roll an operation back whole (#289)
+- **release-notes:** merge naming the plugin in the release notes popup (#286)
+- **settings:** merge keeping an emptied folder-note property template empty (#285)
+- **confirm-dialog:** merge the single action row restoration (#281)
+- **reorder:** keep a folder's contents reorderable when only the folder is excluded (#279)
+- **deps:** float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
+
+### Documentation
+
+- **screenshots:** merge recapturing the recursive-split mobile frames
+- **settings:** merge naming the commands the strategies heading leaves out
+- **settings:** merge the Attachment extensions pointer to the path lists (#290)
+- **agents:** correct the stale raiseSoftKeyboard warning in the keyboard notes
+- **settings:** record why the two root setting groups stay at the root (#274)
+- replace the private rule-id citations with what they assert
+- name the library and the sibling plugins so a reader can resolve them
+- replace the private tracker references with what they pointed at
+- record why the rename-heading frame does not raise the soft keyboard
+- say where the debug command is run
+- **agents:** record where the picker's spellcheck rule now lives
 
 ## 5.11.0
 
-- docs: name the unversioned demo-vault asset and the folder it unzips into
-- chore: make the LICENSE copyright line lintable and guard it against the year roll-over
-- chore(deps): take `obsidian-dev-utils` 101.4.1, so each `vitest` project collects only its own files
-- test(integration): isolate the shared desktop vault per file, and stop waiting for the create row
-- test(test-mocks): await the trusted-input helpers, and stop assigning over app.plugins
-- feat(settings): merge the title page into the frontmatter page (#272)
-- feat(paths): move each include/exclude list under its own command (#271)
-- feat(paths): narrow the content filter per command category (#270)
-- feat(split): auto-number the notes or folders a split creates (#269)
-- refactor(confirm-dialog): retire the hand-wired control strip onto ModalCommandBuilder
-- test(integration): reset the app between files so one failure stops cascading
-- docs(agents): record refreshSpellcheck and de-stale the spell-check note
-- feat(split): spell-check the picker box while it names a note
-- fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
-- refactor: narrow an over-exposed field
-- style: reformat after the `dprint` bump
-- chore(deps): sweep caret-ranged dependencies to latest
-- fix(deps): move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
-- fix(deps): drop the brace-expansion file: override that breaks a clean install
-- test(confirm-dialog): restore the picker's Create/Merge mode after the change-target flow
-- feat(select): selection-only commands and the Selection anchor pair (#266)
-- docs: point plugin-directory links at community.obsidian.md
-- feat(split-picker): ask for the folder before the name, with no suggestions (#261)
-- fix(notices): put the user back in the editor when the destination link is clicked (#263)
-- feat(create): hide `Create empty note at cursor...` while a selection is active (#265)
-- fix(split-picker): always remember the last create/merge mode (#264)
-- fix(split-picker): put the cursor in the box when the picker opens (#262)
-- feat(split-picker): keep the cursor in the box when the mode is flipped (#260)
-- feat(split-picker): keep the create/merge switch out of the override setting (#258)
-- fix(split-picker): choose an existing note clicked while nothing is typed (#257)
-- fix(pickers): rank a completed target and a note you opened by which came last (#256)
-- feat(create): let `Create empty note in folder...` honor `Should split into folder` (#255)
-- feat(commands): choose each command's context menu one command at a time (#254)
-- fix(merge): give excluded merge destinations their own setting (#253)
-- test(advanced-note-composer): record the deliberate untrusted-input exceptions
-- test(advanced-note-composer): prove Enter is preventDefault-ed on a REAL key press
-- test(advanced-note-composer): convert the last dispatched key press in the split-picker suite
-- test(advanced-note-composer): drive integration tests with trusted input instead of dispatchEvent
+This release has 12 new features, 9 fixes and 3 documentation changes. 14 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **settings:** merge the title page into the frontmatter page (#272)
+- **paths:** move each include/exclude list under its own command (#271)
+- **paths:** narrow the content filter per command category (#270)
+- **split:** auto-number the notes or folders a split creates (#269)
+- **split:** spell-check the picker box while it names a note
+- **select:** selection-only commands and the Selection anchor pair (#266)
+- **split-picker:** ask for the folder before the name, with no suggestions (#261)
+- **create:** hide `Create empty note at cursor...` while a selection is active (#265)
+- **split-picker:** keep the cursor in the box when the mode is flipped (#260)
+- **split-picker:** keep the create/merge switch out of the override setting (#258)
+- **create:** let `Create empty note in folder...` honor `Should split into folder` (#255)
+- **commands:** choose each command's context menu one command at a time (#254)
+
+### Fixed
+
+- **build:** wire build:compile to buildCompile and drop the duplicate leaf script
+- **deps:** move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
+- **deps:** drop the brace-expansion file: override that breaks a clean install
+- **notices:** put the user back in the editor when the destination link is clicked (#263)
+- **split-picker:** always remember the last create/merge mode (#264)
+- **split-picker:** put the cursor in the box when the picker opens (#262)
+- **split-picker:** choose an existing note clicked while nothing is typed (#257)
+- **pickers:** rank a completed target and a note you opened by which came last (#256)
+- **merge:** give excluded merge destinations their own setting (#253)
+
+### Documentation
+
+- name the unversioned demo-vault asset and the folder it unzips into
+- **agents:** record refreshSpellcheck and de-stale the spell-check note
+- point plugin-directory links at community.obsidian.md
 
 ## 5.10.1
 
-- fix(test): stop the multi-line name-transform test reading other tests' notices
-- docs(demo-vault): unwrap the notes so Obsidian stops rendering a break per line
+This release has 1 fix and 1 documentation change.
+
+### Fixed
+
+- **test:** stop the multi-line name-transform test reading other tests' notices
+
+### Documentation
+
+- **demo-vault:** unwrap the notes so Obsidian stops rendering a break per line
 
 ## 5.10.0
 
-- chore: lint
-- chore: lint
-- test: pin that loading the plugin creates no leaf (#250)
-- docs(agents): record CommandMenuPlacement and the two editor context menus
-- feat(commands): offer each command category on the readable-line-length margin (#252)
-- chore: update libs
-- docs(readme): match the `GitHub` rendering on Obsidian's plugin page (#251)
-- feat(commands): narrow command blocking to one category at a time (#249)
-- feat(split): apply the split template to the create-empty-note commands (#244)
-- feat(split): remember the last used create/merge mode behind a setting
-- chore: update `obsidian-dev-utils` to 94.6.1
-- chore: update `obsidian-dev-utils` to 94.6.0
-- fix: override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
-- feat(pickers): let the picker recency order be chosen, rather than fixed (#248)
-- feat(ui): offer a progress dialog that blocks the vault until the work is done (#247)
-- feat(split): hand an extract's destination note to `Custom Attachment Location` (#246)
-- test: gate the demo vault by clicking every code button
-- feat(split): create an empty note from an empty extract (#244)
-- feat(settings): move the lock-all-notes row to the smart cut & paste page (#243)
-- chore: teach `cspell` the advisory wording
-- chore: update libs
-- fix(merge-folder): make the excluded-items setting reach the folder picker
-- feat(settings): hide every per-operation override when the UI setting is off (#242)
-- feat(settings): flatten the swap settings page (#241)
-- docs: show the screenshots in the README
-- feat(settings): give each merge command its own settings header (#240)
-- docs: capture the community-store screenshot set
-- feat(split): carry a heading's own attachments into the note it creates
-- fix(split-picker): require a name before a new note can be placed (#238)
-- fix(split-picker): clear the heading name when the switch is set to merge (#237)
-- fix(split-picker): keep the create/merge switch clear of the minimize button (#236)
-- fix(operation-notices): name the notes a batch split created (#235)
-- refactor(folder-note): dissolve the local folder-note code onto dev-utils 94.2.0
-- test(merge-suites): make a stalled folder merge report why it stalled
-- feat(prompt): spell-check the name prompts, following the vault's Spellcheck setting (#233)
-- feat(notices): open a folder's folder note when its notice link is clicked
+This release has 15 new features, 6 fixes and 4 documentation changes. 11 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **commands:** offer each command category on the readable-line-length margin (#252)
+- **commands:** narrow command blocking to one category at a time (#249)
+- **split:** apply the split template to the create-empty-note commands (#244)
+- **split:** remember the last used create/merge mode behind a setting
+- **pickers:** let the picker recency order be chosen, rather than fixed (#248)
+- **ui:** offer a progress dialog that blocks the vault until the work is done (#247)
+- **split:** hand an extract's destination note to `Custom Attachment Location` (#246)
+- **split:** create an empty note from an empty extract (#244)
+- **settings:** move the lock-all-notes row to the smart cut & paste page (#243)
+- **settings:** hide every per-operation override when the UI setting is off (#242)
+- **settings:** flatten the swap settings page (#241)
+- **settings:** give each merge command its own settings header (#240)
+- **split:** carry a heading's own attachments into the note it creates
+- **prompt:** spell-check the name prompts, following the vault's Spellcheck setting (#233)
+- **notices:** open a folder's folder note when its notice link is clicked
+
+### Fixed
+
+- override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
+- **merge-folder:** make the excluded-items setting reach the folder picker
+- **split-picker:** require a name before a new note can be placed (#238)
+- **split-picker:** clear the heading name when the switch is set to merge (#237)
+- **split-picker:** keep the create/merge switch clear of the minimize button (#236)
+- **operation-notices:** name the notes a batch split created (#235)
+
+### Documentation
+
+- **agents:** record CommandMenuPlacement and the two editor context menus
+- **readme:** match the `GitHub` rendering on Obsidian's plugin page (#251)
+- show the screenshots in the README
+- capture the community-store screenshot set
 
 ## 5.9.2
 
-- fix(demo-vault): stop committing the app.json settings `obsidian-dev-utils` owns
-- feat(notices): land the extract notice link on the extracted content and reveal the file
+This release has 1 new feature and 1 fix.
+
+### New
+
+- **notices:** land the extract notice link on the extracted content and reveal the file
+
+### Fixed
+
+- **demo-vault:** stop committing the app.json settings `obsidian-dev-utils` owns
 
 ## 5.9.1
 
-- docs: make the demo vault the documentation, in the standard layout
-- feat(demo-vault): migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
-- test(merge-suites): stop the folder-merge suites dying on the 30 s CDP cap
-- test(modals): pin the modal keyboard paths and drop the dead Escape handlers
-- docs(agents): record the #230 synchronous nesting gate in the flatten-items notes
-- fix(flatten-folder): keep judging the nesting rule under an attachment plugin (#230)
-- feat(split): add a `Create`/`Merge` switch to the split/extract picker (#227)
-- feat(templates): resolve the `Create folder with notes` folder tokens in the note templates (#227)
-- feat(smart-cut): mark a whole heading for smart cut & paste (#229)
-- feat(split): add `Split heading recursively...` scoped to the cursor's heading (#228)
-- fix(prompt): show the red invalid outline only after Create is clicked (#219)
-- feat(settings): reorganize the settings tab into pages (#220-#226)
-- fix(name-transform): find a templater context note instead of demanding an open one
-- feat: re #217
-- fix(reorder): drag a row and it actually moves
+This release has 7 new features, 4 fixes and 2 documentation changes. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **demo-vault:** migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
+- **split:** add a `Create`/`Merge` switch to the split/extract picker (#227)
+- **templates:** resolve the `Create folder with notes` folder tokens in the note templates (#227)
+- **smart-cut:** mark a whole heading for smart cut & paste (#229)
+- **split:** add `Split heading recursively...` scoped to the cursor's heading (#228)
+- **settings:** reorganize the settings tab into pages (#220-#226)
+- \[FR\] `Rename` Model that updates `folder name`, `title`, and `aliases` (#217)
+
+### Fixed
+
+- **flatten-folder:** keep judging the nesting rule under an attachment plugin (#230)
+- **prompt:** show the red invalid outline only after Create is clicked (#219)
+- **name-transform:** find a templater context note instead of demanding an open one
+- **reorder:** drag a row and it actually moves
+
+### Documentation
+
+- make the demo vault the documentation, in the standard layout
+- **agents:** record the #230 synchronous nesting gate in the flatten-items notes
 
 ## 5.9.0
 
-- chore: update libs
-- fix(smart-cut): stop the marked-selection notice from throwing on dev-utils 93
-- chore: overexposed
-- chore: update libs
-- feat(reorder): reorder a folder's contents, renumbering names and folder-note titles (#216)
-- fix(merge-into-single-file): close the tabs of the merged-away notes in one pass (#212)
-- feat(create-folder): make the confirmation dialog's rename buttons optional (#214)
-- fix(flatten-folder): ignore the attachment setting a plugin has taken over (#213)
-- feat(merge-folder): open the result after a folder merge (#212, #215)
-- feat(flatten-folder): hide a flatten variant that duplicates a simpler one (#210)
+This release has 4 new features and 3 fixes. 3 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **reorder:** reorder a folder's contents, renumbering names and folder-note titles (#216)
+- **create-folder:** make the confirmation dialog's rename buttons optional (#214)
+- **merge-folder:** open the result after a folder merge (#212, #215)
+- **flatten-folder:** hide a flatten variant that duplicates a simpler one (#210)
+
+### Fixed
+
+- **smart-cut:** stop the marked-selection notice from throwing on dev-utils 93
+- **merge-into-single-file:** close the tabs of the merged-away notes in one pass (#212)
+- **flatten-folder:** ignore the attachment setting a plugin has taken over (#213)
 
 ## 5.8.0
 
-- test(integration): restore the fixtures the two-note merge guard broke (#209)
-- fix(merge-folder-into-file): hide the command for folders with fewer than two notes (#209)
-- test(modals): pin that a background click minimizes a confirmation (#202)
-- chore: update libs
-- fix(merge-folder-into-file): order numbered notes and folders naturally (#208)
-- feat(recent-suggestions): count a completed operation's target as clicked-on (#206)
-- fix(name-transform): refuse a multi-line name and say why (#203)
-- feat(modals): show the minimize button on every confirmation menu (#201)
-- feat(confirm-dialog): rename the folder and each note from `Create folder with notes...` (#200)
-- feat(confirm-dialog): make `Change target` work on every confirmation menu (#205, #199)
-- feat(settings): split command blocking out of Exclude paths (#198)
+This release has 5 new features and 3 fixes. 3 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **recent-suggestions:** count a completed operation's target as clicked-on (#206)
+- **modals:** show the minimize button on every confirmation menu (#201)
+- **confirm-dialog:** rename the folder and each note from `Create folder with notes...` (#200)
+- **confirm-dialog:** make `Change target` work on every confirmation menu (#205, #199)
+- **settings:** split command blocking out of Exclude paths (#198)
+
+### Fixed
+
+- **merge-folder-into-file:** hide the command for folders with fewer than two notes (#209)
+- **merge-folder-into-file:** order numbered notes and folders naturally (#208)
+- **name-transform:** refuse a multi-line name and say why (#203)
 
 ## 5.7.0
 
-- docs: narrow the overstated processFrontMatter claim to the flows it applies to
-- feat(demo-vault): install `Templater` from the note that needs it
-- feat(create-folder): make a template's own property writes survive the render (#197)
-- fix(create-folder): declare TOKENS first, so it works in a note's frontmatter (#197)
-- docs(demo-vault): show how to split a name into several aliases (#197)
-- fix(prompt): show the empty-name error only after Create is clicked (#195)
-- feat(name-transform): define your own replacements via a template (#196)
-- feat(create-folder): resolve the palette's destination from Obsidian's setting (#194)
+This release has 4 new features, 2 fixes and 2 documentation changes.
+
+### New
+
+- **demo-vault:** install `Templater` from the note that needs it
+- **create-folder:** make a template's own property writes survive the render (#197)
+- **name-transform:** define your own replacements via a template (#196)
+- **create-folder:** resolve the palette's destination from Obsidian's setting (#194)
+
+### Fixed
+
+- **create-folder:** declare TOKENS first, so it works in a note's frontmatter (#197)
+- **prompt:** show the empty-name error only after Create is clicked (#195)
+
+### Documentation
+
+- narrow the overstated processFrontMatter claim to the flows it applies to
+- **demo-vault:** show how to split a name into several aliases (#197)
 
 ## 5.6.1
 
-- chore(flatten): exempt the unreachable parent-less guard from coverage
-- chore: update libs and adopt `obsidian-integration-testing` 10
-- feat(flatten): protect excluded items and the configured attachment folder
-- feat: add `Create folder with notes...` command (#191)
+This release has 2 new features. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **flatten:** protect excluded items and the configured attachment folder
+- add `Create folder with notes...` command (#191)
 
 ## 5.6.0
 
-- fix: re #185
-- docs: describe flatten as three commands, not a Flatten mode setting
+This release has 1 fix and 1 documentation change.
+
+### Fixed
+
+- The two folder-only flatten commands no longer appear on a folder whose only child (#185)
+
+### Documentation
+
+- describe flatten as three commands, not a Flatten mode setting
 
 ## 5.5.0
 
-- feat: re #188
+This release has 1 new feature.
+
+### New
+
+- Hide `Extract this heading...` and `Split note by headings recursively...` (#188)
 
 ## 5.4.0
 
-- feat: re #184
-- fix: re #186
-- fix: re #187
+This release has 1 new feature and 2 fixes.
+
+### New
+
+- \[FR\] Current note should not show up as when `split/extract` search (#184)
+
+### Fixed
+
+- \[BUG\] File is renamed when `Inside the folder` option is clicked (#186)
+- \[BUG\] Property Order is switched when a property value is moved to another note (#187)
 
 ## 5.3.1
 
-- fix: build fresh command handler instances on every factory call
-- chore: update libs
-- fix(test): build the command handlers through the registered factory
-- feat: re #183
-- chore: update libs
-- feat: show a progress and completion notice for every operation (#182)
-- fix: re #181
-- chore(`vitest`): adopt the shared Obsidian plugin `vitest` configuration
-- feat: re #177
-- feat: re #178
-- fix: re #179
-- refactor(prism): register the template language through `obsidian-dev-utils`' SyntaxHighlightingComponent
+This release has 4 new features and 4 fixes. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- re #183
+- show a progress and completion notice for every operation (#182)
+- \[FR\] Allow `flatten children` and `flatten recursively` to both appear as options on right click context menu (#177)
+- \[FR\] Option to not move file, after merging all folder items to a single file (#178)
+
+### Fixed
+
+- build fresh command handler instances on every factory call
+- **test:** build the command handlers through the registered factory
+- Folder-to-heading merge no longer emits a heading for a sub-folder that (#181)
+- \[FR\] Move line down after clicking `move to top of file` & Create new line at the end after clicking `move to bottom of file` (#179)
 
 ## 5.3.0
 
-- refactor(settings): move the settings tab onto the declarative settings API
-- feat: re #175 re #176
-- chore: update libs and clear the `npm` audit
+This release has 1 new feature. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- re #175 re #176
 
 ## 5.2.0
 
-- feat: re #174
-- feat: re #173
-- feat: re #172
-- feat: re #170 re #171
-- fix: re #168
-- feat: re #167
-- fix: re #166
-- feat: re #165
+This release has 6 new features and 2 fixes.
+
+### New
+
+- \[FR\] Unification of `merge` and `smart cut and paste` templates (#174)
+- \[FR\] Setting to place the the recursive splits in Obsidian defined folder (#173)
+- \[FR\] `Recursive Split` Should use the split template (#172)
+- re #170 re #171
+- \[FR\] `Merge into a single file` keep current folder, delete children folders (#167)
+- \[FR\] When moving folder the destination should be clickable (#165)
+
+### Fixed
+
+- \[BUG\] Converting to headers is not working correctly (#168)
+- \[BUG\] Clicking note confirmation will create the note on merge into single file (#166)
 
 ## 5.1.0
 
-- refactor: stop exporting the test-only trailing-dots regular expression
-- docs: fix the demo vault download instructions
-- fix(settings): report an invalid path regular expression instead of ignoring it (re #155)
-- feat(attachments)!: configure real extensions instead of markdown sub-extensions
-- test: drop the hand-seeded attachment-path surface now that the mocks model it
-- fix(merge-folder): stop clamping folder headings at six levels (re #160)
-- feat(merge): make attachments follow a merged note (re #161)
-- feat(merge-folder): enhance Merge folder contents into a single file (re #160, re #161)
-- docs: explain the path-string vs regular-expression forms of Include/Exclude paths (re #159)
-- fix: offer the folder you are on first in the folder pickers (re #158)
-- feat: per-direction jump-to-moved-content settings (re #144)
-- feat: ask before flattening and moving folders (re #154)
-- feat: split note by headings recursively (re #79)
-- feat: predefine the note name for folder splits (re #153)
-- feat: split headings automatically (re #79)
+This release has 1 breaking change, 7 new features, 3 fixes and 2 documentation changes. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Breaking changes
+
+- **attachments:** configure real extensions instead of markdown sub-extensions
+
+### New
+
+- **merge:** make attachments follow a merged note (re #161)
+- **merge-folder:** enhance Merge folder contents into a single file (re #160, re #161)
+- per-direction jump-to-moved-content settings (re #144)
+- ask before flattening and moving folders (re #154)
+- split note by headings recursively (re #79)
+- predefine the note name for folder splits (re #153)
+- split headings automatically (re #79)
+
+### Fixed
+
+- **settings:** report an invalid path regular expression instead of ignoring it (re #155)
+- **merge-folder:** stop clamping folder headings at six levels (re #160)
+- offer the folder you are on first in the folder pickers (re #158)
+
+### Documentation
+
+- fix the demo vault download instructions
+- explain the path-string vs regular-expression forms of Include/Exclude paths (re #159)
 
 ## 5.0.0
 
-- fix: skip vanished backlink sources when fixing backlinks
-- test: wait for the metadata cache before extracting between rules
-- test: expect the Swap with selection button in the smart-cut notice
-- chore: update libs
-- feat: split into folder (re #79)
-- feat: merge multiple selected files into one file (re #92)
-- feat: merge folder contents into a single file (re #92)
-- feat: add Rename heading command that updates nested-subpath links (re #111)
-- fix: don't cycle the active leaf on folder merge (re #106)
-- feat: add swap confirmation dialog (re #74)
-- feat: gate split-by-headings menu items on the selected heading level (re #94)
-- fix: move the cursor to the moved content for smart cut & paste (re #144)
-- feat: block commands on excluded paths (re #93)
-- feat: always-merge-excluded-items setting (re #150)
-- feat: recent folders in the move-folder picker (re #149)
-- feat: swap button in the smart cut & paste notice (re #148)
-- feat: reorder nested headings (re #147)
-- docs: demo folder commands, reorder and swap-selection in demo vault (re #105, #73, #103, #108)
-- test: integration tests for folder commands and extract-heading (re #105, #73, #72, #143)
+This release has 11 new features, 3 fixes and 1 documentation change. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- split into folder (re #79)
+- merge multiple selected files into one file (re #92)
+- merge folder contents into a single file (re #92)
+- add Rename heading command that updates nested-subpath links (re #111)
+- add swap confirmation dialog (re #74)
+- gate split-by-headings menu items on the selected heading level (re #94)
+- block commands on excluded paths (re #93)
+- always-merge-excluded-items setting (re #150)
+- recent folders in the move-folder picker (re #149)
+- swap button in the smart cut & paste notice (re #148)
+- reorder nested headings (re #147)
+
+### Fixed
+
+- skip vanished backlink sources when fixing backlinks
+- don't cycle the active leaf on folder merge (re #106)
+- move the cursor to the moved content for smart cut & paste (re #144)
+
+### Documentation
+
+- demo folder commands, reorder and swap-selection in demo vault (re #105, #73, #103, #108)
 
 ## 4.0.0
 
-- chore: fix overexposed
-- feat: re #103
-- feat: re #108
-- fix: re #95
-- fix: re #102
-- feat: re #73
-- feat: re #105
-- fix: re #72
-- feat: re #89
-- feat: re #143
+This release has 6 new features and 3 fixes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- \[FR\] Reorder Headers (#103)
+- \[FR\] Swap selection/header (#108)
+- \[FR\] Better Move Folder to... Command (#73)
+- \[FR\] Flatten Folder (#105)
+- \[FR\] {{parentFolder}} variable (#89)
+- \[FR\] Make current “Extract this heading” command work in body (#143)
+
+### Fixed
+
+- \[BUG\] Splash Page since last update (#95)
+- \[BUG\] First extract selection causes some sort of refresh in the background (#102)
+- \[BUG\] Merge Folder Bug with `tldraw` file (#72)
 
 ## 3.35.0
 
-- feat: re #113
-- chore: update libs
+This release has 1 new feature. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- \[FR\] Extract between Horizontal Rules '---' or (#113)
 
 ## 3.34.9
 
-- fix: re #114
-- chore: update libs
-- refactor: new endpoint
+This release has 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- \[BUG\] title property gets deleted when child (#114)
 
 ## 3.34.8
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.34.7
 
-- docs: rewrite
-- fix: re #142
-- chore: update libs
+This release has 1 fix and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- \[BUG\] Enter button creates sound on folder model (#142)
+
+### Documentation
+
+- rewrite
 
 ## 3.34.6
 
-- chore: update libs
-- chore(demo-vault): drop committed Invocables placeholder
-- fix(demo-vault): export invoke() from startup script; add Invocables folder
+This release has 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- **demo-vault:** export invoke() from startup script; add Invocables folder
 
 ## 3.34.5
 
-- docs: standardize demo-vault README
-- docs: drop per-plugin demo-vault setup notes (bootstrap covered by `obsidian-dev-utils` harness)
-- docs: renumber demo-vault setup notes
-- feat: number demo vault example notes
-- docs: reconcile the demo vault helper description with the injected helper
-- feat: add demo vault
+This release has 2 new features and 4 documentation changes.
+
+### New
+
+- number demo vault example notes
+- add demo vault
+
+### Documentation
+
+- standardize demo-vault README
+- drop per-plugin demo-vault setup notes (bootstrap covered by `obsidian-dev-utils` harness)
+- renumber demo-vault setup notes
+- reconcile the demo vault helper description with the injected helper
 
 ## 3.34.4
 
-- fix: re #141
+This release has 1 fix.
+
+### Fixed
+
+- \[BUG\] Note switches when switch to smart/cut and (#141)
 
 ## 3.34.3
 
-- fix: re #140
-- docs: update
+This release has 1 fix and 1 documentation change.
+
+### Fixed
+
+- \[BUG\] None of the smart buttons work on smart (#140)
+
+### Documentation
+
+- update
 
 ## 3.34.2
 
-- feat: re #137
+This release has 1 new feature.
+
+### New
+
+- \[FR\] A way around clicking the notice (#137)
 
 ## 3.34.1
 
-- fix: re #136
-- feat: re #125
-- docs: fix link
-- docs: migrate to AGENTS.md
+This release has 1 new feature, 1 fix and 2 documentation changes.
+
+### New
+
+- \[FR\]  UI setting to remove minimization and x button of a Advanced note composer command with no selection (#125)
+
+### Fixed
+
+- \[FR\] Add search button to smart cut and paste (#136)
+
+### Documentation
+
+- fix link
+- migrate to AGENTS.md
 
 ## 3.34.0
 
-- refactor: reuse EMPTY hack
-- fix: re #130
-- feat: re #131
-- feat: re #138
-- feat: re #139
-- docs: update
+This release has 3 new features, 1 fix and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- re #131
+- \[FR\] Allow user to define different template for cursor insertions (#138)
+- \[FR\] UI setting to hide Move marked selection to top of file (#139)
+
+### Fixed
+
+- \[BUG\] Unlock button still doesn't work on extract selection (#130)
+
+### Documentation
+
+- update
 
 ## 3.33.0
 
-- chore: overexposed
-- chore: update libs
-- refactor: drop app2 hack, use inherited protected app
-- refactor: consume dev-utils 85 resource-lock unlock + release-on-abort
-- refactor: better API
+This release has 2 new features, 1 fix and 1 other change. 5 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- `Smart cut & paste` UX improvements
+- Originally requested: (#127)
+
+### Fixed
+
+- \[BUG\] Minimize button can be infinitely cast (#126)
+
+### Other changes
+
 - Merge branch 'issue-129'
-- feat: `Smart cut & paste` UX improvements
-- fix: re #126
-- feat: re #127
 
 ## 3.32.0
 
-- feat: move selection to another note re #97 #100
+This release has 1 new feature.
+
+### New
+
+- move selection to another note re #97 #100
 
 ## 3.31.0
 
-- feat: re #119
+This release has 1 new feature.
+
+### New
+
+- re #119
 
 ## 3.30.1
 
-- docs: fix changelog wrong ref
-- fix: re #124
+This release has 1 fix and 1 documentation change.
+
+### Fixed
+
+- \[BUG\] Transparent Button (#124)
+
+### Documentation
+
+- fix changelog wrong ref
 
 ## 3.30.0
 
-- feat: re #121
+This release has 1 new feature.
+
+### New
+
+- re #121
 
 ## 3.29.0
 
-- feat: re #123
+This release has 1 new feature.
+
+### New
+
+- \[FR\] Keep title property when there is no new (#123)
 
 ## 3.28.0
 
-- fix: re #122
-- test: wire integration-testing vitest-setup into integration projects
-- chore: update libs
+This release has 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- \[BUG\] Random Dialog box at the very end of (#122)
 
 ## 3.27.0
 
-- chore: lint
-- docs: drop completed session-progress notes
-- fix: preserve context when splitting/merging, even if the editor changed #120
+This release has 1 fix and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- preserve context when splitting/merging, even if the editor changed #120
+
+### Documentation
+
+- drop completed session-progress notes
 
 ## 3.26.12
 
-- refactor: new template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.11
 
-- refactor: notices
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.10
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.9
 
-- chore: unify tsconfig
-- test: use real `obsidian-dev-utils` implementations in unit tests
-- test: drive real `obsidian-dev-utils` base classes via test-mocks bridge
-- fix: restrict merge-file command to markdown files
-- chore: add integration tests
+This release has 1 fix. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- restrict merge-file command to markdown files
 
 ## 3.26.8
 
-- chore: update template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.7
 
-- chore: add attestation
-- chore: update version script
+This release has maintenance changes only. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 3.26.6
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.5
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.4
 
-- chore: update template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.3
 
-- chore: update template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.26.2
 
-- fix: exclude root folder from merge/swap re #104
+This release has 1 fix.
+
+### Fixed
+
+- exclude root folder from merge/swap re #104
 
 ## 3.26.1
 
-- fix: safe trash re #107
-- chore: update libs
-- refactor: getSelections
+This release has 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- safe trash re #107
 
 ## 3.26.0
 
-- feat: show confirms for split by heading commands
-- chore: lint
-- fix: correct button caption
-- feat: remove new split file is cancelled
-- feat: shouldAskBeforeSplitting re #77
+This release has 3 new features and 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- show confirms for split by heading commands
+- remove new split file is cancelled
+- shouldAskBeforeSplitting re #77
+
+### Fixed
+
+- correct button caption
 
 ## 3.25.0
 
-- feat: shouldAddCommandsToSubmenu re #86
+This release has 1 new feature.
+
+### New
+
+- shouldAddCommandsToSubmenu re #86
 
 ## 3.24.0
 
-- feat: additional explanation for `Should allow split into unresolved path` re #85
+This release has 1 new feature.
+
+### New
+
+- additional explanation for `Should allow split into unresolved path` re #85
 
 ## 3.23.0
 
-- feat: additional explanation for `Should treat title as path` re #84
+This release has 1 new feature.
+
+### New
+
+- additional explanation for `Should treat title as path` re #84
 
 ## 3.22.0
 
-- feat: shouldOpenTargetNoteAfterSplit re #78
+This release has 1 new feature.
+
+### New
+
+- shouldOpenTargetNoteAfterSplit re #78
 
 ## 3.21.0
 
-- refactor: path settings
-- chore: lint
-- refactor: extractHeading
-- refactor: switch visibility
-- refactor: init ctors
-- refactor: extract editor
-- refactor: move initialization
-- refactor: modal result classes
-- refactor: getInsertModeFromEvent
-- refactor: switch to InsertMode enum
-- refactor: rename insertMode
-- refactor: extract item selectors
-- refactor: remove composer arg from modals
-- refactor: extract composer props
-- refactor: move init composer to split
-- refactor: move init composer to merge
-- refactor: remove doNotAskAgain
-- refactor: prepareForMergeFile
-- refactor: rename SplitFileModal
-- refactor: extract mergeFile
-- refactor: remove action
-- refactor: extract separate composers
-- refactor: rename ComposerBase
-- refactor: extract Composers
-- refactor: rename insertMode
-- refactor: move selectItem
-- refactor: extract prepareForSplitFile
-- refactor: add app arg
-- refactor: extract AdvancedNoteComposerOptions
-- refactor: remove animation
-- refactor: remove context
-- refactor: remove DynamicModal
-- fix: don't confirm after clicking checkbox
-- fix: wrong title
-- feat: improve captions
-- refactor: modals to promises
-- refactor: rename ConfirmDialogModalResult
-- refactor: traverseBookmarks
-- feat: extract submenu
-- refactor: promise of MergeFolderModal
+This release has 2 new features and 2 fixes. 36 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- improve captions
+- extract submenu
+
+### Fixed
+
+- don't confirm after clicking checkbox
+- wrong title
 
 ## 3.20.0
 
-- feat: restructure/reword settings re #82 #81
-- chore: update libs
+This release has 1 new feature. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- restructure/reword settings re #82 #81
 
 ## 3.19.1
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 3.19.0
 
-- feat: rewrite swap re #71
-- fix: change setting title re #68
+This release has 1 new feature and 1 fix.
+
+### New
+
+- rewrite swap re #71
+
+### Fixed
+
+- change setting title re #68
 
 ## 3.18.0
 
-- chore: lint
-- feat: allow excluding child/parent paths re #68
-- refactor: link
-- fix: improve subfolder merging re #70
-- feat: check source path for ignored
-- feat: swap command re #69
+This release has 3 new features and 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- allow excluding child/parent paths re #68
+- check source path for ignored
+- swap command re #69
+
+### Fixed
+
+- improve subfolder merging re #70
 
 ## 3.17.0
 
-- feat: check source folder for ignores
-- feat: filter excluded folders re #60
-- chore: spellcheck
-- chore: lint
-- fix: change setting only on Merge click
-- fix: mobile dialog
-- feat: add links to folders
-- feat: add warning re #61
+This release has 4 new features and 2 fixes. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- check source folder for ignores
+- filter excluded folders re #60
+- add links to folders
+- add warning re #61
+
+### Fixed
+
+- change setting only on Merge click
+- mobile dialog
 
 ## 3.16.0
 
-- feat: rewrite recursive merge to preserve links / fix: carefully merge into sub/superfolder / re #64 #65 #62
-- chore: update libs
+This release has 1 new feature. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- rewrite recursive merge to preserve links / fix: carefully merge into sub/superfolder / re #64 #65 #62
 
 ## 3.15.2
 
-- fix: clean UI re #67
+This release has 1 fix.
+
+### Fixed
+
+- clean UI re #67
 
 ## 3.15.1
 
-- chore: spellcheck
-- fix: exclude current recent folder re #66
+This release has 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- exclude current recent folder re #66
 
 ## 3.15.0
 
-- fix: merging with subfolders re #62
+This release has 1 fix.
+
+### Fixed
+
+- merging with subfolders re #62
 
 ## 3.14.0
 
-- feat: show recent folders first
+This release has 1 new feature.
+
+### New
+
+- show recent folders first
 
 ## 3.13.1
 
-- fix: don't merge non-md
+This release has 1 fix.
+
+### Fixed
+
+- don't merge non-md
 
 ## 3.13.0
 
-- feat: implement merge folder re #25
-- refactor: move Modals
-- feat: add MergeFolderCommand
-- chore: update libs
+This release has 2 new features. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- implement merge folder re #25
+- add MergeFolderCommand
 
 ## 3.12.0
 
-- feat: split frontmatter as text for KeepOriginalFrontmatter re #58
+This release has 1 new feature.
+
+### New
+
+- split frontmatter as text for KeepOriginalFrontmatter re #58
 
 ## 3.11.0
 
-- feat: add frontmatterTitleMode setting re #56 #55
+This release has 1 new feature.
+
+### New
+
+- add frontmatterTitleMode setting re #56 #55
 
 ## 3.10.1
 
-- feat: ignore `Keep original frontmatter` setting when splitting into a new file re #54 #53
+This release has 1 new feature.
+
+### New
+
+- ignore `Keep original frontmatter` setting when splitting into a new file re #54 #53
 
 ## 3.10.0
 
-- chore: spellcheck
-- feat: add setting splitToExistingFileTemplate re #52 #51
-- refactor: enum Action
+This release has 1 new feature. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- add setting splitToExistingFileTemplate re #52 #51
 
 ## 3.9.0
 
-- feat: add splitTemplate re #50
-- feat: setting shouldKeepHeadingsWhenSplittingContent re #38
-- fix: extracting content under Setext heading
-- fix: extracting first symbol after heading
+This release has 2 new features and 2 fixes.
+
+### New
+
+- add splitTemplate re #50
+- setting shouldKeepHeadingsWhenSplittingContent re #38
+
+### Fixed
+
+- extracting content under Setext heading
+- extracting first symbol after heading
 
 ## 3.8.0
 
-- feat: add merge modal hotkeys
-- feat: delay before open re #32
+This release has 2 new features.
+
+### New
+
+- add merge modal hotkeys
+- delay before open re #32
 
 ## 3.7.0
 
-- chore: format
-- chore: update libs
-- feat: add progress bar re #33
+This release has 1 new feature. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- add progress bar re #33
 
 ## 3.6.0
 
-- feat: add source/target clickable links re #49
-- feat: enable `Templater` re #37
-- chore: update libs
+This release has 2 new features. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- add source/target clickable links re #49
+- enable `Templater` re #37
 
 ## 3.5.7
 
-- fix: disable files menu re #47
+This release has 1 fix.
+
+### Fixed
+
+- disable files menu re #47
 
 ## 3.5.6
 
-- chore: update libs
-- fix: parse frontmatter safely re #48
+This release has 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- parse frontmatter safely re #48
 
 ## 3.5.5
 
-- chore: update libs
-- chore: update libs
+This release has maintenance changes only. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 3.5.4
 
@@ -806,13 +1103,23 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 3.5.3
 
-- fix: change links message to Updated
+This release has 1 fix.
+
+### Fixed
+
+- change links message to Updated
 
 ## 3.5.2
 
-- chore: lint
-- fix: handle formats re #45
-- feat: show links updates notice
+This release has 1 new feature and 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- show links updates notice
+
+### Fixed
+
+- handle formats re #45
 
 ## 3.5.1
 
@@ -830,13 +1137,23 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 3.4.1
 
-- feat: add extra line
+This release has 1 new feature.
+
+### New
+
+- add extra line
 
 ## 3.4.0
 
-- fix: compilation
-- feat: more readable merge dialog re #41
-- chore: update libs
+This release has 1 new feature and 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- more readable merge dialog re #41
+
+### Fixed
+
+- compilation
 
 ## 3.3.0
 
@@ -864,40 +1181,55 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 3.0.0
 
-- chore: add missing lint files
-- feat: add release notes
-- fix: remove keys from correct frontmatter
-- feat: add dropdown
-- fix: key
-- fix: cancel button
-- fix: close dialog on merge
-- refactor: inline translations
-- refactor: add SuggestModalCommandBuilder
-- feat: merge frontmatters
-- feat: reorder dropdown options
-- refactor: clean comments
-- feat: remove dependency from core plugin
-- fix: renamed fields
-- chore: enable `markdownlint`
-- chore: enable conventional commits
-- refactor: commands
-- chore: lint
+This release has 5 new features and 5 fixes. 8 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- add release notes
+- add dropdown
+- merge frontmatters
+- reorder dropdown options
+- remove dependency from core plugin
+
+### Fixed
+
+- remove keys from correct frontmatter
+- key
+- cancel button
+- close dialog on merge
+- renamed fields
 
 ## 2.2.1
+
+This release has 1 other change.
+
+### Other changes
 
 - Exclude source file from selector (#23)
 
 ## 2.2.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Change/hide rendering of unresolved links (#22)
 
 ## 2.1.1
+
+This release has 3 other changes.
+
+### Other changes
 
 - Fix file parts (#21)
 - Use split placeholder
 - Ensure unresolved links filter shouldAllowOnlyCurrentFolder (#20)
 
 ## 2.1.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Add Extract before/after cursor (#19)
 
@@ -907,17 +1239,33 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 2.0.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Add should merge headings
 
 ## 1.13.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Remove unused / restore used extracted footnotes (#18)
 
 ## 1.12.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Should hide core plugin menu items (#17)
 
 ## 1.11.2
+
+This release has 1 other change.
+
+### Other changes
 
 - Fix empty filename failure (#16)
 
@@ -926,6 +1274,10 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 - Minor changes
 
 ## 1.11.0
+
+This release has 3 other changes.
+
+### Other changes
 
 - Should allow only current folder
 - Preserve title
@@ -957,6 +1309,10 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 1.9.2
 
+This release has 1 other change.
+
+### Other changes
+
 - Fix link source (#10)
 
 ## 1.9.1
@@ -964,6 +1320,10 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 - Minor changes
 
 ## 1.9.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Add command to split heading content
 
@@ -977,13 +1337,25 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 1.8.0
 
+This release has 1 other change.
+
+### Other changes
+
 - shouldOpenNoteAfterMerge
 
 ## 1.7.1
 
+This release has 1 other change.
+
+### Other changes
+
 - Change links only for merges
 
 ## 1.7.0
+
+This release has 2 other changes.
+
+### Other changes
 
 - Ensure wikilinks are renamed
 - Support links without subpath
@@ -993,6 +1365,10 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 - Skip update links. As it's already done earlier
 
 ## 1.5.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Handle titles with period
 
@@ -1014,22 +1390,42 @@ This release has 1 new feature and 1 documentation change. 1 maintenance commit 
 
 ## 1.4.1
 
+This release has 1 other change.
+
+### Other changes
+
 - New template
 
 ## 1.4.0
+
+This release has 2 other changes.
+
+### Other changes
 
 - Add alias if duplicate created
 - Add extract by headings
 
 ## 1.3.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Allow include frontmatter
 
 ## 1.2.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Update links in memory
 
 ## 1.1.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Fix backlinks
 
