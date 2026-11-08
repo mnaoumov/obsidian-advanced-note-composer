@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 6.3.0
+
+This release has 1 new feature and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- **merge:** merge a note back in place of its residual link (#310)
+
+### Documentation
+
+- **demo-vault:** list the merge-at-the-link setting on the settings page
+
 ## 6.2.0
 
 - feat(split): add a Folder for split notes setting (#309)
