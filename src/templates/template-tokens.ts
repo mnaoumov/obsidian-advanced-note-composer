@@ -24,6 +24,36 @@ const FOLDER_BASE_TOKEN_KEY = 'safeFolderName';
 const moment = extractDefaultExportInterop(moment_);
 
 /**
+ * Everything `Bulk rename...` knows about one item while it renders the item's prefix and suffix.
+ */
+export interface BulkRenameTemplateTokens {
+  /**
+   * The item's extension, leading dot included (`.md`), or an empty string for a folder. Never renamed.
+   */
+  readonly extension: string;
+
+  /**
+   * The item's position in the batch, counted from the chosen start number.
+   */
+  readonly index: number;
+
+  /**
+   * The item's name as the find, replace and case steps left it, extension excluded.
+   */
+  readonly name: string;
+
+  /**
+   * The name of the folder the item sits in.
+   */
+  readonly parentFolder: string;
+
+  /**
+   * The path of the folder the item sits in.
+   */
+  readonly parentFolderPath: string;
+}
+
+/**
  * Everything the `Create folder with notes...` command knows about the folder it is creating (issue #191).
  *
  * Both spellings of the name are members rather than one being derived from the other, because the reporter's
@@ -153,6 +183,18 @@ export interface ReorderedFileTemplateTokens {
    * The basename WITHOUT the index — what the file was called before the sequence claimed a number for it.
    */
   readonly safeName: string;
+}
+
+interface ResolveBulkRenameTemplateTokensParams {
+  /**
+   * The raw template string (may contain `{{token}}` / `{{token:format}}` placeholders).
+   */
+  readonly template: string;
+
+  /**
+   * The values the tokens resolve to.
+   */
+  readonly tokens: BulkRenameTemplateTokens;
 }
 
 interface ResolveCreateFolderTemplateTokensParams {
@@ -298,6 +340,41 @@ export function getTemplateTokenKeys(template: string): string[] {
   // A fresh instance: the shared regex carries the `g` flag, and `matchAll` reads its `lastIndex`.
   const tokenRegExp = new RegExp(TEMPLATE_TOKEN_REG_EXP.source, 'g');
   return [...template.matchAll(tokenRegExp)].map((match) => getMandatoryNamedGroup(match, 'Key'));
+}
+
+/**
+ * Resolves the tokens `Bulk rename...` exposes in its prefix and suffix.
+ *
+ * Shares {@link TEMPLATE_TOKEN_REG_EXP}, the `{{index:000}}` zero-pad mask and the "unknown key throws"
+ * contract with the other resolvers, so numbering a batch is written exactly as numbering a reorder is.
+ *
+ * @param params - The template and the values its tokens resolve to.
+ * @returns The template with every token replaced by its value.
+ */
+export function resolveBulkRenameTemplateTokens(params: ResolveBulkRenameTemplateTokensParams): string {
+  const { template, tokens } = params;
+  return replaceTemplateTokens(template, (key, format) => {
+    switch (key.toLowerCase()) {
+      case 'parentFolder'.toLowerCase(): {
+        return tokens.parentFolder;
+      }
+      case 'parentFolderPath'.toLowerCase(): {
+        return tokens.parentFolderPath;
+      }
+      case 'extension': {
+        return tokens.extension;
+      }
+      case 'index': {
+        return formatIndex(tokens.index, format);
+      }
+      case 'name': {
+        return tokens.name;
+      }
+      default: {
+        return resolveDateTimeToken(key, format);
+      }
+    }
+  });
 }
 
 /**

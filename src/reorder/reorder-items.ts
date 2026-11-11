@@ -22,9 +22,10 @@ export enum ReorderItemKind {
  */
 export interface BuildRenameStepsParams {
   /**
-   * The renumbered items, as {@link buildRenumberPlan} produced them.
+   * The items to rename — a reorder's {@link buildRenumberPlan} result, or any other set of renames inside
+   * folders that are not themselves being renamed.
    */
-  readonly items: readonly RenumberedItem[];
+  readonly items: readonly RenameStepItem[];
 
   /**
    * Turns a wanted path into one nothing currently occupies. Injected rather than imported so this module
@@ -79,6 +80,14 @@ export interface RenameStep {
    */
   readonly isTemporary: boolean;
   readonly toPath: string;
+}
+
+/**
+ * One item {@link buildRenameSteps} orders: where it is and where it is going.
+ */
+export interface RenameStepItem {
+  readonly newPath: string;
+  readonly oldPath: string;
 }
 
 /**
@@ -173,7 +182,7 @@ export const BASE_TOKEN_KEYS: Record<ReorderItemKind, string> = {
  * A cycle member parked under a temporary name until the rest of its cycle has unwound.
  */
 interface ParkedItem {
-  readonly item: RenumberedItem;
+  readonly item: RenameStepItem;
   readonly temporaryPath: string;
 }
 
@@ -195,7 +204,7 @@ export function buildRenameSteps(params: BuildRenameStepsParams): readonly Renam
   const { items, resolveTemporaryPath } = params;
   const steps: RenameStep[] = [];
   // Keyed by the path each pending item currently occupies, so a destination can be tested for an occupant.
-  const pendingItemsByCurrentPath = new Map<string, RenumberedItem>();
+  const pendingItemsByCurrentPath = new Map<string, RenameStepItem>();
   for (const item of items) {
     if (item.newPath !== item.oldPath) {
       pendingItemsByCurrentPath.set(item.oldPath, item);

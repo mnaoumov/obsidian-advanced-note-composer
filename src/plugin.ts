@@ -11,6 +11,8 @@ import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 
 import type { Level } from './headings/markdown-heading-document.ts';
 
+import { BulkRenameCommandHandler } from './bulk-rename/bulk-rename-command-handler.ts';
+import { selectBulkRenameRequest } from './bulk-rename/bulk-rename-modal.ts';
 import { InsertMode } from './composers/insert-mode.ts';
 import { CreateEmptyNoteAtCursorEditorCommandHandler } from './create/create-empty-note-at-cursor-editor-command-handler.ts';
 import { CreateEmptyNoteInFolderCommandHandler } from './create/create-empty-note-in-folder-command-handler.ts';
@@ -488,6 +490,14 @@ export class Plugin extends PluginBase {
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
         resourceLockComponent
+      }),
+      new BulkRenameCommandHandler({
+        app: this.app,
+        bulkOperationRunner: bulkOperationCommitComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectBulkRenameRequest
       }),
       new RenameHeadingEditorCommandHandler({
         app: this.app,
