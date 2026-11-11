@@ -19,7 +19,7 @@ caption: Open the menu for the three Draft items
 require('/demoSetup.ts').showFileMenu(app, ['Materials/43 Bulk rename/Bulk rename example/Draft - Meeting.md', 'Materials/43 Bulk rename/Bulk rename example/Draft - Plan.md', 'Materials/43 Bulk rename/Bulk rename example/Draft - Archive'], codeButtonContext.buttonEl);
 ```
 
-Open [Index](<../Materials/43 Bulk rename/Bulk rename example/Index.md>) afterwards: its links now name the renamed notes, including the one inside the renamed folder.
+Open [Index](<../Materials/43 Bulk rename/Bulk rename example/Index.md>) afterwards: its links now point at the renamed notes, including the ones inside the renamed folder.
 
 ```code-button
 ---
