@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 6.4.0
+
+This release has 1 new feature, 1 fix and 1 documentation change.
+
+### New
+
+- **bulk-rename:** rename a whole explorer selection at once (<https://github.com/mnaoumov/obsidian-explorer-multi-select/issues/1>)
+
+### Fixed
+
+- **demo-vault:** link the bulk rename example with markdown links
+
+### Documentation
+
+- **changelog:** regroup the published release notes for readers
+
 ## 6.3.0
 
 This release has 1 new feature and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
