@@ -1,6 +1,6 @@
 # Folder operations
 
-Obsidian gives a folder a rename and a delete. These five commands give it the rest: promoting its children, moving it somewhere else, creating one already filled with notes, and keeping a numbered sequence of folders in order. Each runs as one reversible, resource-locked transaction, and each keeps the folder's own folder note in step.
+Obsidian gives a folder a rename and a delete. These commands give it the rest: promoting its children, moving it somewhere else, creating one already filled with notes, keeping a numbered sequence of folders in order, and renaming a whole selection of notes and folders at once. Each runs as one reversible, resource-locked transaction, and each keeps the folder's own folder note in step.
 
 Two of them - the move and the three flattens - can also number what they relocate, continuing the numbering the destination already has: [41 Auto-number moves](<./41 Auto-number moves.md>).
 
@@ -14,5 +14,6 @@ Each also reports what it did in a notice whose folder name is clickable: clicki
 | [23 Reorder folders](<./23 Reorder folders.md>) | Putting sibling or child folders in your order and renumbering them |
 | [24 Rename folder](<./24 Rename folder.md>) | Renaming a folder, keeping its number, its folder note and its aliases in step |
 | [41 Auto-number moves](<./41 Auto-number moves.md>) | Numbering what a move or a flatten relocates, continuing the destination's sequence |
+| [43 Bulk rename](<./43 Bulk rename.md>) | Renaming a whole selection of notes and folders at once: find and replace, case, prefix, suffix and numbering |
 
 One more command lives on the same folder menu without being a folder operation: `Create empty note in folder...` puts a single empty note in the folder you right-clicked — the one-note counterpart of [22 Create folder with notes](<./22 Create folder with notes.md>), documented in [37 Create empty note](<../02 Extract/37 Create empty note.md>).

@@ -1,7 +1,7 @@
 {
   "author": "mnaoumov",
   "authorUrl": "https://github.com/mnaoumov/",
-  "description": "Enhances Note composer core plugin.",
+  "description": "Merge, split and extract notes, bulk rename notes and folders with find and replace and numbering, and flatten, move and reorder folders. Enhances the core Note composer.",
   "fundingUrl": "https://www.buymeacoffee.com/mnaoumov",
   "id": "advanced-note-composer",
   "isDesktopOnly": false,

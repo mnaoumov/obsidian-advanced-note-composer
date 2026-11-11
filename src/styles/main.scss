@@ -241,3 +241,50 @@
   font-size: var(--font-ui-smaller);
   margin-left: var(--size-4-2);
 }
+
+// `Bulk rename...`: the live old-to-new preview. A row whose new name cannot be used is marked and says why.
+// The fields and the preview scroll inside the dialog, so the Rename button stays on screen in a short window.
+.advanced-note-composer-bulk-rename-modal {
+  max-height: 90vh;
+
+  .modal-content {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+.advanced-note-composer-bulk-rename-summary {
+  margin-block: var(--size-4-2);
+
+  &.mod-warning {
+    color: var(--text-error);
+  }
+}
+
+.advanced-note-composer-bulk-rename-preview {
+  border: var(--border-width) solid var(--background-modifier-border);
+  border-radius: var(--radius-s);
+  font-size: var(--font-ui-small);
+  max-height: 12em;
+  overflow-y: auto;
+  padding: var(--size-4-2);
+
+  .advanced-note-composer-bulk-rename-row {
+    overflow-wrap: anywhere;
+    padding-block: var(--size-2-1);
+
+    &.is-unchanged {
+      color: var(--text-faint);
+    }
+
+    &.mod-warning .advanced-note-composer-bulk-rename-new,
+    .advanced-note-composer-bulk-rename-problem {
+      color: var(--text-error);
+    }
+  }
+
+  .advanced-note-composer-bulk-rename-arrow {
+    color: var(--text-muted);
+    margin-inline: var(--size-4-2);
+  }
+}
