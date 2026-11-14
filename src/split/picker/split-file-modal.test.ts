@@ -202,6 +202,10 @@ vi.mock('../../ui/suggest-modal-base.ts', async () => {
     // The real one reads `Editor > Spellcheck` off the vault and writes an attribute on `inputEl`; both
     // belong to the base, so they are proved by `suggest-modal-base.test.ts` and the desktop case rather
     // than here, where the base is a stand-in.
+    protected refreshNewFileButton(): void {
+      noop();
+    }
+
     protected refreshSpellcheck(): void {
       noop();
     }

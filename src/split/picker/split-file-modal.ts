@@ -684,6 +684,9 @@ class SplitFileModal extends SuggestModalBase {
     // attribute from disagreeing with the switch: this is already the one place the mode is applied,
     // reached from the constructor, `Alt+M`, the toggle, and `Mod+Enter` alike.
     this.refreshSpellcheck();
+    // The same reasoning holds for the mobile create button: the switch changes whether this picker can
+    // create, and no `input` event says so (issue #312).
+    this.refreshNewFileButton();
   }
 
   private async buildInstructions(): Promise<void> {
