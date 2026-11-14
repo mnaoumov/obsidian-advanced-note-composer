@@ -15,7 +15,10 @@ import type {
 
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
-import { Platform } from 'obsidian';
+import {
+  Platform,
+  SuggestModal
+} from 'obsidian';
 import {
   afterEach,
   beforeEach,
@@ -84,6 +87,16 @@ interface FolderNoteFixture {
   readonly folderNote: TFile;
   readonly modal: TestSuggestModal;
   readonly otherNote: TFile;
+}
+
+interface MobileModalFixture {
+  readonly ctaEl: HTMLElement;
+  readonly modal: TestSuggestModal;
+}
+
+interface MobileModalParams {
+  readonly inputValue: string;
+  readonly suggestionTexts: readonly string[];
 }
 
 interface MockPlugin {
@@ -259,6 +272,32 @@ describe('SuggestModalBase', () => {
       modal.onOpen();
 
       expect(modal.inputEl.value).toBe('');
+    });
+
+    it('should show the mobile create button for a seeded name without any typing (issue #312)', () => {
+      vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
+      plugin = createMockPlugin();
+      sourceFile = createMockFile('folder/source.md');
+      const modal = new TestSuggestModal({
+        app: plugin.app,
+        initialInputValue: 'Heading',
+        pluginSettingsComponent: plugin.pluginSettingsComponent,
+        sourceFile
+      });
+      modal['allowCreateNewFile'] = true;
+      const ctaEl = createDiv();
+      Object.defineProperties(modal, {
+        chooser: { value: { suggestions: [] } },
+        ctaEl: { value: ctaEl }
+      });
+
+      const superPrototype = getSuggestModalSuperPrototype(modal);
+      superPrototype.onOpen = vi.fn();
+      superPrototype.updateSuggestions = vi.fn();
+
+      modal.onOpen();
+
+      expect(ctaEl.querySelector('button')?.ariaDisabled).toBe('false');
     });
   });
 
@@ -825,91 +864,100 @@ describe('SuggestModalBase', () => {
   });
 
   describe('onInput', () => {
-    it('should handle mobile with create button when allowCreateNewFile is true', () => {
+    it('should run the base input handling and then show the create button on mobile', () => {
       vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
       sourceFile = createMockFile('folder/source.md');
       plugin = createMockPlugin();
       const modal = createTestSuggestModal(plugin, sourceFile);
       modal['allowCreateNewFile'] = true;
-      castTo<TestableSuggestModalBase>(modal).shouldShowMarkdown = true;
       modal.inputEl.value = 'test';
+      const ctaEl = createDiv();
+      Object.defineProperties(modal, {
+        chooser: { value: { suggestions: [] } },
+        ctaEl: { value: ctaEl }
+      });
+      // Stubs Obsidian's own `SuggestModal.onInput` (two prototypes above `SuggestModalBase`), so the
+      // override under test is what runs.
+      const suggestModalPrototype = castTo<OnInputable>(SuggestModal.prototype);
+      const originalOnInput = suggestModalPrototype.onInput;
+      const superOnInput = vi.fn();
+      suggestModalPrototype.onInput = superOnInput;
+      try {
+        modal.onInput();
+      } finally {
+        suggestModalPrototype.onInput = originalOnInput;
+      }
 
-      // Mock ctaEl and chooser
+      expect(superOnInput).toHaveBeenCalled();
+      expect(ctaEl.querySelector('button')?.ariaDisabled).toBe('false');
+    });
+  });
+  describe('refreshNewFileButton (issue #312)', () => {
+    function createMobileModal(params: MobileModalParams): MobileModalFixture {
+      vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
+      sourceFile = createMockFile('folder/source.md');
+      plugin = createMockPlugin();
+      const modal = createTestSuggestModal(plugin, sourceFile);
+      modal['allowCreateNewFile'] = true;
+      modal.inputEl.value = params.inputValue;
       const ctaEl = createDiv();
       Object.defineProperties(modal, {
         chooser: {
           value: {
-            suggestions: [{ getText: (): string => 'test' }]
+            suggestions: params.suggestionTexts.map((text) => ({ getText: (): string => text }))
           }
         },
         ctaEl: { value: ctaEl }
       });
+      return { ctaEl, modal };
+    }
 
-      // Super.onInput() may not exist on the mock, so we stub it
-      const superOnInput = vi.fn();
-      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
+    function getButton(ctaEl: HTMLElement): HTMLElement | null {
+      return ctaEl.querySelector('button');
+    }
 
-      modal.onInput();
-      expect(superOnInput).toHaveBeenCalled();
+    it('should show an enabled button for a seeded name with no input event', () => {
+      const { ctaEl, modal } = createMobileModal({ inputValue: 'Heading', suggestionTexts: [] });
+      modal['refreshNewFileButton']();
+      expect(getButton(ctaEl)?.ariaDisabled).toBe('false');
     });
 
-    it('should detach create button when input is empty on mobile', () => {
-      vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
-      sourceFile = createMockFile('folder/source.md');
-      plugin = createMockPlugin();
-      const modal = createTestSuggestModal(plugin, sourceFile);
-      modal['allowCreateNewFile'] = true;
-      modal.inputEl.value = ' '.repeat(3);
-
-      const superOnInput = vi.fn();
-      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
-
-      modal.onInput();
-      expect(superOnInput).toHaveBeenCalled();
+    it('should disable the button when the name matches the first suggestion', () => {
+      const { ctaEl, modal } = createMobileModal({ inputValue: 'heading', suggestionTexts: ['Heading'] });
+      modal['refreshNewFileButton']();
+      expect(getButton(ctaEl)?.ariaDisabled).toBe('true');
     });
 
-    it('should not re-append create button when already in DOM on mobile', () => {
-      vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(true);
-      sourceFile = createMockFile('folder/source.md');
-      plugin = createMockPlugin();
-      const modal = createTestSuggestModal(plugin, sourceFile);
-      modal['allowCreateNewFile'] = true;
-      castTo<TestableSuggestModalBase>(modal).shouldShowMarkdown = true;
-      modal.inputEl.value = 'test';
-
-      const ctaEl = createDiv();
-      Object.defineProperties(modal, {
-        chooser: {
-          value: {
-            suggestions: [{ getText: (): string => 'test' }]
-          }
-        },
-        ctaEl: { value: ctaEl }
-      });
-
-      const superOnInput = vi.fn();
-      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
-
-      // First call: appends the button
-      modal.onInput();
-      // Second call: button is already appended, so just updates ariaDisabled
-      modal.onInput();
-      expect(superOnInput).toHaveBeenCalledTimes(2);
+    it('should re-derive the disabled state when the button is already shown', () => {
+      const { ctaEl, modal } = createMobileModal({ inputValue: 'heading', suggestionTexts: ['Heading'] });
+      modal['refreshNewFileButton']();
+      modal.inputEl.value = 'heading 2';
+      modal['refreshNewFileButton']();
+      expect(ctaEl.querySelectorAll('button')).toHaveLength(1);
+      expect(getButton(ctaEl)?.ariaDisabled).toBe('false');
     });
 
-    it('should not add create button on desktop', () => {
+    it('should remove the button once the picker can no longer create', () => {
+      const { ctaEl, modal } = createMobileModal({ inputValue: 'Heading', suggestionTexts: [] });
+      modal['refreshNewFileButton']();
+      modal['allowCreateNewFile'] = false;
+      modal['refreshNewFileButton']();
+      expect(getButton(ctaEl)).toBeNull();
+    });
+
+    it('should remove the button when the box is emptied', () => {
+      const { ctaEl, modal } = createMobileModal({ inputValue: 'Heading', suggestionTexts: [] });
+      modal['refreshNewFileButton']();
+      modal.inputEl.value = '  ';
+      modal['refreshNewFileButton']();
+      expect(getButton(ctaEl)).toBeNull();
+    });
+
+    it('should not show the button on desktop', () => {
+      const { ctaEl, modal } = createMobileModal({ inputValue: 'Heading', suggestionTexts: [] });
       vi.spyOn(Platform, 'isMobile', 'get').mockReturnValue(false);
-      sourceFile = createMockFile('folder/source.md');
-      plugin = createMockPlugin();
-      const modal = createTestSuggestModal(plugin, sourceFile);
-      modal.inputEl.value = 'test';
-
-      const superOnInput = vi.fn();
-
-      castTo<OnInputable>(Object.getPrototypeOf(castTo<object>(Object.getPrototypeOf(modal)))).onInput = superOnInput;
-
-      modal.onInput();
-      expect(superOnInput).toHaveBeenCalled();
+      modal['refreshNewFileButton']();
+      expect(getButton(ctaEl)).toBeNull();
     });
   });
 

@@ -190,26 +190,10 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     invokeAsyncSafely(() => this.onChooseSuggestionAsync(item, $event));
   }
 
-  /* v8 ignore start -- onInput mobile branch has defensive ?? and ?. on chooser.suggestions[0]?.getText(). */
   public override onInput(): void {
     super.onInput();
-    if (!Platform.isMobile || !this.allowCreateNewFile) {
-      return;
-    }
-    const inputValue = this.inputEl.value.trim();
-    if (inputValue === '') {
-      this.newFileButtonEl.detach();
-      return;
-    }
-    if (this.newFileButtonEl.parentElement) {
-      return;
-    }
-    this.ctaEl.append(this.newFileButtonEl);
-
-    const firstSuggestionValue = this.chooser.suggestions[0]?.getText() ?? '';
-    this.newFileButtonEl.ariaDisabled = String(inputValue.toLowerCase() === firstSuggestionValue.toLowerCase());
+    this.refreshNewFileButton();
   }
-  /* v8 ignore stop */
 
   public override onNoSuggestion(): void {
     super.onNoSuggestion();
@@ -231,6 +215,9 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
     this.inputEl.value = this.initialInputValue;
     this.refreshSpellcheck();
     this.updateSuggestions();
+    // The box can open already holding a name (a heading seeds it), and no `input` event fires for that,
+    // so the button has to be derived here too, not only on typing (issue #312).
+    this.refreshNewFileButton();
   }
 
   /* v8 ignore start -- renderSuggestion contains many defensive ?? fallbacks on item properties that never take the null path in tests. */
@@ -351,6 +338,28 @@ export abstract class SuggestModalBase extends SuggestModal<Item | null> {
    * checked too. That is what Obsidian's own inline rename does to a basename, and the alternative —
    * parsing the box to spell-check only its last segment — cannot be expressed as an attribute.
    */
+  /**
+   * Shows the mobile `file-plus` create button exactly while the box holds a name and this picker can
+   * create, and re-derives whether it is disabled (the name already matches the first suggestion).
+   *
+   * It is a pure function of the current state rather than an `input`-event side effect, because the state
+   * changes without one: the picker opens with a seeded name, and the split picker's `Create` / `Merge`
+   * switch flips {@link allowCreateNewFile} (issue #312: the button appeared only after typing a space).
+   */
+  protected refreshNewFileButton(): void {
+    const inputValue = this.inputEl.value.trim();
+    if (!Platform.isMobile || !this.supportsCreate || inputValue === '') {
+      this.newFileButtonEl.detach();
+      return;
+    }
+    if (!this.newFileButtonEl.parentElement) {
+      this.ctaEl.append(this.newFileButtonEl);
+    }
+
+    const firstSuggestionValue = this.chooser.suggestions[0]?.getText() ?? '';
+    this.newFileButtonEl.ariaDisabled = String(inputValue.toLowerCase() === firstSuggestionValue.toLowerCase());
+  }
+
   protected refreshSpellcheck(): void {
     applySpellcheckMode({
       app: this.app,
