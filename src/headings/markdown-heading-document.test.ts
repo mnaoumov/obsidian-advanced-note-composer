@@ -327,4 +327,35 @@ describe('MarkdownHeadingDocument.wrapText', () => {
     await doc.wrapText((text) => Promise.resolve(`wrapped(${text})`));
     expect(doc.toString()).toBe('wrapped(Simple text)');
   });
+
+  it('should keep a heading on its own line when the section above it is emptied', async () => {
+    const content = '## A\n### B\nText';
+    mockParseMetadata.mockResolvedValue({
+      features: [],
+      headings: [
+        {
+          heading: 'A',
+          level: 2,
+          position: {
+            end: { col: 4, line: 0, offset: 4 },
+            start: { col: 0, line: 0, offset: 0 }
+          }
+        },
+        {
+          heading: 'B',
+          level: 3,
+          position: {
+            end: { col: 5, line: 1, offset: 10 },
+            start: { col: 0, line: 1, offset: 5 }
+          }
+        }
+      ]
+    });
+
+    const app = createMockApp();
+    const doc = await parseMarkdownHeadingDocument(app, content);
+
+    await doc.wrapText((text) => text.trim() ? text : '');
+    expect(doc.toString()).toBe(content);
+  });
 });

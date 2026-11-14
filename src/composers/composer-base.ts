@@ -968,10 +968,14 @@ export abstract class ComposerBase {
 
   /* v8 ignore start -- wrapText branches for empty/newline trimming are defensive. */
   private wrapText(text: string): string {
-    text = text.trim();
-    if (!text) {
-      return '';
+    const trimmedText = text.trim();
+    if (!trimmedText) {
+      // An empty section keeps its own line breaks, so a blank line between a heading and the
+      // sub-heading under it survives the heading-aware merge (issue #311). Only the line breaks: other
+      // whitespace on a blank line means nothing.
+      return text.replaceAll(/[^\n]/g, '');
     }
+    text = trimmedText;
     let wrappedText = this.applyTemplate(text);
     const frontmatterInfo = getFrontMatterInfo(wrappedText);
     wrappedText = wrappedText.slice(frontmatterInfo.contentStart);
