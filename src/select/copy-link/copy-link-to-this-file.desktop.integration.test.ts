@@ -1,4 +1,3 @@
-import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -9,11 +8,6 @@ import {
 
 const PLUGIN_ID = 'advanced-note-composer';
 
-interface CopyState {
-  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
-  copied: null | string;
-}
-
 /*
  * Issue #308: the reporter wanted the note-level sibling of `Copy link to this heading`, a link to the note
  * being edited, to paste into a section that is split out later.
@@ -21,7 +15,7 @@ interface CopyState {
 describe('copy link to this file (issue #308)', () => {
   it('should copy a link to the note being edited', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { useInMemoryClipboard, waitUntil }, obsidianModule, pluginId }) {
         // Two waits at the ceiling below.
         const WAIT_TIMEOUT_IN_MILLISECONDS = 5000;
         await app.vault.createFolder('copy-file-folder');
@@ -33,29 +27,25 @@ describe('copy link to this file (issue #308)', () => {
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
         });
 
-        // The hidden test window is never focused, and the real clipboard refuses an unfocused document, so
-        // the write is captured instead of performed.
-        const clipboard = activeWindow.navigator.clipboard;
-        const originalWriteText = clipboard.writeText.bind(clipboard);
-        const state: CopyState = { copied: null };
-        clipboard.writeText = (text: string): Promise<void> => {
-          state.copied = text;
-          return noopAsync();
-        };
+        // The hidden test window is never focused, so the real clipboard refuses it, and the real clipboard
+        // belongs to whoever uses the machine: the copy goes to a clipboard held in memory instead.
+        const clipboard = useInMemoryClipboard();
+        let copied: string;
         try {
           app.commands.executeCommandById(`${pluginId}:copy-link-to-this-file`);
           await waitUntil({
             message: 'nothing was copied',
-            predicate: () => state.copied !== null,
+            predicate: () => clipboard.writtenTexts.length > 0,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
+          copied = clipboard.text;
         } finally {
-          clipboard.writeText = originalWriteText;
+          clipboard.restore();
         }
 
-        const linkText = /^\[\[(?<linkText>[^\]|#]+)/u.exec(state.copied ?? '')?.groups?.['linkText'] ?? '';
+        const linkText = /^\[\[(?<linkText>[^\]|#]+)/u.exec(copied)?.groups?.['linkText'] ?? '';
         return {
-          copied: state.copied,
+          copied,
           resolvedPath: app.metadataCache.getFirstLinkpathDest(linkText, '')?.path ?? null
         };
       },

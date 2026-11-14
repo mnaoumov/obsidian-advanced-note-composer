@@ -1,4 +1,3 @@
-import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -275,7 +274,7 @@ describe('heading links survive a split (issue #291)', () => {
 
   it('should copy a link to the heading the cursor is under', async () => {
     const result = await evalInObsidian({
-      async callback({ app, lib: { waitUntil }, obsidianModule, pluginId }) {
+      async callback({ app, lib: { useInMemoryClipboard, waitUntil }, obsidianModule, pluginId }) {
         // Two waits at the ceiling below.
         const WAIT_TIMEOUT_IN_MILLISECONDS = 5000;
         const SOURCE_PATH = 'hl-copy-source.md';
@@ -294,24 +293,20 @@ describe('heading links survive a split (issue #291)', () => {
         }
         view.editor.setCursor({ ch: 0, line: 4 });
 
-        // The hidden test window is never focused, and the real clipboard refuses an unfocused document, so
-        // the write is captured instead of performed.
-        const clipboard = activeWindow.navigator.clipboard;
-        const originalWriteText = clipboard.writeText.bind(clipboard);
-        let copied: null | string = null;
-        clipboard.writeText = (text: string): Promise<void> => {
-          copied = text;
-          return noopAsync();
-        };
+        // The hidden test window is never focused, so the real clipboard refuses it, and the real clipboard
+        // belongs to whoever uses the machine: the copy goes to a clipboard held in memory instead.
+        const clipboard = useInMemoryClipboard();
+        let copied: string;
         try {
           app.commands.executeCommandById(`${pluginId}:copy-link-to-this-heading`);
           await waitUntil({
             message: 'nothing was copied',
-            predicate: () => copied !== null,
+            predicate: () => clipboard.writtenTexts.length > 0,
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
+          copied = clipboard.text;
         } finally {
-          clipboard.writeText = originalWriteText;
+          clipboard.restore();
         }
 
         return { copied };
