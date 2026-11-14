@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 6.4.1
+
+This release has 2 fixes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- re #312 - \[BUG\] Missing button to create file after split/extract process
+- re #311 - \[BUG\] Headings get into one line/heading after Merge or Split/extract via extract this heading command
+
 ## 6.4.0
 
 This release has 1 new feature, 1 fix and 1 documentation change.
