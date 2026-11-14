@@ -161,7 +161,14 @@ class MarkdownHeadingNode {
     }
     $string += this.text;
     for (const child of this.children) {
-      $string += child.toString();
+      const childString = child.toString();
+      // A section whose text was emptied (a heading straight above a sub-heading, whose whitespace-only
+      // text `wrapText` trims away, or two empty texts merged) would otherwise leave the next heading on
+      // the same line as this one: `## A### B` (issue #311). A heading always starts its own line.
+      if ($string && childString && !$string.endsWith('\n')) {
+        $string += '\n';
+      }
+      $string += childString;
     }
     return $string;
   }
