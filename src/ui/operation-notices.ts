@@ -374,7 +374,7 @@ export function showOperationPermanentProgressNotice(params: ShowOperationPerman
  *
  * @param params - The parameters.
  * @returns A handle whose disposal hides the notice, or `null` when operation notices are off — so callers
- * dispose it as `progressNotice?.[Symbol.dispose]()`.
+ * dispose it with {@link disposeOperationProgressNotice}.
  */
 export function showOperationProgressNotice(params: ShowOperationProgressNoticeParams): null | PluginNoticeComponentDelayedNotice {
   const {

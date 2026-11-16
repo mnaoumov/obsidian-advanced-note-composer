@@ -2,6 +2,7 @@ import type { PromiseResolve } from '@mnaoumov/typescript-lib/async';
 import type { App } from 'obsidian';
 
 import { flushQueue } from '@mnaoumov/obsidian-lib/queue';
+import { toDisposableEx } from '@mnaoumov/typescript-lib/disposable';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { waitForAllAsyncOperations } from '@mnaoumov/typescript-test-toolkit/async-operation-tracking';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
@@ -152,7 +153,7 @@ describe('showOperationProgressModal', () => {
     await waitForAllAsyncOperations();
     expect(getModal().contentEl.textContent).toContain('Cancel');
 
-    handle[Symbol.dispose]();
+    toDisposableEx(handle).dispose();
 
     // What is left is waiting for other plugins' queued work, which cancelling could not undo.
     expect(getModal().contentEl.textContent).not.toContain('Cancel');
@@ -204,7 +205,7 @@ describe('showOperationProgressModal', () => {
     const handle = show();
     await waitForAllAsyncOperations();
 
-    handle[Symbol.dispose]();
+    toDisposableEx(handle).dispose();
     // Disposing is not closing: this is the whole point of the request, since the reporter's own
     // mock-up closed here and left the links still updating.
     expect(getModal().isOpen).toBe(true);
@@ -221,7 +222,7 @@ describe('showOperationProgressModal', () => {
 
     const handle = show();
     await waitForAllAsyncOperations();
-    handle[Symbol.dispose]();
+    toDisposableEx(handle).dispose();
     await waitForAllAsyncOperations();
 
     // A dialog that cannot be dismissed and never closes is worse than the problem it solves.
@@ -234,8 +235,8 @@ describe('showOperationProgressModal', () => {
     const handle = show();
     await waitForAllAsyncOperations();
 
-    handle[Symbol.dispose]();
-    handle[Symbol.dispose]();
+    toDisposableEx(handle).dispose();
+    toDisposableEx(handle).dispose();
     await waitForAllAsyncOperations();
 
     expect(vi.mocked(flushQueue)).toHaveBeenCalledOnce();
@@ -245,7 +246,7 @@ describe('showOperationProgressModal', () => {
     const handle = show();
     await waitForAllAsyncOperations();
 
-    handle[Symbol.dispose]();
+    toDisposableEx(handle).dispose();
     handle.setContent('too late');
     await waitForAllAsyncOperations();
 

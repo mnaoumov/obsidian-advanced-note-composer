@@ -150,7 +150,7 @@ describe('SelectionHighlightComponent', () => {
     const highlight = component.addHighlight(file('source.md'), [selection(0, 5)]);
     expect(app.workspace.iterateAllLeaves).toHaveBeenCalledTimes(1);
 
-    highlight[Symbol.dispose]();
+    highlight.dispose();
     expect(app.workspace.iterateAllLeaves).toHaveBeenCalledTimes(2);
   });
 

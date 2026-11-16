@@ -1,5 +1,6 @@
 import type { Extension } from '@codemirror/state';
 import type { DecorationSet } from '@codemirror/view';
+import type { DisposableEx } from '@mnaoumov/typescript-lib/disposable';
 import type {
   App,
   TFile,
@@ -103,9 +104,9 @@ export class SelectionHighlightComponent extends ComponentEx {
    *
    * @param file - The source note to highlight in.
    * @param ranges - The captured selection ranges to highlight.
-   * @returns A {@link Disposable} that removes the highlight when disposed.
+   * @returns A {@link DisposableEx} that removes the highlight when disposed.
    */
-  public addHighlight(file: TFile, ranges: Selection[]): Disposable {
+  public addHighlight(file: TFile, ranges: Selection[]): DisposableEx {
     const key = Symbol('highlight');
     this.highlights.set(key, { file, ranges });
     this.refresh();
