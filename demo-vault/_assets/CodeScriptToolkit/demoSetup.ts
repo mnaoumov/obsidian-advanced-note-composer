@@ -236,7 +236,7 @@ export function openPluginSettings(app: App): void {
  *
  * Manual equivalent: change it under **Settings -> Editor**.
  */
-export function setObsidianSetting(app: App, key: string, value: unknown): void {
+export function setObsidianSetting(app: App, key: Parameters<App['vault']['setConfig']>[0], value: unknown): void {
   app.vault.setConfig(key, value);
   new Notice(`Set ${key} to ${String(value)}.`);
 }
