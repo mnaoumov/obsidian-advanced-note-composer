@@ -233,8 +233,8 @@ export function captureStallDiagnosticsInObsidian(params: CaptureStallDiagnostic
  */
 export async function chooseFolderInPickerInObsidian(params: ChooseFolderInPickerInObsidianParams): Promise<void> {
   const { folderPath, waitUntil } = params;
-  const input = document.querySelector('.prompt-input');
-  if (!(input instanceof HTMLInputElement)) {
+  const input = activeDocument.querySelector('.prompt-input');
+  if (!input?.instanceOf(HTMLInputElement)) {
     throw new TypeError('No folder picker input.');
   }
 
@@ -242,7 +242,7 @@ export async function chooseFolderInPickerInObsidian(params: ChooseFolderInPicke
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await waitUntil({
     message: `no suggestion for ${folderPath}`,
-    predicate: () => [...document.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath))
+    predicate: () => [...activeDocument.querySelectorAll('.suggestion-item')].some((el) => el.textContent.includes(folderPath))
   });
   input.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, code: 'Enter', key: 'Enter' }));
 }

@@ -7,13 +7,6 @@ import type {
   WorkspaceLeaf
 } from 'obsidian';
 
-import {
-  MarkdownView,
-  Menu,
-  Notice,
-  TFile,
-  TFolder
-} from 'obsidian';
 // A vault has no `node_modules`: `CodeScript Toolkit` serves `@mnaoumov/obsidian-lib` and `@mnaoumov/typescript-lib`
 // to vault scripts as built-in modules.
 import {
@@ -22,31 +15,99 @@ import {
   enableCommunityPlugin,
   installConfigureEnableCommunityPlugin
 } from '@mnaoumov/obsidian-lib/community-plugins';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import {
+  MarkdownView,
+  Menu,
+  Notice,
+  TFile,
+  TFolder
+} from 'obsidian';
 
 const PLUGIN_ID = 'advanced-note-composer';
 const TEMPLATER_PLUGIN_ID = 'templater-obsidian';
 
 interface DemoSettingsPatch {
-  defaultFrontmatterMergeStrategy?: string;
-  frontmatterTitleMode?: string;
-  mergeTemplate?: string;
-  newFolderContentTemplate?: string;
-  shouldAddInvalidTitleToNoteAlias?: boolean;
-  shouldAlwaysMergeExcludedItems?: boolean;
-  shouldJumpToMovedContentToBottom?: boolean;
-  shouldJumpToMovedContentToTop?: boolean;
-  shouldKeepHeadingsWhenSplittingContent?: boolean;
-  shouldLockAllNotesWhenMarkingSelection?: boolean;
-  shouldOpenFirstNoteAfterMergingFolder?: boolean;
-  shouldOpenNoteAfterMergingFolderIntoFile?: boolean;
-  shouldRunTemplaterOnDestinationFile?: boolean;
-  shouldSwapEntireFolderStructureByDefault?: boolean;
-  shouldTreatTitleAsPathByDefault?: boolean;
-  smartCutAndPasteTemplate?: string;
-  smartCutAndPasteToBottomTemplate?: string;
-  smartCutAndPasteToTopTemplate?: string;
-  splitTemplate?: string;
-  textAfterExtractionMode?: string;
+  readonly defaultFrontmatterMergeStrategy?: string;
+  readonly frontmatterTitleMode?: string;
+  readonly mergeTemplate?: string;
+  readonly newFolderContentTemplate?: string;
+  readonly shouldAddInvalidTitleToNoteAlias?: boolean;
+  readonly shouldAlwaysMergeExcludedItems?: boolean;
+  readonly shouldJumpToMovedContentToBottom?: boolean;
+  readonly shouldJumpToMovedContentToTop?: boolean;
+  readonly shouldKeepHeadingsWhenSplittingContent?: boolean;
+  readonly shouldLockAllNotesWhenMarkingSelection?: boolean;
+  readonly shouldOpenFirstNoteAfterMergingFolder?: boolean;
+  readonly shouldOpenNoteAfterMergingFolderIntoFile?: boolean;
+  readonly shouldRunTemplaterOnDestinationFile?: boolean;
+  readonly shouldSwapEntireFolderStructureByDefault?: boolean;
+  readonly shouldTreatTitleAsPathByDefault?: boolean;
+  readonly smartCutAndPasteTemplate?: string;
+  readonly smartCutAndPasteToBottomTemplate?: string;
+  readonly smartCutAndPasteToTopTemplate?: string;
+  readonly splitTemplate?: string;
+  readonly textAfterExtractionMode?: string;
+}
+
+interface RunCommandOptions {
+  /**
+   * The command to run. A bare id is this plugin's (`merge-file`); an id holding a `:` is used as it is.
+   */
+  readonly commandId: string;
+
+  /**
+   * Put the cursor right AFTER the first occurrence of this text.
+   */
+  readonly cursorAfter?: string;
+
+  /**
+   * Put the cursor right BEFORE the first occurrence of this text.
+   */
+  readonly cursorBefore?: string;
+
+  /**
+   * Put the cursor at the end of the first line that reads exactly this — a heading line, say, which
+   * the walkthrough's own text may also quote.
+   */
+  readonly cursorOnLine?: string;
+
+  /**
+   * The note to run the command in. It is opened in editing mode — in the tab that already shows it, or
+   * in a new tab, so the note the button lives in stays open. Omitted, the command runs where you are.
+   */
+  readonly notePath?: string;
+
+  /**
+   * Select the first occurrence of this text before running the command.
+   */
+  readonly selection?: string;
+
+  /**
+   * Go back to the tab the button was clicked in once the command has run, so the walkthrough's next
+   * step is in front of you. Needed after a command that locks the note it ran in, such as marking a
+   * selection to move: a locked note's tab cannot be pointed at another note until the lock is gone.
+   */
+  readonly shouldReturnToButton?: boolean;
+
+  /**
+   * Wait for an operation that runs with no dialog to finish — until no note is locked any more — so the
+   * note it opens at the end is open before the button reports.
+   */
+  readonly shouldWaitUntilDone?: boolean;
+
+  /**
+   * Look for {@link selection}, {@link cursorBefore} or {@link cursorAfter} only from the first
+   * occurrence of this text on, for a word the walkthrough's own instructions also mention.
+   */
+  readonly within?: string;
+}
+
+export function bindHotkey(app: App, commandId: string, hotkey: Hotkey): void {
+  app.hotkeyManager.setHotkeys(commandId, [hotkey]);
+  app.hotkeyManager.save();
+  app.hotkeyManager.bake();
+  new Notice(`Bound hotkey to: ${commandId}`);
 }
 
 /**
@@ -66,106 +127,6 @@ interface DemoSettingsPatch {
  */
 export async function changeSettings(app: App, patch: DemoSettingsPatch): Promise<void> {
   await configureCommunityPlugin({ app, pluginId: PLUGIN_ID, settings: patch });
-}
-
-/**
- * Installs and enables `Templater`, then loads the multi-alias content template and reloads.
- *
- * The demo vault ships only the plugin under test and the helper, so the `Templater` section of
- * `29 Create folder with notes` has nothing to run against until this has been done. `Templater` is
- * installed through Obsidian's own store path rather than committed to the vault.
- */
-export async function setUpTemplaterExample(app: App): Promise<void> {
-  new Notice(createFragment((f) => {
-    f.appendText('Installing ');
-    f.createEl('code', { text: 'Templater' });
-    f.appendText('...');
-  }));
-  await installConfigureEnableCommunityPlugin({ app, pluginId: TEMPLATER_PLUGIN_ID });
-
-  // Disabled first rather than patched in place: this one replaces a template the plugin reads at
-  // load time, so nothing should hold stale settings while the file changes. Enabling again picks
-  // them up with no window reload at all.
-  await disableCommunityPlugin({ app, pluginId: PLUGIN_ID });
-  await configureCommunityPlugin({
-    app,
-    pluginId: PLUGIN_ID,
-    settings: {
-      newFolderContentTemplate: [
-        '{{file}} !.md',
-        '---',
-        'aliases: <% JSON.stringify(TOKENS.rawFolderName.split(\' - \')) %>',
-        '---',
-        '# <% TOKENS.folderName %>'
-      ].join('\n'),
-      shouldRunTemplaterOnDestinationFile: true
-    }
-  });
-  await enableCommunityPlugin({ app, pluginId: PLUGIN_ID });
-  new Notice(createFragment((f) => {
-    f.createEl('code', { text: 'Templater' });
-    f.appendText(' is ready — the example template is loaded.');
-  }));
-}
-
-export function bindHotkey(app: App, commandId: string, hotkey: Hotkey): void {
-  app.hotkeyManager.setHotkeys(commandId, [hotkey]);
-  app.hotkeyManager.save();
-  app.hotkeyManager.bake();
-  new Notice(`Bound hotkey to: ${commandId}`);
-}
-
-interface RunCommandOptions {
-  /**
-   * The command to run. A bare id is this plugin's (`merge-file`); an id holding a `:` is used as it is.
-   */
-  commandId: string;
-
-  /**
-   * Put the cursor right AFTER the first occurrence of this text.
-   */
-  cursorAfter?: string;
-
-  /**
-   * Put the cursor right BEFORE the first occurrence of this text.
-   */
-  cursorBefore?: string;
-
-  /**
-   * Put the cursor at the end of the first line that reads exactly this — a heading line, say, which
-   * the walkthrough's own text may also quote.
-   */
-  cursorOnLine?: string;
-
-  /**
-   * The note to run the command in. It is opened in editing mode — in the tab that already shows it, or
-   * in a new tab, so the note the button lives in stays open. Omitted, the command runs where you are.
-   */
-  notePath?: string;
-
-  /**
-   * Select the first occurrence of this text before running the command.
-   */
-  selection?: string;
-
-  /**
-   * Go back to the tab the button was clicked in once the command has run, so the walkthrough's next
-   * step is in front of you. Needed after a command that locks the note it ran in, such as marking a
-   * selection to move: a locked note's tab cannot be pointed at another note until the lock is gone.
-   */
-  shouldReturnToButton?: boolean;
-
-  /**
-   * Wait for an operation that runs with no dialog to finish — until no note is locked any more — so the
-   * note it opens at the end is open before the button reports.
-   */
-  shouldWaitUntilDone?: boolean;
-
-  /**
-   * Look for {@link selection}, {@link cursorBefore} or {@link cursorAfter} only from the first
-   * occurrence of this text on, for a word the walkthrough's own instructions also mention.
-   */
-  within?: string;
 }
 
 /**
@@ -203,22 +164,66 @@ export async function runCommand(app: App, options: RunCommandOptions): Promise<
   }
 }
 
+/**
+ * Installs and enables `Templater`, then loads the multi-alias content template and reloads.
+ *
+ * The demo vault ships only the plugin under test and the helper, so the `Templater` section of
+ * `29 Create folder with notes` has nothing to run against until this has been done. `Templater` is
+ * installed through Obsidian's own store path rather than committed to the vault.
+ */
+export async function setUpTemplaterExample(app: App): Promise<void> {
+  new Notice(createFragment((f) => {
+    f.appendText('Installing ');
+    appendCodeBlock(f, 'Templater');
+    f.appendText('...');
+  }));
+  await installConfigureEnableCommunityPlugin({ app, pluginId: TEMPLATER_PLUGIN_ID });
+
+  // Disabled first rather than patched in place: this one replaces a template the plugin reads at
+  // load time, so nothing should hold stale settings while the file changes. Enabling again picks
+  // them up with no window reload at all.
+  await disableCommunityPlugin({ app, pluginId: PLUGIN_ID });
+  await configureCommunityPlugin({
+    app,
+    pluginId: PLUGIN_ID,
+    settings: {
+      // eslint-disable-next-line typescript-dev-toolkit/prefer-dedent -- A vault has no `node_modules`, and `CodeScript Toolkit` does not serve `dedent`, so the import would fail at runtime.
+      newFolderContentTemplate: [
+        '{{file}} !.md',
+        '---',
+        'aliases: <% JSON.stringify(TOKENS.rawFolderName.split(\' - \')) %>',
+        '---',
+        '# <% TOKENS.folderName %>'
+      ].join('\n'),
+      shouldRunTemplaterOnDestinationFile: true
+    }
+  });
+  await enableCommunityPlugin({ app, pluginId: PLUGIN_ID });
+  new Notice(createFragment((f) => {
+    appendCodeBlock(f, 'Templater');
+    f.appendText(' is ready — the example template is loaded.');
+  }));
+}
+
 const WAIT_STEP_IN_MILLISECONDS = 100;
 const WAIT_LIMIT_IN_MILLISECONDS = 8000;
 const OPEN_AFTER_OPERATION_SETTLE_IN_MILLISECONDS = 500;
 
-/**
- * An operation shows a lock indicator on every note it holds, and gives the last one back when it
- * commits. Opening its result comes a moment after that, hence the settle.
- */
-async function waitUntilNoNoteIsLocked(): Promise<void> {
-  for (let waited = 0; waited < WAIT_LIMIT_IN_MILLISECONDS; waited += WAIT_STEP_IN_MILLISECONDS) {
-    await sleep(WAIT_STEP_IN_MILLISECONDS);
-    if (!activeDocument.querySelector('.obsidian-lib-lock-indicator')) {
-      break;
-    }
-  }
-  await sleep(OPEN_AFTER_OPERATION_SETTLE_IN_MILLISECONDS);
+interface ShowAvailableCommandsOptions {
+  /**
+   * The commands to ask about, as for {@link runCommand}.
+   */
+  readonly commandIds: string[];
+
+  /**
+   * The note to ask in, opened as for {@link runCommand}.
+   */
+  readonly notePath: string;
+
+  /**
+   * Text to select first, for commands that need a selection.
+   */
+  readonly selection?: string;
 }
 
 /**
@@ -236,26 +241,9 @@ export function openPluginSettings(app: App): void {
  *
  * Manual equivalent: change it under **Settings -> Editor**.
  */
-export function setObsidianSetting(app: App, key: string, value: unknown): void {
+export function setObsidianSetting(app: App, key: Parameters<App['vault']['setConfig']>[0], value: unknown): void {
   app.vault.setConfig(key, value);
   new Notice(`Set ${key} to ${String(value)}.`);
-}
-
-interface ShowAvailableCommandsOptions {
-  /**
-   * The commands to ask about, as for {@link runCommand}.
-   */
-  commandIds: string[];
-
-  /**
-   * The note to ask in, opened as for {@link runCommand}.
-   */
-  notePath: string;
-
-  /**
-   * Text to select first, for commands that need a selection.
-   */
-  selection?: string;
 }
 
 /**
@@ -265,7 +253,7 @@ interface ShowAvailableCommandsOptions {
  * Manual equivalent: open the note, select the text, and open the command palette (or right-click).
  */
 export async function showAvailableCommands(app: App, options: ShowAvailableCommandsOptions): Promise<void> {
-  await runCommandSetup(app, { commandId: '', notePath: options.notePath, ...options.selection === undefined ? {} : { selection: options.selection } });
+  await runCommandSetup(app, { commandId: '', notePath: options.notePath, ...options.selection !== undefined && { selection: options.selection } });
   const available: string[] = [];
   const unavailable: string[] = [];
   for (const commandId of options.commandIds) {
@@ -287,12 +275,26 @@ export async function showAvailableCommands(app: App, options: ShowAvailableComm
   }), AVAILABLE_COMMANDS_NOTICE_DURATION_IN_MILLISECONDS);
 }
 
+/**
+ * An operation shows a lock indicator on every note it holds, and gives the last one back when it
+ * commits. Opening its result comes a moment after that, hence the settle.
+ */
+async function waitUntilNoNoteIsLocked(): Promise<void> {
+  for (let waited = 0; waited < WAIT_LIMIT_IN_MILLISECONDS; waited += WAIT_STEP_IN_MILLISECONDS) {
+    await sleep(WAIT_STEP_IN_MILLISECONDS);
+    if (!activeDocument.querySelector('.obsidian-lib-lock-indicator')) {
+      break;
+    }
+  }
+  await sleep(OPEN_AFTER_OPERATION_SETTLE_IN_MILLISECONDS);
+}
+
 const AVAILABLE_COMMANDS_NOTICE_DURATION_IN_MILLISECONDS = 15_000;
 
 function isCommandAvailable(app: App, command: Command): boolean {
   const activeEditor = app.workspace.activeEditor;
   if (command.editorCheckCallback) {
-    return activeEditor?.editor ? command.editorCheckCallback(true, activeEditor.editor, activeEditor) === true : false;
+    return !!activeEditor?.editor && command.editorCheckCallback(true, activeEditor.editor, activeEditor) === true;
   }
   if (command.editorCallback) {
     return activeEditor?.editor !== undefined;
@@ -303,7 +305,12 @@ function isCommandAvailable(app: App, command: Command): boolean {
   return true;
 }
 
-let shownMenu: Menu | null = null;
+/**
+ * The menu {@link showFileMenu} last showed, at most one, so the next call can hide it first.
+ */
+const shownMenus: Menu[] = [];
+const MENU_X_FRACTION_WITHOUT_ANCHOR = 0.5;
+const MENU_Y_FRACTION_WITHOUT_ANCHOR = 0.33;
 
 /**
  * Shows the file explorer's own right-click menu for one file or folder, or for several files at once,
@@ -323,7 +330,9 @@ export function showFileMenu(app: App, paths: string[], anchorEl?: HTMLElement |
     return file;
   });
 
-  shownMenu?.hide();
+  for (const previousMenu of shownMenus.splice(0)) {
+    previousMenu.hide();
+  }
   const menu = new Menu();
   const [firstFile] = files;
   if (files.length === 1 && firstFile) {
@@ -334,10 +343,10 @@ export function showFileMenu(app: App, paths: string[], anchorEl?: HTMLElement |
 
   const rect = anchorEl?.getBoundingClientRect();
   menu.showAtPosition({
-    x: rect ? rect.left : window.innerWidth / 2,
-    y: rect ? rect.bottom : window.innerHeight / 3
+    x: rect ? rect.left : window.innerWidth * MENU_X_FRACTION_WITHOUT_ANCHOR,
+    y: rect ? rect.bottom : window.innerHeight * MENU_Y_FRACTION_WITHOUT_ANCHOR
   });
-  shownMenu = menu;
+  shownMenus.push(menu);
 }
 
 /**
@@ -346,25 +355,6 @@ export function showFileMenu(app: App, paths: string[], anchorEl?: HTMLElement |
  * explorer, in a search, or in a picker.
  */
 const SNAPSHOT_FOLDER = '.demo-vault-snapshot';
-
-/**
- * Copies every note and fixture of the vault into {@link SNAPSHOT_FOLDER}, once — a later launch keeps
- * the first copy, which is the vault as it shipped.
- */
-export async function snapshotVault(app: App): Promise<void> {
-  const adapter = app.vault.adapter;
-  if (await adapter.exists(SNAPSHOT_FOLDER)) {
-    return;
-  }
-
-  await adapter.mkdir(SNAPSHOT_FOLDER);
-  for (const file of app.vault.getFiles()) {
-    if (isSnapshotted(file.path)) {
-      await ensureAdapterFolder(app, parentPath(`${SNAPSHOT_FOLDER}/${file.path}`));
-      await adapter.writeBinary(`${SNAPSHOT_FOLDER}/${file.path}`, await app.vault.readBinary(file));
-    }
-  }
-}
 
 /**
  * Puts notes and folders back the way the vault shipped.
@@ -388,6 +378,7 @@ export async function resetDemo(app: App, paths: string[], createdInFolders: str
 
   for (const folderPath of createdInFolders) {
     const folder = folderPath === '' ? app.vault.getRoot() : app.vault.getFolderByPath(folderPath);
+    // eslint-disable-next-line unicorn/no-useless-spread -- A copy: deleting a child removes it from `children` mid-loop.
     for (const child of [...folder?.children ?? []]) {
       if (isSnapshotted(child.path) && !await adapter.exists(`${SNAPSHOT_FOLDER}/${child.path}`)) {
         await deleteIfExists(app, child);
@@ -433,17 +424,40 @@ export async function resetWholeDemoVault(app: App): Promise<void> {
   await resetDemo(app, topLevelPaths);
 }
 
+/**
+ * Copies every note and fixture of the vault into {@link SNAPSHOT_FOLDER}, once — a later launch keeps
+ * the first copy, which is the vault as it shipped.
+ */
+export async function snapshotVault(app: App): Promise<void> {
+  const adapter = app.vault.adapter;
+  if (await adapter.exists(SNAPSHOT_FOLDER)) {
+    return;
+  }
+
+  await adapter.mkdir(SNAPSHOT_FOLDER);
+  for (const file of app.vault.getFiles()) {
+    if (!isSnapshotted(file.path)) {
+      continue;
+    }
+
+    await ensureAdapterFolder(app, parentPath(`${SNAPSHOT_FOLDER}/${file.path}`));
+    await adapter.writeBinary(`${SNAPSHOT_FOLDER}/${file.path}`, await app.vault.readBinary(file));
+  }
+}
+
 async function deleteIfExists(app: App, file: null | TAbstractFile): Promise<void> {
   if (file) {
-    await app.vault.delete(file, true);
+    await app.fileManager.trashFile(file);
   }
 }
 
 async function ensureAdapterFolder(app: App, path: string): Promise<void> {
-  if (path !== '' && !await app.vault.adapter.exists(path)) {
-    await ensureAdapterFolder(app, parentPath(path));
-    await app.vault.adapter.mkdir(path);
+  if (path === '' || await app.vault.adapter.exists(path)) {
+    return;
   }
+
+  await ensureAdapterFolder(app, parentPath(path));
+  await app.vault.adapter.mkdir(path);
 }
 
 async function ensureVaultFolder(app: App, path: string): Promise<void> {
@@ -460,12 +474,17 @@ function findTextOffset(view: MarkdownView, text: string, within?: string): numb
   let offset = content.indexOf(text, within === undefined ? 0 : findTextOffset(view, within));
   while (offset !== -1) {
     const candidate = offset;
-    if (!codeRanges.some(([start, end]) => start <= candidate && candidate < end)) {
+    if (codeRanges.every(([start, end]) => !(start <= candidate && candidate < end))) {
       return offset;
     }
     offset = content.indexOf(text, offset + 1);
   }
   throw new Error(`Could not find "${text}" in ${view.file?.path ?? 'the note'}. Reset the demo to bring it back.`);
+}
+
+function isSnapshotted(path: string): boolean {
+  const [topLevel = ''] = path.split('/', 1);
+  return !topLevel.startsWith('.') && !topLevel.startsWith('_');
 }
 
 function listCodeFenceRanges(content: string): [number, number][] {
@@ -474,7 +493,7 @@ function listCodeFenceRanges(content: string): [number, number][] {
   let fenceMarker = '';
   let offset = 0;
   for (const line of content.split('\n')) {
-    const marker = /^\s*(`{3,}|~{3,})/.exec(line)?.[1] ?? '';
+    const marker = /^\s*(?<marker>`{3,}|~{3,})/.exec(line)?.groups?.['marker'] ?? '';
     if (fenceStart === -1 && marker !== '') {
       fenceStart = offset;
       fenceMarker = marker;
@@ -490,11 +509,6 @@ function listCodeFenceRanges(content: string): [number, number][] {
   return ranges;
 }
 
-function isSnapshotted(path: string): boolean {
-  const [topLevel = ''] = path.split('/');
-  return !topLevel.startsWith('.') && !topLevel.startsWith('_');
-}
-
 async function openInEditingMode(app: App, path: string): Promise<WorkspaceLeaf> {
   const file = app.vault.getFileByPath(path);
   if (!file) {
@@ -506,18 +520,6 @@ async function openInEditingMode(app: App, path: string): Promise<WorkspaceLeaf>
   await leaf.setViewState({ active: true, state: { file: path, mode: 'source', source: false }, type: 'markdown' });
   app.workspace.setActiveLeaf(leaf, { focus: true });
   return leaf;
-}
-
-async function runCommandSetup(app: App, options: RunCommandOptions): Promise<void> {
-  if (options.notePath === undefined) {
-    return;
-  }
-  const leaf = await openInEditingMode(app, options.notePath);
-  const view = leaf.view;
-  if (!(view instanceof MarkdownView)) {
-    throw new Error(`${options.notePath} did not open as a note.`);
-  }
-  placeCursor(view, options);
 }
 
 function parentPath(path: string): string {
@@ -590,6 +592,7 @@ async function restoreFolder(app: App, path: string): Promise<void> {
   const listed = await app.vault.adapter.list(`${SNAPSHOT_FOLDER}/${path}`);
   const shippedChildren = new Set([...listed.files, ...listed.folders].map((childPath) => childPath.slice(SNAPSHOT_FOLDER.length + 1)));
   const folder = app.vault.getFolderByPath(path);
+  // eslint-disable-next-line unicorn/no-useless-spread -- A copy: deleting a child removes it from `children` mid-loop.
   for (const child of [...folder?.children ?? []]) {
     if (!shippedChildren.has(child.path)) {
       await deleteIfExists(app, child);
@@ -602,4 +605,16 @@ async function restoreFolder(app: App, path: string): Promise<void> {
   for (const folderPath of listed.folders) {
     await restoreFolder(app, folderPath.slice(SNAPSHOT_FOLDER.length + 1));
   }
+}
+
+async function runCommandSetup(app: App, options: RunCommandOptions): Promise<void> {
+  if (options.notePath === undefined) {
+    return;
+  }
+  const leaf = await openInEditingMode(app, options.notePath);
+  const view = leaf.view;
+  if (!(view instanceof MarkdownView)) {
+    throw new TypeError(`${options.notePath} did not open as a note.`);
+  }
+  placeCursor(view, options);
 }

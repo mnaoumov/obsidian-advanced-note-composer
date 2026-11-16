@@ -738,7 +738,7 @@ describe('splitFile', () => {
     expect(showNoticeAfterDelayMock).toHaveBeenCalledTimes(1);
     const params = showNoticeAfterDelayMock.mock.calls[0]?.[0];
     expect(params?.abortController).toBeInstanceOf(AbortController);
-    const content = await resolveValue(ensureNonNullable(params?.content), {});
+    const content = await resolveValue(ensureNonNullable(params?.content), { abortSignal: new AbortController().signal });
     expect(castTo<DocumentFragment>(content).textContent).toContain(
       'Splitting note'
     );
