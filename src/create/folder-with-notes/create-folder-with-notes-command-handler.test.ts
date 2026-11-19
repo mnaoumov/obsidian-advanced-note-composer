@@ -36,6 +36,10 @@ import type { PluginSettings } from '../../settings/plugin-settings.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
 
 import { InsertMode } from '../../composers/insert-mode.ts';
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../../templates/templater-stub.ts';
 import { openConfirmDialogModal } from '../../ui/open-minimizable-modal.ts';
 import { selectFolder } from '../../ui/select-folder-modal.ts';
 import { CreateFolderWithNotesCommandHandler } from './create-folder-with-notes-command-handler.ts';
@@ -51,17 +55,6 @@ interface HandlerContext {
   readonly editAndSave: MockInstance<PluginSettingsComponent['editAndSave']>;
   readonly handler: Testable;
   readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
-}
-
-/**
- * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
- *
- * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
- * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
- * assign over `app.plugins` any more.
- */
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
@@ -253,7 +246,7 @@ function getFolder(path: string): TFolder {
 function initApp(files: Record<string, string> = {}, plugins?: Record<string, unknown>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
   for (const [id, plugin] of Object.entries(plugins ?? {})) {
-    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__(id, plugin);
+    registerPluginStub(app, id, plugin);
   }
   vi.spyOn(app.vault, 'getAvailablePath').mockImplementation((basePath, extension) => {
     const suffix = extension ? `.${extension}` : '';
@@ -553,14 +546,10 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     it('should map a character that the replacement string would otherwise mangle', async () => {
       const parseTemplate = vi.fn().mockResolvedValue('A - B');
       initApp({ 'parent/note.md': 'note' }, {
-        'templater-obsidian': {
-          templater: {
-            /* eslint-disable camelcase -- `Templater`'s own API method names. */
-            create_running_config: vi.fn().mockReturnValue({}),
-            parse_template: parseTemplate
-            /* eslint-enable camelcase -- `Templater`'s own API method names. */
-          }
-        }
+        'templater-obsidian': createTemplaterPluginStub({
+          // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+          templater: { create_running_config: vi.fn().mockReturnValue({}), parse_template: parseTemplate }
+        })
       });
       vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(app.vault.getFileByPath('parent/note.md'));
       mockPrompt.mockResolvedValue('A: B');
@@ -586,14 +575,10 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     it('should report a template that throws something other than an Error', async () => {
       // `Templater` runs user JS, and `throw "boom"` is legal JS.
       initApp({ 'parent/note.md': 'note' }, {
-        'templater-obsidian': {
-          templater: {
-            /* eslint-disable camelcase -- `Templater`'s own API method names. */
-            create_running_config: vi.fn().mockReturnValue({}),
-            parse_template: vi.fn().mockRejectedValue('boom')
-            /* eslint-enable camelcase -- `Templater`'s own API method names. */
-          }
-        }
+        'templater-obsidian': createTemplaterPluginStub({
+          // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+          templater: { create_running_config: vi.fn().mockReturnValue({}), parse_template: vi.fn().mockRejectedValue('boom') }
+        })
       });
       vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(app.vault.getFileByPath('parent/note.md'));
       mockPrompt.mockResolvedValue(null);
@@ -1057,14 +1042,10 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should report a transform that throws something other than an Error', async () => {
       initApp({ 'parent/note.md': 'note' }, {
-        'templater-obsidian': {
-          templater: {
-            /* eslint-disable camelcase -- `Templater`'s own API method names. */
-            create_running_config: vi.fn().mockReturnValue({}),
-            parse_template: vi.fn().mockRejectedValue('boom')
-            /* eslint-enable camelcase -- `Templater`'s own API method names. */
-          }
-        }
+        'templater-obsidian': createTemplaterPluginStub({
+          // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+          templater: { create_running_config: vi.fn().mockReturnValue({}), parse_template: vi.fn().mockRejectedValue('boom') }
+        })
       });
       vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(app.vault.getFileByPath('parent/note.md'));
       const { handler } = createHandler({ nameTransformTemplate: '<% throw "boom" %>' });
@@ -1109,7 +1090,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const startTask = vi.fn();
       const endTask = vi.fn().mockResolvedValue(undefined);
       initApp({ 'parent/note.md': 'note' }, {
-        'templater-obsidian': {
+        'templater-obsidian': createTemplaterPluginStub({
           templater: {
             /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
@@ -1118,7 +1099,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
             start_templater_task: startTask
             /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
-        }
+        })
       });
       mockPrompt.mockResolvedValue('alpha');
       const { handler } = createHandler({
@@ -1149,7 +1130,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
         .mockRejectedValueOnce(new Error('bad template'))
         .mockResolvedValueOnce('second\n');
       initApp({ 'parent/note.md': 'note' }, {
-        'templater-obsidian': {
+        'templater-obsidian': createTemplaterPluginStub({
           templater: {
             /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
@@ -1158,7 +1139,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
             start_templater_task: vi.fn()
             /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
-        }
+        })
       });
       mockPrompt.mockResolvedValue('alpha');
       const { handler, showNotice } = createHandler({
@@ -1187,7 +1168,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     it('should report a created note whose template throws something other than an Error', async () => {
       // `Templater` runs user JS, and `throw "boom"` is legal JS.
       initApp({ 'parent/note.md': 'note' }, {
-        'templater-obsidian': {
+        'templater-obsidian': createTemplaterPluginStub({
           templater: {
             /* eslint-disable camelcase -- `Templater`'s own API method names. */
             create_running_config: vi.fn().mockReturnValue({}),
@@ -1196,7 +1177,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
             start_templater_task: vi.fn()
             /* eslint-enable camelcase -- `Templater`'s own API method names. */
           }
-        }
+        })
       });
       mockPrompt.mockResolvedValue('alpha');
       const { handler, showNotice } = createHandler({ shouldRunTemplaterOnDestinationFile: true });

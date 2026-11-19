@@ -20,6 +20,10 @@ import {
   NameTransformError,
   transformAndFixFileName
 } from './name-transform.ts';
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from './templater-stub.ts';
 
 interface CreateAppOverrides {
   readonly files: Record<string, string>;
@@ -29,17 +33,6 @@ interface FixOverrides {
   readonly fileName: string;
   readonly nameTransformTemplate?: string;
   readonly shouldReplaceInvalidCharacters?: boolean;
-}
-
-/**
- * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
- *
- * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
- * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
- * assign over `app.plugins` any more.
- */
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface TemplaterMock {
@@ -292,14 +285,18 @@ function installTemplater(app: AppOriginal): TemplaterMock {
     createRunningConfig: vi.fn().mockReturnValue({}),
     parseTemplate: vi.fn().mockResolvedValue('')
   };
-  castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
-    templater: {
-      /* eslint-disable camelcase -- `Templater`'s own API method names. */
-      create_running_config: templaterMock.createRunningConfig,
-      parse_template: templaterMock.parseTemplate
-      /* eslint-enable camelcase -- `Templater`'s own API method names. */
-    }
-  });
+  registerPluginStub(
+    app,
+    'templater-obsidian',
+    createTemplaterPluginStub({
+      templater: {
+        /* eslint-disable camelcase -- `Templater`'s own API method names. */
+        create_running_config: templaterMock.createRunningConfig,
+        parse_template: templaterMock.parseTemplate
+        /* eslint-enable camelcase -- `Templater`'s own API method names. */
+      }
+    })
+  );
   return templaterMock;
 }
 

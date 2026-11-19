@@ -1,8 +1,10 @@
+/* eslint-disable camelcase -- the fake `Templater` mirrors its snake_case API member names. */
 import type {
   TFile,
   TFolder
 } from 'obsidian';
 
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import {
   describe,
@@ -244,8 +246,12 @@ describe('name transform with no note open (issue #218)', () => {
 
         function createFakeTemplaterPlugin(): unknown {
           return {
+            editor_handler: {
+              jump_to_next_cursor_location: async (): Promise<void> => {
+                await noopAsync();
+              }
+            },
             templater: {
-              /* eslint-disable camelcase -- `Templater`'s own API method names. */
               create_running_config: (templateFile: unknown, targetFile: null | TFile | undefined, runMode: number): unknown => {
                 recordedTargetPaths.push(targetFile?.path ?? '<no target file>');
                 return {
@@ -255,6 +261,13 @@ describe('name transform with no note open (issue #218)', () => {
                   template_file: templateFile
                 };
               },
+              end_templater_task: async (): Promise<void> => {
+                await noopAsync();
+              },
+              functions_generator: { generate_object: (): Promise<object> => Promise.resolve({}) },
+              overwrite_file_commands: async (): Promise<void> => {
+                await noopAsync();
+              },
               /*
                * The reporter's template, evaluated the only way a fake can honestly evaluate it: by reading
                * `TOKENS.rawString` back out of the prelude the plugin generated. A fake returning a constant
@@ -263,8 +276,11 @@ describe('name transform with no note open (issue #218)', () => {
               parse_template: (_config: unknown, content: string): Promise<string> => {
                 const rawStringMatch = /"rawString":"(?<rawString>[^"]*)"/.exec(content);
                 return Promise.resolve((rawStringMatch?.groups?.['rawString'] ?? '').replaceAll(': ', ' - '));
-              }
-              /* eslint-enable camelcase -- `Templater`'s own API method names. */
+              },
+
+              read_and_parse_template: (): Promise<string> => Promise.resolve(''),
+
+              start_templater_task: (): void => {/* Nothing to register in a fake. */}
             }
           };
         }
@@ -483,8 +499,12 @@ describe('name transform with no note open (issue #218)', () => {
 
         function createFakeTemplaterPlugin(): unknown {
           return {
+            editor_handler: {
+              jump_to_next_cursor_location: async (): Promise<void> => {
+                await noopAsync();
+              }
+            },
             templater: {
-              /* eslint-disable camelcase -- `Templater`'s own API method names. */
               create_running_config: (templateFile: unknown, targetFile: null | TFile | undefined, runMode: number): unknown => {
                 recordedTargetPaths.push(targetFile?.path ?? '<no target file>');
                 return {
@@ -494,13 +514,23 @@ describe('name transform with no note open (issue #218)', () => {
                   template_file: templateFile
                 };
               },
+              end_templater_task: async (): Promise<void> => {
+                await noopAsync();
+              },
+              functions_generator: { generate_object: (): Promise<object> => Promise.resolve({}) },
+              overwrite_file_commands: async (): Promise<void> => {
+                await noopAsync();
+              },
               // Emulates the template this test sets, by reading `TOKENS.rawString` back out of the prelude
               // the plugin generated — a fake returning a constant would pass with the binding broken.
               parse_template: (_config: unknown, content: string): Promise<string> => {
                 const rawStringMatch = /"rawString":"(?<rawString>[^"]*)"/.exec(content);
                 return Promise.resolve((rawStringMatch?.groups?.['rawString'] ?? '').replaceAll('_', ' - '));
-              }
-              /* eslint-enable camelcase -- `Templater`'s own API method names. */
+              },
+
+              read_and_parse_template: (): Promise<string> => Promise.resolve(''),
+
+              start_templater_task: (): void => {/* Nothing to register in a fake. */}
             }
           };
         }
@@ -582,3 +612,5 @@ describe('name transform with no note open (issue #218)', () => {
     expect(result.mergedContent).toContain('bravo body');
   });
 });
+
+/* eslint-enable camelcase -- the fake `Templater` mirrors its snake_case API member names. */

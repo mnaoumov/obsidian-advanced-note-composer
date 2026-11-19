@@ -37,18 +37,15 @@ import type { PluginSettings } from '../settings/plugin-settings.ts';
 import type { RenameFolderCommandHandlerConstructorParams } from './rename-folder-command-handler.ts';
 
 import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../templates/templater-stub.ts';
 import { RenameFolderCommandHandler } from './rename-folder-command-handler.ts';
 
 interface HandlerContext {
   readonly handler: Testable;
   readonly showNotice: MockInstance<PluginNoticeComponent['showNotice']>;
-}
-
-/**
- * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
- */
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
@@ -376,14 +373,14 @@ describe('RenameFolderCommandHandler', () => {
     initApp({ 'parent/Alpha/Alpha.md': '---\ntitle: Alpha\naliases:\n  - Alpha\n---\n' });
     const createRunningConfig = vi.fn().mockReturnValue({});
     const parseTemplate = vi.fn().mockImplementation((_config: unknown, content: string) => Promise.resolve(content.includes('toUpperCase') ? 'BETA\n' : 'Beta'));
-    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
-      templater: {
-        /* eslint-disable camelcase -- `Templater`'s own API method names. */
-        create_running_config: createRunningConfig,
-        parse_template: parseTemplate
-        /* eslint-enable camelcase -- `Templater`'s own API method names. */
-      }
-    });
+    registerPluginStub(
+      app,
+      'templater-obsidian',
+      createTemplaterPluginStub({
+        // eslint-disable-next-line camelcase -- `Templater`'s own API method names.
+        templater: { create_running_config: createRunningConfig, parse_template: parseTemplate }
+      })
+    );
     const { handler } = createHandler({ folderNoteAliasesTemplate: '<% TOKENS.safeFolderName.toUpperCase() %>' });
     typedName = 'Beta';
 

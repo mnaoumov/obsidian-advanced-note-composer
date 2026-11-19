@@ -2,7 +2,6 @@ import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/pl
 import type { App as AppOriginal } from 'obsidian';
 import type { Mock } from 'vitest';
 
-import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
@@ -13,11 +12,11 @@ import {
   vi
 } from 'vitest';
 
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../templater-stub.ts';
 import { resolveDestinationTemplaterRunner } from './destination-templater.ts';
-
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
-}
 
 interface TestContext {
   readonly app: AppOriginal;
@@ -46,10 +45,14 @@ describe('resolveDestinationTemplaterRunner', () => {
   it('should run Templater\'s own overwrite over the note, telling it whether the note is active', async () => {
     const { app, showNotice } = createContext();
     const overwriteFileCommands = vi.fn().mockResolvedValue(undefined);
-    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
-      // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
-      templater: { overwrite_file_commands: overwriteFileCommands }
-    });
+    registerPluginStub(
+      app,
+      'templater-obsidian',
+      createTemplaterPluginStub({
+        // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+        templater: { overwrite_file_commands: overwriteFileCommands }
+      })
+    );
     const note = ensureNonNullable(app.vault.getFileByPath('note.md'));
     const activeFileSpy = vi.spyOn(app.workspace, 'getActiveFile').mockReturnValue(null);
 

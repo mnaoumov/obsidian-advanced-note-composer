@@ -2,8 +2,8 @@ import type {
   App as AppOriginal,
   TFile
 } from 'obsidian';
+import type { Mock } from 'vitest';
 
-import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
@@ -14,6 +14,12 @@ import {
   vi
 } from 'vitest';
 
+import type { TemplaterEditorHandler } from '../templater.ts';
+
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../templater-stub.ts';
 import {
   clearPendingTemplaterCursors,
   hasTemplaterCursorMarker,
@@ -25,13 +31,9 @@ interface CreateContextOptions {
   readonly shouldInstallTemplater?: boolean;
 }
 
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
-}
-
 interface TestContext {
   readonly app: AppOriginal;
-  readonly jump: ReturnType<typeof vi.fn>;
+  readonly jump: Mock<TemplaterEditorHandler['jump_to_next_cursor_location']>;
   readonly marked: TFile;
   readonly plain: TFile;
   readonly setActive: (file: null | TFile, editorContent?: string) => void;
@@ -139,10 +141,14 @@ describe('jumpToPendingTemplaterCursor', () => {
 
     context.setActive(context.marked, MARKED_CONTENT);
     await jumpToPendingTemplaterCursor(context.app, context.marked);
-    castTo<PluginsRegistryTestable>(context.app.plugins).registerPlugin__('templater-obsidian', {
-      // eslint-disable-next-line camelcase -- `Templater`'s own API property name.
-      editor_handler: { jump_to_next_cursor_location: context.jump }
-    });
+    registerPluginStub(
+      context.app,
+      'templater-obsidian',
+      createTemplaterPluginStub({
+        // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+        editorHandler: { jump_to_next_cursor_location: context.jump }
+      })
+    );
     await jumpToPendingTemplaterCursor(context.app, context.marked);
 
     expect(context.jump).not.toHaveBeenCalled();
@@ -163,12 +169,16 @@ describe('jumpToPendingTemplaterCursor', () => {
 
 function createContext(options: CreateContextOptions = {}): TestContext {
   const app = App.createConfigured__({ files: { 'marked.md': MARKED_CONTENT, 'plain.md': 'plain' } }).asOriginalType__();
-  const jump = vi.fn().mockResolvedValue(undefined);
+  const jump = vi.fn<TemplaterEditorHandler['jump_to_next_cursor_location']>().mockResolvedValue(undefined);
   if (options.shouldInstallTemplater ?? true) {
-    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
-      // eslint-disable-next-line camelcase -- `Templater`'s own API property name.
-      editor_handler: { jump_to_next_cursor_location: jump }
-    });
+    registerPluginStub(
+      app,
+      'templater-obsidian',
+      createTemplaterPluginStub({
+        // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+        editorHandler: { jump_to_next_cursor_location: jump }
+      })
+    );
   }
   const activeFileSpy = vi.spyOn(app.workspace, 'getActiveFile');
 

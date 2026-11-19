@@ -16,20 +16,16 @@ import {
 } from 'vitest';
 
 import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../templater-stub.ts';
+import {
   renderSingleLineValueWithTemplater,
   renderStringWithTemplater,
   renderTemplateErrorMessage,
   renderValueListWithTemplater,
   TemplateRenderError
 } from './templater-string.ts';
-
-/**
- * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry — mock-only, so absent
- * from the `App` type `asOriginalType__()` hands back.
- */
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
-}
 
 const SETTING_NAME = 'Folder note aliases template';
 const TOKENS = {
@@ -154,13 +150,17 @@ function getNote(app: AppOriginal): TFile {
 
 function installTemplater(app: AppOriginal): Mock {
   const parseTemplate = vi.fn().mockResolvedValue('');
-  castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__('templater-obsidian', {
-    templater: {
-      /* eslint-disable camelcase -- `Templater`'s own API method names. */
-      create_running_config: vi.fn().mockReturnValue({}),
-      parse_template: parseTemplate
-      /* eslint-enable camelcase -- `Templater`'s own API method names. */
-    }
-  });
+  registerPluginStub(
+    app,
+    'templater-obsidian',
+    createTemplaterPluginStub({
+      templater: {
+        /* eslint-disable camelcase -- `Templater`'s own API method names. */
+        create_running_config: vi.fn().mockReturnValue({}),
+        parse_template: parseTemplate
+        /* eslint-enable camelcase -- `Templater`'s own API method names. */
+      }
+    })
+  );
   return parseTemplate;
 }

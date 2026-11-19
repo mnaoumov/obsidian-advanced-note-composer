@@ -5,10 +5,11 @@ import type {
 
 import { isMarkdownFile } from '@mnaoumov/obsidian-lib/file-system';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { TemplaterRunMode } from '@mnaoumov/obsidian-lib/templater';
 
 import type { TemplaterPreludeTokens } from './templater-prelude.ts';
 
-import { TEMPLATER_RUN_MODE_DYNAMIC_PROCESSOR } from '../templater.ts';
+import { getTemplaterPluginApi } from '../templater.ts';
 import { buildTemplaterPrelude } from './templater-prelude.ts';
 
 /**
@@ -151,7 +152,7 @@ export async function renderStringWithTemplater(params: RenderStringWithTemplate
     return resolvedTemplate;
   }
 
-  const templaterPlugin = app.plugins.plugins['templater-obsidian'];
+  const templaterPlugin = getTemplaterPluginApi(app);
   if (!templaterPlugin) {
     throw new TemplateRenderError(`${settingName} uses Templater syntax, but the Templater plugin is not installed`);
   }
@@ -161,7 +162,7 @@ export async function renderStringWithTemplater(params: RenderStringWithTemplate
     throw new TemplateRenderError(`${settingName} uses Templater syntax, which needs a note as its context, and this vault has none`);
   }
 
-  const runningConfig = templaterPlugin.templater.create_running_config(undefined, targetFile, TEMPLATER_RUN_MODE_DYNAMIC_PROCESSOR);
+  const runningConfig = templaterPlugin.templater.create_running_config(undefined, targetFile, TemplaterRunMode.DynamicProcessor);
   try {
     return await templaterPlugin.templater.parse_template(runningConfig, `${buildTemplaterPrelude(tokens)}${resolvedTemplate}`);
   } catch (error) {

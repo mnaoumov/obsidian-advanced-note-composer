@@ -13,6 +13,7 @@ import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/fo
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
+import { TemplaterRunMode } from '@mnaoumov/obsidian-lib/templater';
 import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
 import { noop } from '@mnaoumov/typescript-lib/function';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
@@ -40,7 +41,7 @@ import {
   NameTransformError
 } from '../../templates/name-transform.ts';
 import { resolveCreateFolderTemplateTokens } from '../../templates/template-tokens.ts';
-import { TEMPLATER_RUN_MODE_OVERWRITE_FILE } from '../../templates/templater.ts';
+import { getTemplaterPluginApi } from '../../templates/templater.ts';
 import { recordPendingTemplaterCursor } from '../../templates/templater/templater-cursor.ts';
 import { buildTemplaterPrelude } from '../../templates/templater/templater-prelude.ts';
 import { applyPropertiesWrittenDuringRun } from '../../templates/templater/templater-run-properties.ts';
@@ -843,7 +844,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+    const templaterPlugin = getTemplaterPluginApi(this.app);
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
         f.appendText('You have enabled setting ');
@@ -861,7 +862,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       templater.start_templater_task(file.path);
       try {
         const contentBeforeRun = await this.app.vault.read(file);
-        const runningConfig = templater.create_running_config(file, file, TEMPLATER_RUN_MODE_OVERWRITE_FILE);
+        const runningConfig = templater.create_running_config(file, file, TemplaterRunMode.OverwriteFile);
         const renderedContent = await templater.parse_template(runningConfig, `${buildTemplaterPrelude(tokens)}${contentBeforeRun}`);
         const content = applyPropertiesWrittenDuringRun({
           contentAfterRun: await this.app.vault.read(file),

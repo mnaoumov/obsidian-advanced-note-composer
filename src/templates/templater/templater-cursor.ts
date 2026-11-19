@@ -30,6 +30,8 @@ import type {
   TFile
 } from 'obsidian';
 
+import { getTemplaterPluginApi } from '../templater.ts';
+
 /**
  * The marker `tp.file.cursor()` renders to, with its optional order argument — the pattern `Templater`'s own
  * cursor jump searches for (`Templater` 2.25.0, `CursorJumper.get_cursor_matches_and_positions`).
@@ -72,7 +74,7 @@ export async function jumpToPendingTemplaterCursor(app: App, file: TFile): Promi
     return;
   }
 
-  const templaterPlugin = app.plugins.plugins['templater-obsidian'];
+  const templaterPlugin = getTemplaterPluginApi(app);
   if (!templaterPlugin) {
     filesWithPendingCursor.delete(file);
     return;
@@ -87,7 +89,7 @@ export async function jumpToPendingTemplaterCursor(app: App, file: TFile): Promi
   }
 
   filesWithPendingCursor.delete(file);
-  await templaterPlugin.editor_handler.jump_to_next_cursor_location(file, true);
+  await templaterPlugin.editorHandler.jump_to_next_cursor_location(file, true);
 }
 
 /**

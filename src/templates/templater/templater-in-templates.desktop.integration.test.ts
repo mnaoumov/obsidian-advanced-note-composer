@@ -1,5 +1,7 @@
+/* eslint-disable camelcase -- the fake `Templater` mirrors its snake_case API member names. */
 import type { TFile } from 'obsidian';
 
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -79,13 +81,26 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
             settings.splitTemplate = '# {{newTitle}}\n\n{{content}}\n\nstamp: <% "RENDERED" %>';
           });
           pluginsRecord['templater-obsidian'] = {
+            editor_handler: {
+              jump_to_next_cursor_location: async (): Promise<void> => {
+                await noopAsync();
+              }
+            },
             templater: {
-              // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+              create_running_config: (): unknown => ({}),
+              end_templater_task: async (): Promise<void> => {
+                await noopAsync();
+              },
+              functions_generator: { generate_object: (): Promise<object> => Promise.resolve({}) },
+
               overwrite_file_commands: async (file: TFile): Promise<void> => {
                 const content = await app.vault.read(file);
                 contentsSeenByTemplater.push(content);
                 await app.vault.modify(file, content.replaceAll('<% "RENDERED" %>', 'RENDERED'));
-              }
+              },
+              parse_template: (_config: unknown, content: string): Promise<string> => Promise.resolve(content),
+              read_and_parse_template: (): Promise<string> => Promise.resolve(''),
+              start_templater_task: (): void => {/* Nothing to register in a fake. */}
             }
           };
 
@@ -218,18 +233,32 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
             settings.folderNoteAliasesTemplate = '<% TOKENS.safeFolderName.toUpperCase() %>';
           });
           pluginsRecord['templater-obsidian'] = {
+            editor_handler: {
+              jump_to_next_cursor_location: async (): Promise<void> => {
+                await noopAsync();
+              }
+            },
             templater: {
-              /* eslint-disable camelcase -- `Templater`'s own API method names. */
               create_running_config: (_templateFile: unknown, targetFile: TFile): unknown => {
                 recordedTargetPaths.push(targetFile.path);
                 return {};
+              },
+              end_templater_task: async (): Promise<void> => {
+                await noopAsync();
+              },
+              functions_generator: { generate_object: (): Promise<object> => Promise.resolve({}) },
+              overwrite_file_commands: async (): Promise<void> => {
+                await noopAsync();
               },
               // Evaluates the one expression the template holds, out of the prelude the plugin generated.
               parse_template: (_config: unknown, content: string): Promise<string> => {
                 const match = /"safeFolderName":"(?<safeFolderName>[^"]*)"/.exec(content);
                 return Promise.resolve((match?.groups?.['safeFolderName'] ?? '').toUpperCase());
-              }
-              /* eslint-enable camelcase -- `Templater`'s own API method names. */
+              },
+
+              read_and_parse_template: (): Promise<string> => Promise.resolve(''),
+
+              start_templater_task: (): void => {/* Nothing to register in a fake. */}
             }
           };
 
@@ -347,3 +376,5 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
     expect(result.recordedTargetPaths).toEqual(['templater-in-templates-rename/1. Beta/1. Beta.md']);
   });
 });
+
+/* eslint-enable camelcase -- the fake `Templater` mirrors its snake_case API member names. */
