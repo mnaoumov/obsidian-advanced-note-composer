@@ -107,8 +107,8 @@ describe('merge multiple selected files into one file (issue #92)', () => {
           });
         }
 
-        function findMergeItem(menu: MenuLike): MenuItemLike | undefined {
-          return menu.items.find((item) => (item.dom?.textContent ?? '').includes('Merge these files into one file'));
+        function findMergeItem(menu: MenuLike): MenuItemLike | null {
+          return menu.items.find((item) => (item.dom?.textContent ?? '').includes('Merge these files into one file')) ?? null;
         }
 
         async function chooseFileInPicker(filePath: string): Promise<void> {

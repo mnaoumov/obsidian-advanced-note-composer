@@ -94,6 +94,7 @@ async function loadComponentFromRecord(record: GenericObject): Promise<TestableP
   const component = new TestablePluginSettingsComponent({
     dataHandler: strictProxy<DataHandler>({
       loadData: () => Promise.resolve(record),
+      recoveryStore: null,
       saveData: noopAsync
     }),
     pluginEventSource: strictProxy<PluginEventSource>({
@@ -108,11 +109,11 @@ async function validateProperty<PropertyName extends keyof PluginSettings>(
   component: TestablePluginSettingsComponent,
   propertyName: PropertyName,
   value: PluginSettings[PropertyName]
-): Promise<string | undefined> {
+): Promise<null | string> {
   const settings = new PluginSettings();
   settings[propertyName] = value;
   const result = await component.validate(settings);
-  return result[propertyName];
+  return result[propertyName] ?? null;
 }
 
 describe('PluginSettingsComponent', () => {
@@ -130,24 +131,24 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept valid replacement string', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'replacement', '_')).toBeUndefined();
+        expect(await validateProperty(component, 'replacement', '_')).toBeNull();
       });
 
       it('should accept empty replacement string', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'replacement', '')).toBeUndefined();
+        expect(await validateProperty(component, 'replacement', '')).toBeNull();
       });
     });
 
     describe('nameTransformTemplate validator', () => {
       it('should accept an empty template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'nameTransformTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'nameTransformTemplate', '')).toBeNull();
       });
 
       it('should accept the rawString token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'nameTransformTemplate', 'Project {{rawString}}')).toBeUndefined();
+        expect(await validateProperty(component, 'nameTransformTemplate', 'Project {{rawString}}')).toBeNull();
       });
 
       it('should reject an unknown token', async () => {
@@ -157,12 +158,12 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept literal text that is not a valid file name, since the result is sanitized afterwards', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'nameTransformTemplate', '{{rawString}}: extra')).toBeUndefined();
+        expect(await validateProperty(component, 'nameTransformTemplate', '{{rawString}}: extra')).toBeNull();
       });
 
       it('should accept templater syntax, which cannot be checked until it runs', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'nameTransformTemplate', '<% TOKENS.rawString.replaceAll(": ", " - ") %>')).toBeUndefined();
+        expect(await validateProperty(component, 'nameTransformTemplate', '<% TOKENS.rawString.replaceAll(": ", " - ") %>')).toBeNull();
       });
     });
 
@@ -174,7 +175,7 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept template with content token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'mergeTemplate', '\n\n{{content}}')).toBeUndefined();
+        expect(await validateProperty(component, 'mergeTemplate', '\n\n{{content}}')).toBeNull();
       });
     });
 
@@ -186,12 +187,12 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept template with content token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'splitTemplate', '{{content}}')).toBeUndefined();
+        expect(await validateProperty(component, 'splitTemplate', '{{content}}')).toBeNull();
       });
 
       it('should accept empty template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'splitTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'splitTemplate', '')).toBeNull();
       });
     });
 
@@ -203,12 +204,12 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept template with content token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'smartCutAndPasteTemplate', '{{content}}')).toBeUndefined();
+        expect(await validateProperty(component, 'smartCutAndPasteTemplate', '{{content}}')).toBeNull();
       });
 
       it('should accept empty template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'smartCutAndPasteTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'smartCutAndPasteTemplate', '')).toBeNull();
       });
     });
 
@@ -221,12 +222,12 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept template with content token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'smartCutAndPasteToTopTemplate', '{{content}}')).toBeUndefined();
+        expect(await validateProperty(component, 'smartCutAndPasteToTopTemplate', '{{content}}')).toBeNull();
       });
 
       it('should accept empty template, which means "use the shared template"', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'smartCutAndPasteToTopTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'smartCutAndPasteToTopTemplate', '')).toBeNull();
       });
     });
 
@@ -239,34 +240,34 @@ describe('PluginSettingsComponent', () => {
 
       it('should accept template with content token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'smartCutAndPasteToBottomTemplate', '{{content}}')).toBeUndefined();
+        expect(await validateProperty(component, 'smartCutAndPasteToBottomTemplate', '{{content}}')).toBeNull();
       });
 
       it('should accept empty template, which means "use the shared template"', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'smartCutAndPasteToBottomTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'smartCutAndPasteToBottomTemplate', '')).toBeNull();
       });
     });
 
     describe('splitIntoFolderNoteNameTemplate validator', () => {
       it('should accept empty note name', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', '')).toBeNull();
       });
 
       it('should accept a constant note name', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', 'Overview')).toBeUndefined();
+        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', 'Overview')).toBeNull();
       });
 
       it('should accept a note name built from tokens', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', '{{newTitle}} index')).toBeUndefined();
+        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', '{{newTitle}} index')).toBeNull();
       });
 
       it('should accept a token whose format contains characters invalid outside a token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', '{{date:YYYY/MM}}')).toBeUndefined();
+        expect(await validateProperty(component, 'splitIntoFolderNoteNameTemplate', '{{date:YYYY/MM}}')).toBeNull();
       });
 
       it('should reject the content token', async () => {
@@ -288,12 +289,12 @@ describe('PluginSettingsComponent', () => {
     describe('mergeFolderIntoFileNoteNameTemplate validator', () => {
       it('should accept empty note name', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', '')).toBeNull();
       });
 
       it('should accept a note name built from folder tokens', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', '{{folderName}} summary')).toBeUndefined();
+        expect(await validateProperty(component, 'mergeFolderIntoFileNoteNameTemplate', '{{folderName}} summary')).toBeNull();
       });
 
       it('should reject the content token', async () => {
@@ -315,17 +316,17 @@ describe('PluginSettingsComponent', () => {
     describe('newFolderNameTemplate validator', () => {
       it('should accept the default template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'newFolderNameTemplate', '{{index}}. {{safeFolderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{index}}. {{safeFolderName}}')).toBeNull();
       });
 
       it('should accept a template with no index token, which simply does not number', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'newFolderNameTemplate', '{{safeFolderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{safeFolderName}}')).toBeNull();
       });
 
       it('should accept a date token', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'newFolderNameTemplate', '{{date:YYYY}} {{safeFolderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'newFolderNameTemplate', '{{date:YYYY}} {{safeFolderName}}')).toBeNull();
       });
 
       it('should reject an empty template', async () => {
@@ -369,19 +370,19 @@ describe('PluginSettingsComponent', () => {
     describe('newFolderContentTemplate validator', () => {
       it('should accept an empty template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'newFolderContentTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'newFolderContentTemplate', '')).toBeNull();
       });
 
       it('should accept the reporter\'s two-note layout', async () => {
         const component = createComponent();
         const template = '{{file}} !.md\n---\ntitle: "{{folderName}}"\n---\n{{file}} {{safeFolderName}}.md\n# {{folderName}}';
-        expect(await validateProperty(component, 'newFolderContentTemplate', template)).toBeUndefined();
+        expect(await validateProperty(component, 'newFolderContentTemplate', template)).toBeNull();
       });
 
       it('should not report the file marker itself as an unknown token', async () => {
         // It is parsed out as a marker before any token is resolved.
         const component = createComponent();
-        expect(await validateProperty(component, 'newFolderContentTemplate', '{{file}} a.md\nbody')).toBeUndefined();
+        expect(await validateProperty(component, 'newFolderContentTemplate', '{{file}} a.md\nbody')).toBeNull();
       });
 
       it('should reject an unknown token in a note name', async () => {
@@ -410,17 +411,17 @@ describe('PluginSettingsComponent', () => {
     describe.each(PATHS_VALIDATOR_PROPERTY_NAMES)('%s validator', (propertyName) => {
       it('should accept an empty list', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, propertyName, [])).toBeUndefined();
+        expect(await validateProperty(component, propertyName, [])).toBeNull();
       });
 
       it('should accept a plain path', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, propertyName, ['Inbox'])).toBeUndefined();
+        expect(await validateProperty(component, propertyName, ['Inbox'])).toBeNull();
       });
 
       it('should accept a valid regular expression literal', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, propertyName, [String.raw`/^Inbox\/[^\/]*$/`])).toBeUndefined();
+        expect(await validateProperty(component, propertyName, [String.raw`/^Inbox\/[^\/]*$/`])).toBeNull();
       });
 
       it('should reject an un-parseable regular expression literal', async () => {
@@ -803,12 +804,12 @@ describe('PluginSettingsComponent', () => {
     describe('reorderedFolderNameTemplate validator', () => {
       it('should accept the default template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}. {{safeFolderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{index}}. {{safeFolderName}}')).toBeNull();
       });
 
       it('should accept a template that pads the index and puts it last', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{safeFolderName}} ({{index:000}})')).toBeUndefined();
+        expect(await validateProperty(component, 'reorderedFolderNameTemplate', '{{safeFolderName}} ({{index:000}})')).toBeNull();
       });
 
       it('should reject an empty template', async () => {
@@ -855,7 +856,7 @@ describe('PluginSettingsComponent', () => {
     describe('reorderedFileNameTemplate validator', () => {
       it('should accept the default template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{index}}. {{safeName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'reorderedFileNameTemplate', '{{index}}. {{safeName}}')).toBeNull();
       });
 
       it('should reject a template with no index', async () => {
@@ -885,17 +886,17 @@ describe('PluginSettingsComponent', () => {
     describe('folderNoteTitleTemplate validator', () => {
       it('should accept the default template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{folderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{folderName}}')).toBeNull();
       });
 
       it('should accept an empty template, which is how the property is left alone', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'folderNoteTitleTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '')).toBeNull();
       });
 
       it('should accept a title that is not a valid file name, a title being no such thing', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{parentFolder}}: {{folderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'folderNoteTitleTemplate', '{{parentFolder}}: {{folderName}}')).toBeNull();
       });
 
       it('should reject the typed name, which describes nothing about the folder', async () => {
@@ -913,12 +914,12 @@ describe('PluginSettingsComponent', () => {
     describe('folderNoteAliasesTemplate validator (issue #217)', () => {
       it('should accept the default template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '{{safeFolderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '{{safeFolderName}}')).toBeNull();
       });
 
       it('should accept an empty template, which is how the property is left alone', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'folderNoteAliasesTemplate', '')).toBeNull();
       });
 
       it('should reject the typed name, which describes nothing about the folder', async () => {
@@ -936,12 +937,12 @@ describe('PluginSettingsComponent', () => {
     describe('headingNumberTemplate validator', () => {
       it('should accept the default per-sibling template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'headingNumberTemplate', '{{index}}. {{headingText}}')).toBeUndefined();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{index}}. {{headingText}}')).toBeNull();
       });
 
       it('should accept an outline template', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'headingNumberTemplate', '{{outlineIndex:00}} {{headingText}}')).toBeUndefined();
+        expect(await validateProperty(component, 'headingNumberTemplate', '{{outlineIndex:00}} {{headingText}}')).toBeNull();
       });
 
       it('should reject an empty template', async () => {
@@ -975,12 +976,12 @@ describe('PluginSettingsComponent', () => {
     describe('reorderedFileTitleTemplate validator', () => {
       it('should accept an empty template, which is the default and leaves the property alone', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'reorderedFileTitleTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'reorderedFileTitleTemplate', '')).toBeNull();
       });
 
       it('should accept the new basename with its index', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'reorderedFileTitleTemplate', '{{name}}')).toBeUndefined();
+        expect(await validateProperty(component, 'reorderedFileTitleTemplate', '{{name}}')).toBeNull();
       });
 
       it('should reject an unknown token', async () => {
@@ -992,7 +993,7 @@ describe('PluginSettingsComponent', () => {
     describe('folderNoteNameTemplate validator', () => {
       it('should accept a note named after its folder', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'folderNoteNameTemplate', '{{folderName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'folderNoteNameTemplate', '{{folderName}}')).toBeNull();
       });
 
       it('should reject a name spanning folders', async () => {
@@ -1008,12 +1009,12 @@ describe('PluginSettingsComponent', () => {
         // The one rule these do NOT share with the reorder templates: a reorder always renames, so an
         // empty template would leave it with no name to write, while here empty IS the opt-out.
         const component = createComponent();
-        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '')).toBeNull();
       });
 
       it('should accept a template that pads the index and puts it last', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '{{safeFolderName}} ({{index:000}})')).toBeUndefined();
+        expect(await validateProperty(component, 'numberedSplitFolderNameTemplate', '{{safeFolderName}} ({{index:000}})')).toBeNull();
       });
 
       it('should reject a template with no index, which would number nothing', async () => {
@@ -1044,12 +1045,12 @@ describe('PluginSettingsComponent', () => {
     describe('numberedSplitNoteNameTemplate validator', () => {
       it('should accept an empty template, which is the default and switches numbering off', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '')).toBeUndefined();
+        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '')).toBeNull();
       });
 
       it('should accept the reporter\'s own numbering', async () => {
         const component = createComponent();
-        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '{{index}}. {{safeName}}')).toBeUndefined();
+        expect(await validateProperty(component, 'numberedSplitNoteNameTemplate', '{{index}}. {{safeName}}')).toBeNull();
       });
 
       it('should reject a template with no index, which would number nothing', async () => {

@@ -490,7 +490,7 @@ function hasOwnNote(folder: TFolder, attachmentExtensions: readonly string[]): b
  * @returns Whether a plugin owns the attachment resolution.
  */
 function isAttachmentResolutionOwnedByPlugin(app: App): boolean {
-  return getCheckIsAttachmentUnitFolderFunction(app) !== undefined;
+  return getCheckIsAttachmentUnitFolderFunction(app) !== null;
 }
 
 /**

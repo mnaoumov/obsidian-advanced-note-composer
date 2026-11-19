@@ -172,8 +172,8 @@ describe('clean the typed name of a created empty note (issue #283)', () => {
           throw new Error('Settings component was not found.');
         }
 
-        function findMenuItem(menuLike: MenuLike, title: string): MenuItemLike | undefined {
-          return menuLike.items.find((item) => (item.dom?.textContent ?? '').includes(title));
+        function findMenuItem(menuLike: MenuLike, title: string): MenuItemLike | null {
+          return menuLike.items.find((item) => (item.dom?.textContent ?? '').includes(title)) ?? null;
         }
 
         async function ensureFolder(path: string): Promise<TFolder> {

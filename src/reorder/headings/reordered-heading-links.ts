@@ -179,7 +179,7 @@ export async function updateReorderedHeadingLinks(params: UpdateReorderedHeading
   const newHeadingPaths = buildNewHeadingPaths(params.split, params.order);
   const oldHeadingPaths = buildHeadingPathsFromCache(oldHeadings);
   // Collected in a `const` array (not a reassigned counter) so the converter closure records rewrites safely.
-  const rewrittenLinks: (string | undefined)[] = [];
+  const rewrittenLinks: (null | string)[] = [];
   await editBacklinks({
     abortSignal: params.abortSignal,
     app: params.app,
@@ -207,7 +207,7 @@ export async function updateReorderedHeadingLinks(params: UpdateReorderedHeading
   });
 
   // A backlink is internal by definition, so `replaceLinkUrl` never declines one; counted defensively anyway.
-  return rewrittenLinks.filter((rewritten) => rewritten !== undefined).length;
+  return rewrittenLinks.filter((rewritten) => rewritten !== null).length;
 }
 
 /**

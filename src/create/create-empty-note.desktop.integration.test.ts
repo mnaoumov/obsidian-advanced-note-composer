@@ -327,7 +327,7 @@ describe('create an empty note (issue #244)', () => {
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('file-menu', menu, folder, 'file-explorer-context-menu');
           const menuItem = findMenuItem(menu, MENU_ITEM_TITLE);
-          const isMenuItemPresent = menuItem !== undefined;
+          const isMenuItemPresent = menuItem !== null;
           if (menuItem?.callback) {
             menuItem.callback();
           } else {
@@ -379,8 +379,8 @@ describe('create an empty note (issue #244)', () => {
           return typeof node.editAndSave === 'function' && typeof node.settings?.defaultSplitTargetMode === 'string';
         }
 
-        function findMenuItem(menuLike: MenuLike, title: string): MenuItemLike | undefined {
-          return menuLike.items.find((item) => (item.dom?.textContent ?? '').includes(title));
+        function findMenuItem(menuLike: MenuLike, title: string): MenuItemLike | null {
+          return menuLike.items.find((item) => (item.dom?.textContent ?? '').includes(title)) ?? null;
         }
 
         async function ensureFolder(): Promise<TFolder> {

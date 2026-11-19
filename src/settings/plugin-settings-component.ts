@@ -139,9 +139,9 @@ interface ValidateReorderNameTemplateParams {
    * Reports the first token key this kind's resolver does not know.
    *
    * @param template - The template to check.
-   * @returns The unknown key, or `undefined` when every token resolves.
+   * @returns The unknown key, or `null` when every token resolves.
    */
-  readonly findUnknownTokenKey: (this: void, template: string) => string | undefined;
+  readonly findUnknownTokenKey: (this: void, template: string) => null | string;
 
   /**
    * Token keys this kind's name template may not use.
@@ -496,19 +496,19 @@ function fanOutRetiredIncludePaths(
  *
  * @param template - The template to check.
  * @param forbiddenTokenKeys - The lower-cased keys to look for.
- * @returns The offending key, or `undefined` when the template uses none of them.
+ * @returns The offending key, or `null` when the template uses none of them.
  */
-function findTokenKey(template: string, forbiddenTokenKeys: ReadonlySet<string>): string | undefined {
-  return getTemplateTokenKeys(template).find((key) => forbiddenTokenKeys.has(key.toLowerCase()));
+function findTokenKey(template: string, forbiddenTokenKeys: ReadonlySet<string>): null | string {
+  return getTemplateTokenKeys(template).find((key) => forbiddenTokenKeys.has(key.toLowerCase())) ?? null;
 }
 
 /**
  * Reports the first token key the create-folder resolver does not know.
  *
  * @param template - The template to check.
- * @returns The unknown key, or `undefined` when every token resolves.
+ * @returns The unknown key, or `null` when every token resolves.
  */
-function findUnknownCreateFolderTokenKey(template: string): string | undefined {
+function findUnknownCreateFolderTokenKey(template: string): null | string {
   return findUnknownTokenKey(template, (probe) => {
     resolveCreateFolderTemplateTokens({ template: probe, tokens: SAMPLE_CREATE_FOLDER_TOKENS });
   });
@@ -518,9 +518,9 @@ function findUnknownCreateFolderTokenKey(template: string): string | undefined {
  * Reports the first token key the reordered-file resolver does not know.
  *
  * @param template - The template to check.
- * @returns The unknown key, or `undefined` when every token resolves.
+ * @returns The unknown key, or `null` when every token resolves.
  */
-function findUnknownReorderedFileTokenKey(template: string): string | undefined {
+function findUnknownReorderedFileTokenKey(template: string): null | string {
   return findUnknownTokenKey(template, (probe) => {
     resolveReorderedFileTemplateTokens({ template: probe, tokens: SAMPLE_REORDERED_FILE_TOKENS });
   });
@@ -536,9 +536,9 @@ function findUnknownReorderedFileTokenKey(template: string): string | undefined 
  *
  * @param template - The template to check.
  * @param resolveToken - Resolves a single `{{key}}` probe, throwing when the key is unknown.
- * @returns The unknown key, or `undefined` when every token resolves.
+ * @returns The unknown key, or `null` when every token resolves.
  */
-function findUnknownTokenKey(template: string, resolveToken: (probe: string) => void): string | undefined {
+function findUnknownTokenKey(template: string, resolveToken: (probe: string) => void): null | string {
   for (const key of getTemplateTokenKeys(template)) {
     try {
       resolveToken(`{{${key}}}`);
@@ -547,7 +547,7 @@ function findUnknownTokenKey(template: string, resolveToken: (probe: string) => 
     }
   }
 
-  return undefined;
+  return null;
 }
 
 /**

@@ -1,3 +1,4 @@
+import type { CommandHandlerRegistrationContext } from '@mnaoumov/obsidian-lib/command-handlers/command-handler';
 import type {
   FileCommandHandlerShouldAddToFileMenuParams,
   FileCommandHandlerShouldAddToFilesMenuParams
@@ -37,6 +38,8 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   private readonly consoleDebugComponent: ConsoleDebugComponent;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private registrationShouldAddCommandToSubmenu: boolean | null = null;
+
   private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: MergeFileCommandHandlerConstructorParams) {
@@ -55,6 +58,11 @@ export class MergeFileCommandHandler extends FileCommandHandler {
     this.resourceLockComponent = params.resourceLockComponent;
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+  }
+
+  public override async onRegistered(context: CommandHandlerRegistrationContext): Promise<void> {
+    await super.onRegistered(context);
+    this.registrationShouldAddCommandToSubmenu = context.shouldAddCommandToSubmenu ?? null;
   }
 
   protected override canExecuteFile(file: TFile): boolean {
@@ -129,7 +137,10 @@ export class MergeFileCommandHandler extends FileCommandHandler {
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    // `obsidian-lib` answers `false` both when nothing set it and when a menu surface that wraps every item in a
+    // plugin-titled entry forced it off, so the registration's own answer is kept to let the setting fill only the
+    // unset case.
+    return this.registrationShouldAddCommandToSubmenu ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.

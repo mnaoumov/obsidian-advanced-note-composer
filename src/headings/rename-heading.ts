@@ -124,12 +124,12 @@ export function normalizeHeadingForComparison(heading: string): string {
  *
  * @param link - The link reference to rewrite.
  * @param url - The new url.
- * @returns The rewritten raw link text, or `undefined` for an external link, which has no url to replace.
+ * @returns The rewritten raw link text, or `null` for an external link, which has no url to replace.
  */
-export function replaceLinkUrl(link: Reference, url: string): string | undefined {
+export function replaceLinkUrl(link: Reference, url: string): null | string {
   const parsed = parseLink(link.original);
   if (!parsed || parsed.isExternal) {
-    return undefined;
+    return null;
   }
 
   return generateRawMarkdownLink(normalizeOptionalProperties<GenerateRawMarkdownLinkParams>({
@@ -147,16 +147,16 @@ export function replaceLinkUrl(link: Reference, url: string): string | undefined
  * position — start, middle, or end of a nested `#A#B#C` subpath). The link's target path, style
  * (wikilink / markdown / embed / angle-bracket), alias, and title are preserved; only the matching
  * subpath segment(s) are replaced. Block references (`#^id`) and links whose subpath does not contain
- * the heading are left untouched (returns `undefined`).
+ * the heading are left untouched (returns `null`).
  *
  * @param params - The link and the old/new heading text.
- * @returns The rewritten raw link text, or `undefined` when the link needs no change.
+ * @returns The rewritten raw link text, or `null` when the link needs no change.
  */
-export function rewriteHeadingLink(params: RewriteHeadingLinkParams): string | undefined {
+export function rewriteHeadingLink(params: RewriteHeadingLinkParams): null | string {
   const { link, newHeading, oldHeading } = params;
   const { linkPath, subpath } = splitSubpath(link.link);
   const newSubpath = rewriteHeadingSubpath({ newHeading, oldHeading, subpath });
-  return newSubpath === null ? undefined : replaceLinkUrl(link, linkPath + newSubpath);
+  return newSubpath === null ? null : replaceLinkUrl(link, linkPath + newSubpath);
 }
 
 /**
@@ -236,8 +236,8 @@ export async function updateHeadingBacklinks(params: UpdateHeadingBacklinksParam
     pluginNoticeComponent,
     referenceConverter: (reference) => {
       const rewritten = rewriteHeadingLink({ link: reference, newHeading, oldHeading });
-      if (rewritten === undefined) {
-        return;
+      if (rewritten === null) {
+        return null;
       }
       rewrittenLinks.push(rewritten);
       return rewritten;

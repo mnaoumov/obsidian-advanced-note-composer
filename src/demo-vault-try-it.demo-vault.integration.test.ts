@@ -43,7 +43,7 @@ async function clickButton(notePath: string, caption: string): Promise<ClickResu
       await app.workspace.openLinkText(path.replace(/\.md$/, ''), '', false);
       await app.workspace.getLeaf(false).setViewState({ state: { file: path, mode: 'preview' }, type: 'markdown' });
 
-      function findButton(): HTMLButtonElement | undefined {
+      function findButton(): HTMLButtonElement | null {
         const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
         const scroller = view?.containerEl.querySelector<HTMLElement>('.markdown-preview-view');
         const found = [...view?.containerEl.querySelectorAll<HTMLButtonElement>(':scope .block-language-code-button button.mod-cta') ?? []]
@@ -52,7 +52,7 @@ async function clickButton(notePath: string, caption: string): Promise<ClickResu
           const isAtBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - SCROLL_BOTTOM_TOLERANCE_IN_PIXELS;
           scroller.scrollTop = isAtBottom ? 0 : scroller.scrollTop + SCROLL_STEP_IN_PIXELS;
         }
-        return found;
+        return found ?? null;
       }
 
       let button: HTMLButtonElement | undefined;
@@ -60,7 +60,7 @@ async function clickButton(notePath: string, caption: string): Promise<ClickResu
         await waitUntil({
           message: `button "${buttonCaption}" never rendered`,
           predicate: () => {
-            button = findButton();
+            button = findButton() ?? undefined;
             return button !== undefined;
           },
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS

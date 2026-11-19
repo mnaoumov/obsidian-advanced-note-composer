@@ -393,7 +393,7 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
      * @param settingsOverrides - The settings the rules read.
      * @returns The error message, or nothing when the name is usable.
      */
-    async function validate(value: string, settingsOverrides: Partial<PluginSettings> = {}): Promise<MaybeReturn<string>> {
+    async function validate(value: string, settingsOverrides: Partial<PluginSettings> = {}): Promise<MaybeReturn<null | string>> {
       const { handler } = createHandler(settingsOverrides);
       mockPrompt.mockResolvedValue(null);
       await handler.executeFolder(createMockFolder('Parent'));

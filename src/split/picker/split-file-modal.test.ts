@@ -1339,11 +1339,11 @@ describe('prepareForSplitFile', () => {
   describe('remembering the last split target mode (issues #245, #264)', () => {
     // What the picker WROTE, by replaying the `editAndSave` callback against a settings stand-in. The
     // component mock resolves without applying the edit, so the value has to be read out of the callback.
-    async function applyRememberedMode(pluginSettingsComponent: PluginSettingsComponent): Promise<SplitTargetMode | undefined> {
+    async function applyRememberedMode(pluginSettingsComponent: PluginSettingsComponent): Promise<null | SplitTargetMode> {
       const editAndSave = vi.mocked(pluginSettingsComponent.editAndSave);
       const editor = editAndSave.mock.calls[0]?.[0];
       if (!editor) {
-        return undefined;
+        return null;
       }
       const settingsToEdit = { defaultSplitTargetMode: SplitTargetMode.Create };
       await editor(castTo<PluginSettings>(settingsToEdit));

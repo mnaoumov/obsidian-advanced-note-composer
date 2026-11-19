@@ -7,14 +7,20 @@ import {
 } from 'eslint/config';
 
 export const configs: Linter.Config[] = defineEslintConfigs({
-  customConfigs() {
+  customConfigs(context) {
     return defineConfig(
       // Verbatim copies of the providers' hand-written `api.d.ts`, refreshed from their repositories rather than
       // Edited, so their style is the providers' to keep.
       globalIgnores([
         'src/integrations/advanced-metadata-cache-api/api.d.ts',
         'src/integrations/custom-attachment-location-api/api.d.ts'
-      ])
+      ]),
+      {
+        files: context.allFiles(),
+        rules: {
+          'typescript-dev-toolkit/no-undefined-return-type': 'error'
+        }
+      }
     );
   }
 });

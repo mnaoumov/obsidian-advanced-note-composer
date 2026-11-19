@@ -326,7 +326,7 @@ export abstract class ComposerBase {
   protected buildCompletionContent(verb: string, shouldLinkSource: boolean): Promise<DocumentFragment> {
     return buildOperationNoticeContent(normalizeOptionalProperties<BuildOperationNoticeContentParams>({
       app: this.app,
-      onTargetLinkClick: this.getTargetLinkClickAction(),
+      onTargetLinkClick: this.getTargetLinkClickAction() ?? undefined,
       pluginSettingsComponent: this.pluginSettingsComponent,
       shouldLinkSource,
       sourcePathOrAbstractFile: this.sourceFile.path,
@@ -478,10 +478,10 @@ export abstract class ComposerBase {
    * point of the issue; a merge relocates the source note WHOLE, so "where did it go" is answered by opening
    * the note and there is nothing narrower to jump to.
    *
-   * @returns The extra click action, or `undefined` for none.
+   * @returns The extra click action, or `null` for none.
    */
-  protected getTargetLinkClickAction(): (() => Promise<void>) | undefined {
-    return undefined;
+  protected getTargetLinkClickAction(): (() => Promise<void>) | null {
+    return null;
   }
 
   protected abstract getTemplate(): string;

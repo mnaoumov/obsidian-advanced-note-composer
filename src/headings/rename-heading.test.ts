@@ -120,23 +120,23 @@ describe('rewriteHeadingLink', () => {
   });
 
   it('should return undefined for a block reference', () => {
-    expect(rewriteHeadingLink({ link: reference('[[target#^abc]]', 'target#^abc'), newHeading: 'New', oldHeading: 'abc' })).toBeUndefined();
+    expect(rewriteHeadingLink({ link: reference('[[target#^abc]]', 'target#^abc'), newHeading: 'New', oldHeading: 'abc' })).toBeNull();
   });
 
   it('should return undefined for a link without a matching subpath', () => {
-    expect(rewriteHeadingLink({ link: reference('[[target#Other]]', 'target#Other'), newHeading: 'New', oldHeading: 'Parent' })).toBeUndefined();
+    expect(rewriteHeadingLink({ link: reference('[[target#Other]]', 'target#Other'), newHeading: 'New', oldHeading: 'Parent' })).toBeNull();
   });
 
   it('should return undefined for a link without a subpath', () => {
-    expect(rewriteHeadingLink({ link: reference('[[target]]', 'target'), newHeading: 'New', oldHeading: 'Parent' })).toBeUndefined();
+    expect(rewriteHeadingLink({ link: reference('[[target]]', 'target'), newHeading: 'New', oldHeading: 'Parent' })).toBeNull();
   });
 
   it('should return undefined for an external link', () => {
-    expect(rewriteHeadingLink({ link: reference('[x](https://example.com#Parent)', 'https://example.com#Parent'), newHeading: 'New', oldHeading: 'Parent' })).toBeUndefined();
+    expect(rewriteHeadingLink({ link: reference('[x](https://example.com#Parent)', 'https://example.com#Parent'), newHeading: 'New', oldHeading: 'Parent' })).toBeNull();
   });
 
   it('should return undefined for a reference that is not a link', () => {
-    expect(rewriteHeadingLink({ link: reference('plain text', 'plain text'), newHeading: 'New', oldHeading: 'Parent' })).toBeUndefined();
+    expect(rewriteHeadingLink({ link: reference('plain text', 'plain text'), newHeading: 'New', oldHeading: 'Parent' })).toBeNull();
   });
 });
 

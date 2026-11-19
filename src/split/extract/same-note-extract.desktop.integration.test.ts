@@ -100,7 +100,7 @@ describe('same-note extract via the split picker', () => {
 
         function wasMovedBefore(path: string, moved: string, marker: string): boolean {
           const value = editorValueFor(path);
-          if (value === undefined) {
+          if (value === null) {
             return false;
           }
           const movedIndex = value.indexOf(moved);
@@ -151,14 +151,14 @@ describe('same-note extract via the split picker', () => {
           return view.editor;
         }
 
-        function editorValueFor(path: string): string | undefined {
+        function editorValueFor(path: string): null | string {
           for (const leaf of app.workspace.getLeavesOfType('markdown')) {
             const view = leaf.view;
             if (view instanceof obsidianModule.MarkdownView && view.file?.path === path) {
               return view.editor.getValue();
             }
           }
-          return undefined;
+          return null;
         }
       },
       input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },

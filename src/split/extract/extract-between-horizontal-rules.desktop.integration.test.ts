@@ -134,14 +134,14 @@ describe('extract between horizontal rules', () => {
           return view.editor;
         }
 
-        function editorValueFor(): string | undefined {
+        function editorValueFor(): null | string {
           for (const leaf of app.workspace.getLeavesOfType('markdown')) {
             const view = leaf.view;
             if (view instanceof obsidianModule.MarkdownView && view.file?.path === NOTE_PATH) {
               return view.editor.getValue();
             }
           }
-          return undefined;
+          return null;
         }
       },
       input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },

@@ -110,8 +110,8 @@ async function moveAndReadSelection(commandToRun: string, cursorOffset: null | n
       await sleep(SETTLE_IN_MILLISECONDS);
       return { activeFilePath, selection };
 
-      function activeEditorValue(): string | undefined {
-        return app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getValue();
+      function activeEditorValue(): null | string {
+        return app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.editor.getValue() ?? null;
       }
 
       async function resetFile(path: string, content: string): Promise<TFile> {
