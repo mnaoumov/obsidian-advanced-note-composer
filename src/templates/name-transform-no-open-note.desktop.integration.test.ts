@@ -505,7 +505,7 @@ describe('name transform with no note open (issue #218)', () => {
           };
         }
 
-        function findInMenu(menu: MenuLike, itemTitle: string): MenuItemLike | undefined {
+        function findInMenu(menu: MenuLike, itemTitle: string): MenuItemLike | null {
           for (const item of menu.items) {
             // The title is enough to identify it — Obsidian core contributes no folder-menu item by this
             // name — and the `callback` requirement is what skips the submenu parent that merely contains it.
@@ -518,10 +518,10 @@ describe('name transform with no note open (issue #218)', () => {
               return nested;
             }
           }
-          return undefined;
+          return null;
         }
 
-        function findPluginMenuItem(folder: TFolder, itemTitle: string): MenuItemLike | undefined {
+        function findPluginMenuItem(folder: TFolder, itemTitle: string): MenuItemLike | null {
           const menu = new obsidianModule.Menu();
           app.workspace.trigger('file-menu', menu, folder, 'file-explorer-context-menu');
           const item = findInMenu(menu as MenuLike, itemTitle);

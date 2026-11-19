@@ -327,7 +327,7 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
   protected abstract resolveRun(editor: Editor, file: TFile, cache: CachedMetadata): null | RecursiveSplitRun;
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    return super.shouldAddCommandToSubmenu() || this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   /**

@@ -2085,7 +2085,7 @@ describe('splitFile frontmatter-only extract', () => {
 
     // The properties were merged into the destination's own frontmatter, so there is no inserted region;
     // The link keeps its plain open-the-note behavior rather than jumping somewhere arbitrary.
-    expect(getTargetLinkClickAction()).toBeUndefined();
+    expect(getTargetLinkClickAction()).toBeNull();
   });
 
   it('should rewrite the source frontmatter with what is left', async () => {
@@ -2204,12 +2204,12 @@ async function clickMoveNoticeLinkAndReadRevealParams(): Promise<object> {
  * `isLoading` rather than by position — a delayed progress notice that did resolve its content would
  * otherwise be mistaken for the completion one.
  *
- * @returns The action, or `undefined` when none was offered.
+ * @returns The action, or `null` when none was offered.
  */
-function getTargetLinkClickAction(): (() => Promise<void>) | undefined {
+function getTargetLinkClickAction(): (() => Promise<void>) | null {
   const calls = [...vi.mocked(buildOperationNoticeContent).mock.calls].reverse();
   const completionCall = calls.find(([callParams]) => !(callParams.isLoading ?? false));
-  return ensureNonNullable(completionCall)[0].onTargetLinkClick;
+  return ensureNonNullable(completionCall)[0].onTargetLinkClick ?? null;
 }
 
 describe('SplitComposer source links to extracted headings (issue #291)', () => {

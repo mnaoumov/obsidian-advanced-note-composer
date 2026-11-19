@@ -94,7 +94,7 @@ The persistent notice also has a **Swap with selection** button. Instead of movi
 ---
 caption: Bind Alt+Shift+Up to "Move marked selection to top of file"
 ---
-require('/demoSetup.ts').bindHotkey(app, 'advanced-note-composer:move-marked-selection-to-top-of-file', { modifiers: ['Alt', 'Shift'], key: 'ArrowUp' });
+await require('/demoSetup.ts').bindHotkey(app, 'advanced-note-composer:move-marked-selection-to-top-of-file', { modifiers: ['Alt', 'Shift'], key: 'ArrowUp' });
 ```
 
 ## Keep your place instead of following the moved text

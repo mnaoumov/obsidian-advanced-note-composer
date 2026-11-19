@@ -431,11 +431,11 @@ export class SplitComposer extends ComposerBase {
    * properties rather than writing a body, so there is no body region to jump to and the link keeps its
    * plain open-the-note behavior.
    *
-   * @returns The click action, or `undefined` when there is nothing to jump to.
+   * @returns The click action, or `null` when there is nothing to jump to.
    */
-  protected override getTargetLinkClickAction(): (() => Promise<void>) | undefined {
+  protected override getTargetLinkClickAction(): (() => Promise<void>) | null {
     const insertedContent = this.insertedContent;
-    return insertedContent === null ? undefined : this.buildRevealInsertedContentAction(insertedContent, true);
+    return insertedContent === null ? null : this.buildRevealInsertedContentAction(insertedContent, true);
   }
 
   protected override getTemplate(): string {

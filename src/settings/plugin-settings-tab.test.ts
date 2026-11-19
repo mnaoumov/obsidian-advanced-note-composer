@@ -127,6 +127,7 @@ async function createSettingsComponent(): Promise<PluginSettingsComponent> {
   const component = new PluginSettingsComponent({
     dataHandler: strictProxy<DataHandler>({
       loadData: vi.fn(() => Promise.resolve(null)),
+      recoveryStore: null,
       saveData: vi.fn(() => noopAsync())
     }),
     pluginEventSource: strictProxy<PluginEventSource>({

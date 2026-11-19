@@ -135,14 +135,14 @@ describe('a marked selection moved to an edge lands on its own line', () => {
           return view.editor;
         }
 
-        function editorValueFor(path: string): string | undefined {
+        function editorValueFor(path: string): null | string {
           for (const leaf of app.workspace.getLeavesOfType('markdown')) {
             const view = leaf.view;
             if (view instanceof obsidianModule.MarkdownView && view.file?.path === path) {
               return view.editor.getValue();
             }
           }
-          return undefined;
+          return null;
         }
       },
       input: { findSettingItem: findSettingItemInObsidian, pluginId: PLUGIN_ID },

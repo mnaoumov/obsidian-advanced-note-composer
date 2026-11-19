@@ -356,8 +356,8 @@ describe('the split template on the create-empty-note commands (issue #244)', ()
           return typeof node.editAndSave === 'function' && typeof node.settings?.defaultSplitTargetMode === 'string';
         }
 
-        function findMenuItem(menuLike: MenuLike, title: string): MenuItemLike | undefined {
-          return menuLike.items.find((item) => (item.dom?.textContent ?? '').includes(title));
+        function findMenuItem(menuLike: MenuLike, title: string): MenuItemLike | null {
+          return menuLike.items.find((item) => (item.dom?.textContent ?? '').includes(title)) ?? null;
         }
 
         async function ensureFolder(path: string): Promise<TFolder> {

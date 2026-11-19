@@ -103,9 +103,9 @@ interface RunCommandOptions {
   readonly within?: string;
 }
 
-export function bindHotkey(app: App, commandId: string, hotkey: Hotkey): void {
+export async function bindHotkey(app: App, commandId: string, hotkey: Hotkey): Promise<void> {
   app.hotkeyManager.setHotkeys(commandId, [hotkey]);
-  app.hotkeyManager.save();
+  await app.hotkeyManager.save();
   app.hotkeyManager.bake();
   new Notice(`Bound hotkey to: ${commandId}`);
 }
@@ -187,7 +187,6 @@ export async function setUpTemplaterExample(app: App): Promise<void> {
     app,
     pluginId: PLUGIN_ID,
     settings: {
-      // eslint-disable-next-line typescript-dev-toolkit/prefer-dedent -- A vault has no `node_modules`, and `CodeScript Toolkit` does not serve `dedent`, so the import would fail at runtime.
       newFolderContentTemplate: [
         '{{file}} !.md',
         '---',

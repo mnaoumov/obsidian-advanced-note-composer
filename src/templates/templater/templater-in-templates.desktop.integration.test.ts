@@ -158,8 +158,8 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
           await trashIfExists(FOLDER_PATH);
         }
 
-        function findMenuItem(menuLike: MenuLike, isMatch: (text: string) => boolean): MenuItemLike | undefined {
-          return menuLike.items.find((item) => isMatch(item.dom?.textContent ?? ''));
+        function findMenuItem(menuLike: MenuLike, isMatch: (text: string) => boolean): MenuItemLike | null {
+          return menuLike.items.find((item) => isMatch(item.dom?.textContent ?? '')) ?? null;
         }
 
         function findSettingsComponent(): SettingsCarrier {
@@ -305,8 +305,8 @@ describe('Templater in the split and folder-note templates (issue #284)', () => 
           await trashRootIfExists();
         }
 
-        function findMenuItem(menuLike: MenuLike, isMatch: (text: string) => boolean): MenuItemLike | undefined {
-          return menuLike.items.find((item) => isMatch(item.dom?.textContent ?? ''));
+        function findMenuItem(menuLike: MenuLike, isMatch: (text: string) => boolean): MenuItemLike | null {
+          return menuLike.items.find((item) => isMatch(item.dom?.textContent ?? '')) ?? null;
         }
 
         function findSettingsComponent(): SettingsCarrier {

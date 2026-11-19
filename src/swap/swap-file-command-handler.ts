@@ -1,3 +1,4 @@
+import type { CommandHandlerRegistrationContext } from '@mnaoumov/obsidian-lib/command-handlers/command-handler';
 import type { FileCommandHandlerShouldAddToFileMenuParams } from '@mnaoumov/obsidian-lib/command-handlers/file-command-handler';
 import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
@@ -34,6 +35,8 @@ export class SwapFileCommandHandler extends FileCommandHandler {
   private readonly app: App;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private registrationShouldAddCommandToSubmenu: boolean | null = null;
+
   private readonly resourceLockComponent: ResourceLockComponent;
 
   public constructor(params: SwapFileCommandHandlerConstructorParams) {
@@ -48,6 +51,11 @@ export class SwapFileCommandHandler extends FileCommandHandler {
     this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
+  }
+
+  public override async onRegistered(context: CommandHandlerRegistrationContext): Promise<void> {
+    await super.onRegistered(context);
+    this.registrationShouldAddCommandToSubmenu = context.shouldAddCommandToSubmenu ?? null;
   }
 
   protected override canExecuteFile(file: TFile): boolean {
@@ -136,7 +144,10 @@ export class SwapFileCommandHandler extends FileCommandHandler {
   }
 
   protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+    // `obsidian-lib` answers `false` both when nothing set it and when a menu surface that wraps every item in a
+    // plugin-titled entry forced it off, so the registration's own answer is kept to let the setting fill only the
+    // unset case.
+    return this.registrationShouldAddCommandToSubmenu ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
