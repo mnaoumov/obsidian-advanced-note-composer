@@ -35,6 +35,10 @@ import type { PluginSettingsComponent } from '../settings/plugin-settings-compon
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 
 import { FrontmatterMergeStrategy } from '../settings/plugin-settings.ts';
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../templates/templater-stub.ts';
 import { mergeFilesIntoSingleFile } from './merge-into-single-file-runner.ts';
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
@@ -70,17 +74,6 @@ afterEach(() => {
 interface InitAppOptions {
   readonly attachmentFolderPath?: string;
   readonly plugins?: Record<string, unknown>;
-}
-
-/**
- * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
- *
- * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
- * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
- * assign over `app.plugins` any more.
- */
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 /**
@@ -149,7 +142,7 @@ function initApp(files: Record<string, string>, options: InitAppOptions = {}): v
     app.vault.setConfig('attachmentFolderPath', options.attachmentFolderPath);
   }
   for (const [id, plugin] of Object.entries(options.plugins ?? {})) {
-    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__(id, plugin);
+    registerPluginStub(app, id, plugin);
   }
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
@@ -501,8 +494,7 @@ describe('mergeFilesIntoSingleFile', () => {
   });
 
   it('does not warn about templater when the plugin is installed', async () => {
-    // eslint-disable-next-line camelcase -- `Templater`'s real public API method name.
-    initApp({ 'a.md': 'alpha body', 'target.md': '' }, { plugins: { 'templater-obsidian': { templater: { overwrite_file_commands: vi.fn() } } } });
+    initApp({ 'a.md': 'alpha body', 'target.md': '' }, { plugins: { 'templater-obsidian': createTemplaterPluginStub() } });
     const { consoleDebugComponent, context, pluginNoticeComponent, pluginSettingsComponent } = createContext({
       shouldRunTemplaterOnDestinationFile: true
     });

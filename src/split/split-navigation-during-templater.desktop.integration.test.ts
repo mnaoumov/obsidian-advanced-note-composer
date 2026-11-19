@@ -1,8 +1,10 @@
+/* eslint-disable camelcase -- the fake `Templater` mirrors its snake_case API member names. */
 import type {
   Editor,
   TFile
 } from 'obsidian';
 
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -104,8 +106,18 @@ async function runExtract(): Promise<ExtractResult> {
         const decoyFile = await app.vault.create('anc-split-nav-decoy.md', 'decoy body');
 
         pluginsRecord['templater-obsidian'] = {
+          editor_handler: {
+            jump_to_next_cursor_location: async (): Promise<void> => {
+              await noopAsync();
+            }
+          },
           templater: {
-            // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+            create_running_config: (): unknown => ({}),
+            end_templater_task: async (): Promise<void> => {
+              await noopAsync();
+            },
+            functions_generator: { generate_object: (): Promise<object> => Promise.resolve({}) },
+
             overwrite_file_commands: async (): Promise<void> => {
               // The user clicks another note while the template is still rendering.
               await app.workspace.getLeaf(false).openFile(decoyFile);
@@ -114,7 +126,10 @@ async function runExtract(): Promise<ExtractResult> {
                 predicate: () => app.workspace.getActiveViewOfType(obsidianModule.MarkdownView)?.file === decoyFile,
                 timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
               });
-            }
+            },
+            parse_template: (_config: unknown, content: string): Promise<string> => Promise.resolve(content),
+            read_and_parse_template: (): Promise<string> => Promise.resolve(''),
+            start_templater_task: (): void => {/* Nothing to register in a fake. */}
           }
         };
 
@@ -204,3 +219,5 @@ async function runExtract(): Promise<ExtractResult> {
     vaultPath: getTemporaryVault().path
   });
 }
+
+/* eslint-enable camelcase -- the fake `Templater` mirrors its snake_case API member names. */

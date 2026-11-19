@@ -42,6 +42,7 @@ import { compareNatural } from '../../natural-sort.ts';
 import { recordRecentTarget } from '../../recency/recent-targets.ts';
 import { isFileOrFolderCommandBlocked } from '../../settings/command-visibility/command-block.ts';
 import { CommandCategory } from '../../settings/plugin-settings.ts';
+import { getTemplaterPluginApi } from '../../templates/templater.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -380,7 +381,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     if (!this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
-    const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+    const templaterPlugin = getTemplaterPluginApi(this.app);
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
         f.appendText('You have enabled setting ');

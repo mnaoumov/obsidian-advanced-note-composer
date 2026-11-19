@@ -14,6 +14,7 @@ import type { Mock } from 'vitest';
 import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
 import { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import {
   castTo,
   normalizeOptionalProperties
@@ -52,6 +53,10 @@ import {
   SmartCutAndPasteMoveKind,
   TextAfterExtractionMode
 } from '../settings/plugin-settings.ts';
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../templates/templater-stub.ts';
 import {
   buildOperationNoticeContent,
   renderOperationNoticeLink
@@ -2297,14 +2302,19 @@ describe('SplitComposer when the source tab is pointed at another note mid-split
 
   // A slow template is where the user has time to navigate: the stand-in `Templater` navigates while it renders.
   function navigateDuringTemplater(navigate: () => void): void {
-    castTo<GenericObject>(app.plugins.plugins)['templater-obsidian'] = {
-      templater: {
-        // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
-        overwrite_file_commands: vi.fn(() => {
-          navigate();
-        })
-      }
-    };
+    registerPluginStub(
+      app,
+      'templater-obsidian',
+      createTemplaterPluginStub({
+        templater: {
+          // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+          overwrite_file_commands: vi.fn(async () => {
+            navigate();
+            await noopAsync();
+          })
+        }
+      })
+    );
   }
 
   function getLastNoticeMessage(pluginNoticeComponent: PluginNoticeComponent): string {

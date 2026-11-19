@@ -1,8 +1,10 @@
+/* eslint-disable camelcase -- the fake `Templater` mirrors its snake_case API member names. */
 import type {
   Editor,
   TFile
 } from 'obsidian';
 
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -108,9 +110,7 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
           Object.assign(settings, CHANGED_SETTINGS);
         });
         pluginsRecord['templater-obsidian'] = {
-          // eslint-disable-next-line camelcase -- `Templater`'s own API property name.
           editor_handler: {
-            // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
             jump_to_next_cursor_location: async (file: null | TFile): Promise<void> => {
               if (file && app.workspace.getActiveFile() !== file) {
                 return;
@@ -132,11 +132,19 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
             }
           },
           templater: {
+            create_running_config: (): unknown => ({}),
+            end_templater_task: async (): Promise<void> => {
+              await noopAsync();
+            },
+            functions_generator: { generate_object: (): Promise<object> => Promise.resolve({}) },
             // `tp.file.cursor()` renders to its own marker, so the rendered note is the note as written.
-            // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
+
             overwrite_file_commands: async (file: TFile): Promise<void> => {
               await app.vault.modify(file, await app.vault.read(file));
-            }
+            },
+            parse_template: (_config: unknown, content: string): Promise<string> => Promise.resolve(content),
+            read_and_parse_template: (): Promise<string> => Promise.resolve(''),
+            start_templater_task: (): void => {/* Nothing to register in a fake. */}
           }
         };
 
@@ -257,3 +265,5 @@ async function runExtract(input: ExtractInput): Promise<ExtractResult> {
     vaultPath: getTemporaryVault().path
   });
 }
+
+/* eslint-enable camelcase -- the fake `Templater` mirrors its snake_case API member names. */

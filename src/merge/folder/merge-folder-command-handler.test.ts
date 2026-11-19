@@ -38,6 +38,10 @@ import type { PluginSettings } from '../../settings/plugin-settings.ts';
 // proceeds without opening a suggest modal. Everything else (vault, lock, transaction, composer) is REAL.
 import { createBulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
 import { FrontmatterMergeStrategy } from '../../settings/plugin-settings.ts';
+import {
+  createTemplaterPluginStub,
+  registerPluginStub
+} from '../../templates/templater-stub.ts';
 import { MergeFolderCommandHandler } from './merge-folder-command-handler.ts';
 import { selectTargetFolderForMergeFolder } from './merge-folder-modal.ts';
 
@@ -49,17 +53,6 @@ interface HandlerContext {
 
 interface InitAppOptions {
   readonly plugins?: Record<string, unknown>;
-}
-
-/**
- * The seam `obsidian-test-mocks` gives a test for putting a plugin in the registry.
- *
- * `registerPlugin__` is mock-only, so it is absent from the `App` type `asOriginalType__()` hands back even
- * though it is right there at runtime. The registry itself is modelled now, which is why nothing here has to
- * assign over `app.plugins` any more.
- */
-interface PluginsRegistryTestable {
-  readonly registerPlugin__: (id: string, plugin: unknown) => void;
 }
 
 interface Testable {
@@ -180,7 +173,7 @@ function initApp(files: Record<string, string>, options: InitAppOptions = {}): v
   // Test-mocks' MetadataCache has no indexer; the merge's processFrontMatter triggers a recompute.
   castTo<GenericObject>(app.metadataCache)['computeMetadataAsync'] = vi.fn();
   for (const [id, plugin] of Object.entries(options.plugins ?? {})) {
-    castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__(id, plugin);
+    registerPluginStub(app, id, plugin);
   }
   resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
   resourceLockComponent.load();
@@ -527,7 +520,7 @@ describe('MergeFolderCommandHandler', () => {
   });
 
   it('should not warn about templater when the plugin is installed', async () => {
-    initApp({}, { plugins: { 'templater-obsidian': {} } });
+    initApp({}, { plugins: { 'templater-obsidian': createTemplaterPluginStub() } });
     await app.vault.createFolder('src');
     await app.vault.createFolder('dst');
     const { handler, showNotice } = createHandler({ shouldRunTemplaterOnDestinationFile: true });

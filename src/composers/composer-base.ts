@@ -57,6 +57,7 @@ import {
 } from '../settings/plugin-settings.ts';
 import { buildExtractedSubpathPredicate } from '../split/extracted-link-targets.ts';
 import { resolveTemplateTokens } from '../templates/template-tokens.ts';
+import { getTemplaterPluginApi } from '../templates/templater.ts';
 import { recordPendingTemplaterCursor } from '../templates/templater/templater-cursor.ts';
 import { buildOperationNoticeContent } from '../ui/operation-notices.ts';
 import {
@@ -570,7 +571,7 @@ export abstract class ComposerBase {
       return;
     }
 
-    const templaterPlugin = this.app.plugins.plugins['templater-obsidian'];
+    const templaterPlugin = getTemplaterPluginApi(this.app);
     if (!templaterPlugin) {
       if (this.shouldShowNotice) {
         this.pluginNoticeComponent.showNotice(createFragment((f) => {

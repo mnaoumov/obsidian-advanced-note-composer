@@ -34,6 +34,7 @@ import {
 import { runLockedTransaction } from '../composers/locked-transaction.ts';
 import { recordRecentTarget } from '../recency/recent-targets.ts';
 import { CommandCategory } from '../settings/plugin-settings.ts';
+import { getTemplaterPluginApi } from '../templates/templater.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -490,7 +491,7 @@ async function showIgnoredFilesNotice(app: App, pluginNoticeComponent: PluginNot
 }
 
 function warnIfTemplaterMissing(app: App, pluginNoticeComponent: PluginNoticeComponent, shouldRunTemplater: boolean): void {
-  if (!shouldRunTemplater || app.plugins.plugins['templater-obsidian']) {
+  if (!shouldRunTemplater || getTemplaterPluginApi(app)) {
     return;
   }
   pluginNoticeComponent.showNotice(createFragment((f) => {
