@@ -292,6 +292,18 @@ export class Plugin extends PluginBase {
         resourceLockComponent,
         selectionHighlightComponent
       }),
+      // The heading's body alone, its `#` line left in the note with the link under it (discussion #310).
+      new ExtractThisHeadingEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        isContentOnly: true,
+        moveNoticeComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent,
+        selectionHighlightComponent
+      }),
       new ExtractBeforeCursorEditorCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,

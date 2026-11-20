@@ -24,6 +24,26 @@ caption: Put the section back
 await require('/demoSetup.ts').resetDemo(app, ['02 Extract/06 Extract heading.md', 'Ideas worth their own note.md']);
 ```
 
+## Keep the heading, extract its content
+
+`Extract this heading's content...` does the same from anywhere in the section, but leaves the heading line here and extracts only what is under it (discussion #310). The new note is still named after the heading, and the link goes right under the heading. Merging that note back with `Merge current file with another file...` puts the content under the heading again.
+
+The first button below runs it with the cursor in the `## A heading that stays` section further down. The second puts the section back and deletes the note.
+
+```code-button
+---
+caption: Extract the content of the heading the cursor is in
+---
+await require('/demoSetup.ts').runCommand(app, { commandId: 'extract-this-heading-content', cursorBefore: 'Only this body moves', notePath: '02 Extract/06 Extract heading.md' });
+```
+
+```code-button
+---
+caption: Put the content back
+---
+await require('/demoSetup.ts').resetDemo(app, ['02 Extract/06 Extract heading.md', 'A heading that stays.md']);
+```
+
 ## Right-click with a selection
 
 Select some text first and right-click it: `Extract this heading...` is **not** in the menu (issue #188). A selection is a question about the selection, so `Extract current selection...` is what you get. Click once to drop the selection and the heading command is back — still from anywhere inside the section.
@@ -41,6 +61,10 @@ Two related rules are unchanged: `Split note by headings - H<n>` (and its `conte
 ## Ideas worth their own note
 
 This whole section - heading and body - becomes a separate note. Put your cursor right here, on this body line, and the extraction still grabs the entire section. The heading text becomes the new note's title, so invalid characters and slashes matter here (see [28 Invalid titles](<../09 Titles, links and frontmatter/28 Invalid titles.md>) and [29 Treat title as path](<../09 Titles, links and frontmatter/29 Treat title as path.md>)).
+
+## A heading that stays
+
+Only this body moves when you run `Extract this heading's content...` here. The heading line above stays in this note, with a link to the new note under it.
 
 ## Another section
 
