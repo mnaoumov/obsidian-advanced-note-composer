@@ -717,20 +717,15 @@ This release has 3 new features, 1 fix and 1 documentation change. 1 maintenance
 
 ## 3.33.0
 
-This release has 2 new features, 1 fix and 1 other change. 5 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+This release has 1 new feature and 1 fix. 5 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ### New
 
-- `Smart cut & paste` UX improvements
-- Originally requested: (#127)
+- `Smart cut & paste` UX improvements: move a marked selection to the top or bottom of a note, extract a selection into the same note, a persistent highlight of the pending selection, and `Switch to smart cut & paste` on the split confirmation dialog (#127, #129).
 
 ### Fixed
 
 - \[BUG\] Minimize button can be infinitely cast (#126)
-
-### Other changes
-
-- Merge branch 'issue-129'
 
 ## 3.32.0
 
@@ -1121,10 +1116,13 @@ This release has maintenance changes only. 2 maintenance commits (tests, build, 
 
 ## 3.5.4
 
-- fix: remove recent paths duplicates
-- fix: broke links to itself after merge
-- fix: don't treat manual split as merge
-  - re 39
+This release has 3 fixes.
+
+### Fixed
+
+- The picker no longer lists the same recent note twice.
+- Merging no longer breaks the links a note holds to itself.
+- A manual split is no longer treated as a merge (#39).
 
 ## 3.5.3
 
@@ -1148,17 +1146,23 @@ This release has 1 new feature and 1 fix. 1 maintenance commit (tests, build, CI
 
 ## 3.5.1
 
-- fix: handling include/exclude paths not ending with /
-  - re #46
+This release has 1 fix.
+
+### Fixed
+
+- Include and exclude paths that do not end with `/` are now matched correctly (#46).
 
 ## 3.5.0
 
-- chore: spellcheck
-- fix: include only markdown files
-  - re #43
-- chore: update libs
-- feat: add include/exclude paths
-  - re #44
+This release has 1 new feature and 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- Include and exclude path settings limit which notes the plugin works with (#44).
+
+### Fixed
+
+- Only markdown files are offered as merge and split targets (#43).
 
 ## 3.4.1
 
@@ -1182,27 +1186,40 @@ This release has 1 new feature and 1 fix. 1 maintenance commit (tests, build, CI
 
 ## 3.3.0
 
-- feat: add {{fromPath}}, {{newPath}} tokens
-- feat: show full path of merged notes
-  - re #40
+This release has 2 new features.
+
+### New
+
+- New template tokens `{{fromPath}}` and `{{newPath}}`.
+- The merge dialog shows the full path of the notes being merged (#40).
 
 ## 3.2.0
 
-- feat: add console.debug
-  - ref #35
+This release has 1 new feature.
+
+### New
+
+- Debug messages are written to the developer console, to help diagnose problems (#35).
 
 ## 3.1.1
 
-- chore: update libs
-- docs: better section Treat title as path
-- docs: treat title as path documentation
-  - fix 28
+This release has documentation changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Documentation
+
+- The README documents the `Treat title as path` setting (#28).
 
 ## 3.1.0
 
-- feat: add support for template in frontmatter
-  - fix #30
-- fix: code highlighter tokens
+This release has 1 new feature and 1 fix.
+
+### New
+
+- Templates can now carry frontmatter, which is merged into the destination note (#30).
+
+### Fixed
+
+- Template tokens are highlighted correctly in the settings editor.
 
 ## 3.0.0
 
