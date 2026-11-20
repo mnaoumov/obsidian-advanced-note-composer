@@ -399,6 +399,57 @@ describe('ExtractThisHeadingEditorCommandHandler', () => {
   });
 });
 
+describe('ExtractThisHeadingEditorCommandHandler content only (discussion #310)', () => {
+  const HEADING_INFO = {
+    end: { ch: 4, line: 5 },
+    heading: 'My Heading',
+    start: { ch: 0, line: 2 }
+  };
+
+  function createContentEditor(body: string): Editor {
+    return strictProxy<Editor>({
+      getCursor: vi.fn().mockReturnValue({ ch: 0, line: 3 }),
+      getRange: vi.fn().mockReturnValue(body),
+      setSelection: vi.fn()
+    });
+  }
+
+  function createContentOnlyHandler(): TestableHandler {
+    return toTestable(new ExtractThisHeadingEditorCommandHandler({ ...createMockParams(), isContentOnly: true }));
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetEnclosingHeadingLine.mockReturnValue(2);
+    mockGetSelectionUnderHeading.mockReturnValue(HEADING_INFO);
+  });
+
+  it('should construct as its own command', () => {
+    const handler = createContentOnlyHandler();
+    expect(handler.id).toBe('extract-this-heading-content');
+    expect(handler.name).toBe('Extract this heading\'s content...');
+    expect(handler.icon).toBe('lucide-text');
+  });
+
+  it('should not be offered on a heading with no body', () => {
+    const handler = createContentOnlyHandler();
+    expect(handler.canExecuteEditor(createContentEditor('\n  \n'), createMockContext(createMockFile()))).toBe(false);
+  });
+
+  it('should select the body without the heading line and still name the note after the heading', async () => {
+    const handler = createContentOnlyHandler();
+    const editor = createContentEditor('body text');
+    const context = createMockContext(createMockFile());
+    expect(handler.canExecuteEditor(editor, context)).toBe(true);
+    mockPrepareForSplitFile.mockResolvedValue(null);
+
+    await handler.executeEditor(editor, context);
+
+    expect(vi.mocked(editor.setSelection)).toHaveBeenCalledWith({ ch: 0, line: 3 }, HEADING_INFO.end);
+    expect(mockPrepareForSplitFile).toHaveBeenCalledWith(expect.objectContaining({ heading: 'My Heading' }));
+  });
+});
+
 /**
  * The `mode` and `source` Obsidian passes with `markdown-viewport-menu` for a right-click on the empty
  * margin beside the text, or on the line-number gutter, of a note being edited (issue #252).

@@ -69,6 +69,11 @@ export const MENU_PLACEABLE_COMMANDS: readonly MenuPlaceableCommand[] = [
   },
   {
     commandCategory: CommandCategory.SplitAndExtract,
+    id: 'extract-this-heading-content',
+    name: 'Extract this heading\'s content...'
+  },
+  {
+    commandCategory: CommandCategory.SplitAndExtract,
     id: 'extract-before-cursor',
     name: 'Extract before cursor...'
   },
