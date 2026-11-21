@@ -8,3 +8,4 @@ Merging takes the content of one thing and folds it into another, then deletes w
 | [02 Merge folder](<./02 Merge folder.md>) | A folder's notes into another folder, keeping the structure |
 | [03 Merge folder into single file](<./03 Merge folder into single file.md>) | A whole folder tree collapsed into one note, optionally with folders as headings |
 | [04 Merge multiple files](<./04 Merge multiple files.md>) | Several notes selected in the file explorer, merged in one go |
+| [45 Inline attachment note into its parent](<./45 Inline attachment note into its parent.md>) | An attachment note folded back into its parent: the attachment embedded on the parent's line, every link moved to that line's block |
