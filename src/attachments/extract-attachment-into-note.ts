@@ -222,7 +222,8 @@ export function findAttachmentReferenceAtCursor(params: FindAttachmentReferenceA
     return underCursor;
   }
 
-  return candidates.length === 1 ? candidates[0] ?? null : null;
+  const [onlyCandidate, ...otherCandidates] = candidates;
+  return onlyCandidate && otherCandidates.length === 0 ? onlyCandidate : null;
 }
 
 /**
