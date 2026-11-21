@@ -180,6 +180,24 @@ describe('MergeComposer', () => {
       expect(await app.vault.adapter.exists('source.md')).toBe(false);
     });
 
+    it('should write the heading the link sits under once when the source opens with it and headings merge', async () => {
+      await app.vault.modify(getSourceFile(), '## Example\n\nsource body');
+      await app.vault.modify(getTargetFile(), 'before\n\n## Example\n\n[[source]]\nafter');
+
+      await createComposer({ shouldMergeHeadingsByDefault: true }, false, true).mergeFile();
+
+      expect(extractFrontmatter(await app.vault.adapter.read('target.md')).content).toBe('before\n\n## Example\n\nsource body\nafter');
+    });
+
+    it('should keep both headings when headings do not merge', async () => {
+      await app.vault.modify(getSourceFile(), '## Example\n\nsource body');
+      await app.vault.modify(getTargetFile(), '## Example\n\n[[source]]');
+
+      await createComposer(undefined, false, true).mergeFile();
+
+      expect(extractFrontmatter(await app.vault.adapter.read('target.md')).content).toBe('## Example\n\n## Example\n\nsource body');
+    });
+
     it('should replace an embed the same way', async () => {
       await app.vault.modify(getTargetFile(), 'before\n![[source]]\nafter');
 

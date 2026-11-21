@@ -27,6 +27,8 @@ interface MergeAtLinkSettings {
   shouldAskBeforeMerging: boolean;
   // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
   shouldMergeAtSourceLinkByDefault: boolean;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Test setup and callbacks reassign this shared fixture state.
+  shouldMergeHeadingsByDefault: boolean;
 }
 
 interface SettingsCarrier {
@@ -193,5 +195,122 @@ describe('merging a note at its residual link (discussion #310)', () => {
     expect(result.contentAtLink).not.toContain('[[t5758-source');
     expect(result.contentAppended).toContain('intro\n');
     expect(result.contentAppended.trimEnd().endsWith('source body')).toBe(true);
+  });
+
+  // Issue #314: the heading kept above the residual link and the heading the extracted note opens with are the
+  // same, so with `Should merge headings` on the merge writes it once; with it off both stay.
+  it('writes the heading the link sits under once when headings merge (issue #314)', async () => {
+    const result = await evalInObsidian({
+      async callback({ app, lib: { pressKey, waitUntil }, obsidianModule, pluginId }) {
+        /**
+         * Shared by every wait below. The closure declares eight (two passes of four), so 2500 ms each keeps the
+         * sum at 20 s, under the transport's ~30 s cap. Each step settles in well under a second.
+         */
+        const WAIT_TIMEOUT_IN_MILLISECONDS = 2500;
+        const RENDER_DELAY_IN_MILLISECONDS = 400;
+        const SOURCE_PATH = 't7022-source.md';
+        const TARGET_PATH = 't7022-target.md';
+        const SOURCE_CONTENT = '## example heading\n\nExample content\n### details\n\nDetails content\n';
+        const TARGET_CONTENT = 'intro\n\n## example heading\n\n[[t7022-source]]\n';
+
+        const settingsComponent = findSettingsComponent();
+        const original = { ...settingsComponent.settings };
+
+        try {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = false;
+            settings.shouldAllowOnlyCurrentFolderByDefault = false;
+            settings.shouldMergeAtSourceLinkByDefault = true;
+            settings.shouldMergeHeadingsByDefault = true;
+          });
+          const contentMerged = await mergeOnce();
+
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldMergeHeadingsByDefault = false;
+          });
+          const contentNotMerged = await mergeOnce();
+
+          return { contentMerged, contentNotMerged };
+        } finally {
+          await settingsComponent.editAndSave((settings) => {
+            settings.shouldAskBeforeMerging = original.shouldAskBeforeMerging;
+            settings.shouldAllowOnlyCurrentFolderByDefault = original.shouldAllowOnlyCurrentFolderByDefault;
+            settings.shouldMergeAtSourceLinkByDefault = original.shouldMergeAtSourceLinkByDefault;
+            settings.shouldMergeHeadingsByDefault = original.shouldMergeHeadingsByDefault;
+          });
+        }
+
+        async function mergeOnce(): Promise<string> {
+          const source = await resetFile(SOURCE_PATH, SOURCE_CONTENT);
+          const target = await resetFile(TARGET_PATH, TARGET_CONTENT);
+          await app.workspace.getLeaf(false).openFile(source);
+          await waitUntil({
+            message: 'the source note did not become active',
+            predicate: () => app.workspace.getActiveFile()?.path === SOURCE_PATH,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          app.commands.executeCommandById(`${pluginId}:merge-file`);
+          await waitUntil({
+            message: 'the merge picker did not open',
+            predicate: () => document.querySelector('.prompt') !== null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          const query = 't7022-target';
+          const input = document.querySelector('.prompt-input');
+          if (!(input instanceof HTMLInputElement)) {
+            throw new TypeError('No merge picker input.');
+          }
+          input.value = query;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          await waitUntil({
+            message: 'the target did not appear as a suggestion',
+            predicate: () => [...document.querySelectorAll('.suggestion-title')].some((el) => el.textContent.includes(query)),
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          input.focus();
+          await pressKey({ key: 'Enter' });
+          await waitUntil({
+            message: 'the merge did not complete',
+            predicate: () => app.vault.getAbstractFileByPath(SOURCE_PATH) === null,
+            timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
+          });
+          await sleep(RENDER_DELAY_IN_MILLISECONDS);
+          return app.vault.read(target);
+        }
+
+        function findSettingsComponent(): SettingsCarrier {
+          const plugin = app.plugins.getPlugin(pluginId) as ComponentTreeNode | null;
+          const queue: ComponentTreeNode[] = plugin ? [plugin] : [];
+          while (queue.length > 0) {
+            const node = queue.shift();
+            if (!node) {
+              continue;
+            }
+            if (typeof node.editAndSave === 'function' && typeof node.settings?.shouldMergeAtSourceLinkByDefault === 'boolean') {
+              return node as SettingsCarrier;
+            }
+            if (node._children) {
+              queue.push(...node._children);
+            }
+          }
+          throw new Error('Settings component was not found.');
+        }
+
+        async function resetFile(path: string, content: string): Promise<TFile> {
+          const existing = app.vault.getAbstractFileByPath(path);
+          if (existing instanceof obsidianModule.TFile) {
+            await app.vault.modify(existing, content);
+            return existing;
+          }
+          return app.vault.create(path, content);
+        }
+      },
+      input: { pluginId: PLUGIN_ID },
+      vaultPath: getTemporaryVault().path
+    });
+
+    expect(result.contentMerged).toBe('intro\n\n## example heading\n\nExample content\n### details\n\nDetails content\n');
+    expect(result.contentNotMerged.match(/## example heading/g)?.length).toBe(2);
   });
 });

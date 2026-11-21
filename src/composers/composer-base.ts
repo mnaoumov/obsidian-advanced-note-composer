@@ -272,6 +272,7 @@ export abstract class ComposerBase {
    * inherit. Defaults to the drop behavior; {@link MergeComposer} overrides it.
    */
   protected readonly shouldKeepSourceTitleForNewTargetFile: boolean = false;
+  protected readonly shouldMergeHeadings: boolean;
   protected readonly shouldShowNotice: boolean;
 
   /**
@@ -289,8 +290,6 @@ export abstract class ComposerBase {
 
   private readonly shouldFixFootnotes: boolean;
   private readonly shouldIncludeFrontmatter: boolean;
-
-  private readonly shouldMergeHeadings: boolean;
 
   private readonly shouldMergeIgnoredTarget: boolean;
 

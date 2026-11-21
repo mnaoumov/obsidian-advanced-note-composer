@@ -33,11 +33,58 @@ export interface ResidualSourceLink {
   readonly startOffset: number;
 }
 
+interface FindHeadingAboveResidualLinkParams {
+  readonly app: App;
+  readonly residualLink: ResidualSourceLink;
+  readonly sourceFile: TFile;
+  readonly targetContent: string;
+  readonly targetFile: TFile;
+}
+
 interface FindResidualSourceLinkParams {
   readonly app: App;
   readonly sourceFile: TFile;
   readonly targetContent: string;
   readonly targetFile: TFile;
+}
+
+/**
+ * Finds the heading directly above the residual link that the source note opens with as well (issue #314).
+ *
+ * An extract that keeps the heading line in the note leaves `## X` with the link right under it, while the
+ * extracted note itself begins with `## X`. Merging back at the link would then write the heading twice, so with
+ * `Should merge headings` on the merge replaces the target's heading together with the link, and the source's
+ * own heading takes its place.
+ *
+ * It qualifies only when nothing but blank lines sits between the heading and the link, and the source's body
+ * (past its frontmatter) begins with a heading of the same level and text.
+ *
+ * @param params - The parameters.
+ * @returns The offset the target's heading line starts at, or `null` when there is no such heading.
+ */
+export async function findHeadingAboveResidualLink(params: FindHeadingAboveResidualLinkParams): Promise<null | number> {
+  const { app, residualLink, sourceFile, targetContent, targetFile } = params;
+  const targetCache = await getCacheSafe(app, targetFile);
+  const headingsAbove = (targetCache?.headings ?? []).filter((heading) => heading.position.end.offset <= residualLink.startOffset);
+  // `findLast` is ES2023, past this project's lib, so the matches are filtered and the last one taken.
+  const headingAbove = headingsAbove.at(-1);
+  if (!headingAbove) {
+    return null;
+  }
+
+  const headingStartOffset = headingAbove.position.start.offset;
+  if (targetContent.slice(headingAbove.position.end.offset, residualLink.startOffset).trim() !== '') {
+    return null;
+  }
+
+  const sourceCache = await getCacheSafe(app, sourceFile);
+  const firstBodySection = (sourceCache?.sections ?? []).find((section) => section.type !== 'yaml');
+  const firstSourceHeading = sourceCache?.headings?.[0];
+  const doesSourceOpenWithSameHeading = firstBodySection?.type === 'heading'
+    && firstSourceHeading?.position.start.offset === firstBodySection.position.start.offset
+    && firstSourceHeading.level === headingAbove.level
+    && firstSourceHeading.heading.trim() === headingAbove.heading.trim();
+  return doesSourceOpenWithSameHeading ? headingStartOffset : null;
 }
 
 /**
