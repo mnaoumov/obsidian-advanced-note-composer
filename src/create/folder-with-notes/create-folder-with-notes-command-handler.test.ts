@@ -35,6 +35,7 @@ import type { PluginSettingsComponent } from '../../settings/plugin-settings-com
 import type { PluginSettings } from '../../settings/plugin-settings.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
 
+import { registerCommandHandlerStub } from '../../command-handler-registration-stub.ts';
 import { InsertMode } from '../../composers/insert-mode.ts';
 import {
   createTemplaterPluginStub,
@@ -327,6 +328,17 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     const { handler } = createHandler();
     expect(handler.shouldAddToFolderMenu(castTo<FolderCommandHandlerShouldAddToFolderMenuParams>({ source: 'file-explorer-context-menu' }))).toBe(true);
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
+  });
+
+  it('should keep a submenu answer the registering menu surface forced off, and use the setting when it set none', async () => {
+    initApp({ 'parent/note.md': 'note' });
+    const forcedOff = createHandler().handler;
+    await registerCommandHandlerStub({ handler: forcedOff, shouldAddCommandToSubmenu: false });
+    expect(forcedOff.shouldAddCommandToSubmenu()).toBe(false);
+
+    const unset = createHandler().handler;
+    await registerCommandHandlerStub({ handler: unset });
+    expect(unset.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   describe('refusals', () => {

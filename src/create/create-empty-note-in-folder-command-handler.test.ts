@@ -25,6 +25,7 @@ import {
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 
+import { registerCommandHandlerStub } from '../command-handler-registration-stub.ts';
 import { openFileAfterOperation } from '../composers/open-after-operation.ts';
 import { placeCaretFromEnd } from '../composers/reveal-inserted-content.ts';
 import { moveIntoOwnFolder } from '../folders/move-into-own-folder.ts';
@@ -186,6 +187,16 @@ describe('CreateEmptyNoteInFolderCommandHandler', () => {
     const { handler } = createHandler();
     expect(handler.shouldAddToFolderMenu(castTo<FolderCommandHandlerShouldAddToFolderMenuParams>({}))).toBe(true);
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
+  });
+
+  it('should keep a submenu answer the registering menu surface forced off, and use the setting when it set none', async () => {
+    const forcedOff = createHandler().handler;
+    await registerCommandHandlerStub({ handler: forcedOff, shouldAddCommandToSubmenu: false });
+    expect(forcedOff.shouldAddCommandToSubmenu()).toBe(false);
+
+    const unset = createHandler().handler;
+    await registerCommandHandlerStub({ handler: unset });
+    expect(unset.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should refuse a blocked folder in canExecuteFolder', () => {

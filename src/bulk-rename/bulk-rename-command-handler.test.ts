@@ -40,6 +40,7 @@ import type {
 import type { BulkRenameRequest } from './bulk-rename-plan.ts';
 
 import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
+import { registerCommandHandlerStub } from '../command-handler-registration-stub.ts';
 import { BulkRenameCommandHandler } from './bulk-rename-command-handler.ts';
 import { DEFAULT_BULK_RENAME_REQUEST } from './bulk-rename-plan.ts';
 
@@ -96,6 +97,17 @@ describe('BulkRenameCommandHandler', () => {
     expect(handler.shouldAddToCommandPalette()).toBe(false);
     expect(handler.canExecute()).toBe(false);
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
+  });
+
+  it('should keep a submenu answer the registering menu surface forced off, and use the setting when it set none', async () => {
+    initApp({ 'a.md': '' });
+    const forcedOff = createHandler(null).handler;
+    await registerCommandHandlerStub({ handler: forcedOff, shouldAddCommandToSubmenu: false });
+    expect(forcedOff.shouldAddCommandToSubmenu()).toBe(false);
+
+    const unset = createHandler(null).handler;
+    await registerCommandHandlerStub({ handler: unset });
+    expect(unset.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should be offered when one selected item can be renamed, never for the vault root alone', () => {
