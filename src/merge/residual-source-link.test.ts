@@ -13,7 +13,10 @@ import {
   vi
 } from 'vitest';
 
-import { findResidualSourceLink } from './residual-source-link.ts';
+import {
+  findHeadingAboveResidualLink,
+  findResidualSourceLink
+} from './residual-source-link.ts';
 
 vi.mock('@mnaoumov/obsidian-lib/metadata-cache', async (importOriginal) => {
   const original = await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>();
@@ -26,10 +29,10 @@ interface Fixture {
   readonly targetFile: TFile;
 }
 
-function createFixture(targetContent: string): Fixture {
+function createFixture(targetContent: string, sourceContent = 'source body'): Fixture {
   const app = App.createConfigured__({
     files: {
-      'source.md': 'source body',
+      'source.md': sourceContent,
       'target.md': targetContent
     }
   }).asOriginalType__();
@@ -90,5 +93,56 @@ describe('findResidualSourceLink', () => {
     const { app, sourceFile, targetFile } = createFixture('[[source]]');
     vi.mocked(getCacheSafe).mockResolvedValueOnce(null);
     expect(await findResidualSourceLink({ app, sourceFile, targetContent: '[[source]]', targetFile })).toBeNull();
+  });
+});
+
+async function findHeading(targetContent: string, sourceContent: string): Promise<null | number> {
+  const { app, sourceFile, targetFile } = createFixture(targetContent, sourceContent);
+  const residualLink = ensureNonNullable(await findResidualSourceLink({ app, sourceFile, targetContent, targetFile }));
+  return findHeadingAboveResidualLink({ app, residualLink, sourceFile, targetContent, targetFile });
+}
+
+describe('findHeadingAboveResidualLink', () => {
+  it('should find the heading the link sits right under when the source opens with the same heading', async () => {
+    expect(await findHeading('intro\n\n## Example\n\n[[source]]\n', '## Example\n\nbody')).toBe(7);
+  });
+
+  it('should look past the source frontmatter', async () => {
+    expect(await findHeading('## Example\n[[source]]', '---\nkey: value\n---\n## Example\nbody')).toBe(0);
+  });
+
+  it('should answer null when text sits between the heading and the link', async () => {
+    expect(await findHeading('## Example\ntext\n[[source]]', '## Example\nbody')).toBeNull();
+  });
+
+  it('should answer null when no heading is above the link', async () => {
+    expect(await findHeading('[[source]]\n## Example', '## Example\nbody')).toBeNull();
+  });
+
+  it('should answer null when the source opens with a different heading text', async () => {
+    expect(await findHeading('## Example\n[[source]]', '## Other\nbody')).toBeNull();
+  });
+
+  it('should answer null when the source opens with a heading of another level', async () => {
+    expect(await findHeading('## Example\n[[source]]', '### Example\nbody')).toBeNull();
+  });
+
+  it('should answer null when the source does not open with a heading', async () => {
+    expect(await findHeading('## Example\n[[source]]', 'body\n\n## Example')).toBeNull();
+  });
+
+  it('should answer null when the source has no headings at all', async () => {
+    expect(await findHeading('## Example\n[[source]]', 'body')).toBeNull();
+  });
+
+  it('should answer null when either note has no metadata cache', async () => {
+    const targetContent = '## Example\n[[source]]';
+    const { app, sourceFile, targetFile } = createFixture(targetContent, '## Example\nbody');
+    const residualLink = ensureNonNullable(await findResidualSourceLink({ app, sourceFile, targetContent, targetFile }));
+    vi.mocked(getCacheSafe).mockResolvedValueOnce(null);
+    expect(await findHeadingAboveResidualLink({ app, residualLink, sourceFile, targetContent, targetFile })).toBeNull();
+    const targetCache = await getCacheSafe(app, targetFile);
+    vi.mocked(getCacheSafe).mockResolvedValueOnce(targetCache).mockResolvedValueOnce(null);
+    expect(await findHeadingAboveResidualLink({ app, residualLink, sourceFile, targetContent, targetFile })).toBeNull();
   });
 });

@@ -31,7 +31,10 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
-import { findResidualSourceLink } from './residual-source-link.ts';
+import {
+  findHeadingAboveResidualLink,
+  findResidualSourceLink
+} from './residual-source-link.ts';
 
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
@@ -263,10 +266,23 @@ export class MergeComposer extends ComposerBase {
       return;
     }
 
+    // With `Should merge headings` on, a heading the link sits right under and the source opens with as well
+    // is written once: the target's copy goes with the link, and the source's takes its place (issue #314).
+    const headingStartOffset = this.shouldMergeHeadings
+      ? await findHeadingAboveResidualLink({
+        app: this.app,
+        residualLink,
+        sourceFile: this.sourceFile,
+        targetContent,
+        targetFile: this.targetFile
+      })
+      : null;
+    const replacedStartOffset = headingStartOffset ?? residualLink.startOffset;
+
     const insertToken = createMoveToken();
     await vaultTransaction.modify(
       this.targetFile,
-      `${targetContent.slice(0, residualLink.startOffset)}${insertToken}${targetContent.slice(residualLink.endOffset)}`
+      `${targetContent.slice(0, replacedStartOffset)}${insertToken}${targetContent.slice(residualLink.endOffset)}`
     );
     this.insertToken = insertToken;
     this.shouldTrimLineBreaksAtInsertToken = true;
