@@ -20,6 +20,8 @@ interface ExtractionScenarioInput {
   readonly linkerContent: string;
   readonly parentContent: string;
   readonly pluginId: string;
+  readonly root: string;
+  readonly shouldExpectNote: boolean;
 }
 
 interface ExtractionScenarioResult {
@@ -31,14 +33,15 @@ interface ExtractionScenarioResult {
 }
 
 const FOLDER = 'ExtractAttach';
+const REFUSED_FOLDER = 'ExtractAttachRefused';
 
-async function runScenario(input: ExtractionScenarioInput, shouldExpectNote: boolean): Promise<ExtractionScenarioResult> {
+async function runScenario(input: ExtractionScenarioInput): Promise<ExtractionScenarioResult> {
   return await evalInObsidian({
-    async callback({ app, lib: { waitUntil }, obsidianModule, scenario: { linkerContent, parentContent, pluginId } }) {
+    async callback({ app, lib: { waitUntil }, obsidianModule, scenario: { linkerContent, parentContent, pluginId, root, shouldExpectNote } }) {
       // Six waits share it, so their ceilings stay well inside the transport's 30 s cap.
       const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
       const SETTLE_DELAY_IN_MILLISECONDS = 1000;
-      const ROOT = 'ExtractAttach';
+      const ROOT = root;
       const OLD_ATTACHMENT_PATH = `${ROOT}/sub/pic.png`;
       const NEW_ATTACHMENT_PATH = `${ROOT}/pic.png`;
       const NOTE_PATH = `${ROOT}/March invoice.md`;
@@ -130,8 +133,10 @@ describe('Extract attachment into its own note', () => {
         - ![[${FOLDER}/sub/pic.png|March invoice]] ^inv
         - something else
       `}\n`,
-      pluginId: PLUGIN_ID
-    }, true);
+      pluginId: PLUGIN_ID,
+      root: FOLDER,
+      shouldExpectNote: true
+    });
 
     // The attachment moved into the new note's attachment folder.
     expect(result.attachmentAtOldPath).toBe(false);
@@ -157,14 +162,17 @@ describe('Extract attachment into its own note', () => {
 
   it('refuses an attachment referenced from another note as well', async () => {
     const result = await runScenario({
-      linkerContent: `Directly: [[${FOLDER}/sub/pic.png]].\n`,
+      linkerContent: `Directly: [[${REFUSED_FOLDER}/sub/pic.png]].\n`,
       parentContent: `${dedent`
         Attachments:
 
-        - ![[${FOLDER}/sub/pic.png|March invoice]] ^inv
+        - ![[${REFUSED_FOLDER}/sub/pic.png|March invoice]] ^inv
       `}\n`,
-      pluginId: PLUGIN_ID
-    }, false);
+      pluginId: PLUGIN_ID,
+      // The vault is reset per file, not per test, so this case gets a folder of its own.
+      root: REFUSED_FOLDER,
+      shouldExpectNote: false
+    });
 
     expect(result.noteContent).toBeNull();
     expect(result.attachmentAtOldPath).toBe(true);
