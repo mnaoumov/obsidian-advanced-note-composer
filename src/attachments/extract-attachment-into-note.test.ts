@@ -165,11 +165,11 @@ describe('findAttachmentReferenceAtCursor', () => {
 });
 
 describe('findBlockIdOnLine', () => {
-  const cache: CachedMetadata = {
+  const cache = castTo<CachedMetadata>({
     blocks: {
       inv: { id: 'inv', position: { end: { col: 30, line: 4, offset: 0 }, start: { col: 0, line: 2, offset: 0 } } }
     }
-  };
+  });
 
   it('should find the block holding the line', () => {
     expect(findBlockIdOnLine(cache, 2)).toBe('inv');

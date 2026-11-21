@@ -4,7 +4,6 @@ import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock
 import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import type {
   App,
-  CachedMetadata,
   Editor,
   MarkdownFileInfo,
   MarkdownView,
@@ -18,6 +17,7 @@ import {
   generateMarkdownLink
 } from '@mnaoumov/obsidian-lib/link';
 import { getCacheSafe } from '@mnaoumov/obsidian-lib/metadata-cache';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
@@ -123,7 +123,7 @@ const EMBED_OFFSET = PARENT_CONTENT.indexOf(EMBED);
 const ATTACHMENT = strictProxy<TFile>({ basename: 'pic', name: 'pic.png', path: 'Docs/sub/pic.png' });
 const NOTE_FILE = strictProxy<TFile>({ path: 'Docs/March invoice.md' });
 const PARENT_FILE = strictProxy<TFile>({ parent: strictProxy<TFolder>({ path: 'Docs' }), path: 'Docs/parent.md' });
-const CACHE = strictProxy<CachedMetadata>({});
+const CACHE = strictProxy<NonNullable<Awaited<ReturnType<typeof getCacheSafe>>>>({});
 
 const REFERENCE: ReferenceCache = {
   link: 'pic.png',
@@ -173,10 +173,10 @@ function createHarness(): Harness {
   const vaultTransaction = strictProxy<VaultTransaction>({
     create: vi.fn().mockResolvedValue(NOTE_FILE),
     modify,
-    process: vi.fn((_file: TFile, function_: (content: string) => string) => {
+    process: vi.fn((_pathOrFile: unknown, function_: (content: string) => string) => {
       parentContent = function_(parentContent);
       parentWrites.push(parentContent);
-      return Promise.resolve(parentContent);
+      return noopAsync();
     })
   });
   mockRunLockedTransaction.mockImplementation(async (transactionParams: RunLockedTransactionParams) => {
@@ -312,12 +312,12 @@ describe('ExtractAttachmentIntoNoteEditorCommandHandler', () => {
     it('should point every link to the block at the new note, keep each display text and drop the block id', async () => {
       const { handler, parentWrites } = createHarness();
       mockFindBlockIdOnLine.mockReturnValue('inv');
-      const converted: (null | string | undefined)[] = [];
-      mockEditBacklinksSnapshot.mockImplementation(async (params: EditBacklinksSnapshotParams<undefined>) => {
+      const converted: unknown[] = [];
+      mockEditBacklinksSnapshot.mockImplementation(async (params: EditBacklinksSnapshotParams<unknown>) => {
         const converter = params.referenceConverter;
         for (const original of ['[[parent#^inv|the invoice]]', '![[parent#^inv]]', '[[parent]]', 'parent#^inv']) {
           const link = original.replace(/^!?\[\[/, '').replace(/(?:\|.*)?\]\]$/, '');
-          converted.push(await converter({ reference: { link, original }, sourcePath: 'linker.md' }));
+          converted.push(await converter(castTo<Parameters<typeof converter>[0]>({ reference: { link, original }, sourcePath: 'linker.md' })));
         }
       });
       mockGenerateMarkdownLink.mockImplementation((params) => `${params.isEmbed ? '!' : ''}[[March invoice${params.alias === undefined ? '' : `|${params.alias}`}]]`);
