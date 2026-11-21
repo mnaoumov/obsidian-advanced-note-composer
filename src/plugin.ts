@@ -12,6 +12,7 @@ import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 import type { Level } from './headings/markdown-heading-document.ts';
 
 import { ExtractAttachmentIntoNoteEditorCommandHandler } from './attachments/extract-attachment-into-note-editor-command-handler.ts';
+import { InlineAttachmentNoteCommandHandler } from './attachments/inline-attachment-note-command-handler.ts';
 import { BulkRenameCommandHandler } from './bulk-rename/bulk-rename-command-handler.ts';
 import { selectBulkRenameRequest } from './bulk-rename/bulk-rename-modal.ts';
 import { InsertMode } from './composers/insert-mode.ts';
@@ -350,6 +351,12 @@ export class Plugin extends PluginBase {
         selectionHighlightComponent
       }),
       new ExtractAttachmentIntoNoteEditorCommandHandler({
+        app: this.app,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new InlineAttachmentNoteCommandHandler({
         app: this.app,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,

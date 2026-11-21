@@ -1,0 +1,10 @@
+{
+  // `Taxi receipt.md` is an attachment note: its body is the one embed the walkthrough inlines into its
+  // parent, and a heading there would be text the inline has to drop. The rest repeats the demo vault's
+  // own config, which a nested config replaces.
+  "config": {
+    "MD025": { "front_matter_title": "" },
+    "MD041": false,
+    "MD052": false
+  }
+}
