@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 6.5.0
+
+This release has 1 new feature, 1 fix and 1 documentation change. 6 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- **split:** add Extract this heading's content... (#310)
+
+### Fixed
+
+- Should merge headings option doesn't work as expected (#314)
+
+### Documentation
+
+- write human-readable release notes for the raw changelog entries
+
 ## 6.4.1
 
 This release has 2 fixes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
