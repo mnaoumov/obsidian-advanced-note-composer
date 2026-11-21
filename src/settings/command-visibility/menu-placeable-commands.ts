@@ -89,6 +89,11 @@ export const MENU_PLACEABLE_COMMANDS: readonly MenuPlaceableCommand[] = [
   },
   {
     commandCategory: CommandCategory.SplitAndExtract,
+    id: 'extract-attachment-into-own-note',
+    name: 'Extract attachment into its own note'
+  },
+  {
+    commandCategory: CommandCategory.SplitAndExtract,
     id: 'split-heading-recursively',
     name: 'Split heading recursively...'
   },
