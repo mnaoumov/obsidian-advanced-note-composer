@@ -75,9 +75,12 @@ interface ExtractionPlan {
   readonly parentFile: TFile;
 }
 
+// Filled in by the transaction body, which cannot return a value through `runLockedTransaction`.
 interface ExtractionResult {
-  readonly noteFile: null | TFile;
-  readonly rewrittenLinkCount: number;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Written by the transaction body.
+  noteFile: null | TFile;
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- Written by the transaction body.
+  rewrittenLinkCount: number;
 }
 
 /**

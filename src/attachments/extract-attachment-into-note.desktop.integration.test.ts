@@ -3,6 +3,7 @@ import type {
   TFile
 } from 'obsidian';
 
+import dedent from 'dedent';
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
@@ -33,7 +34,7 @@ const FOLDER = 'ExtractAttach';
 
 async function runScenario(input: ExtractionScenarioInput, shouldExpectNote: boolean): Promise<ExtractionScenarioResult> {
   return await evalInObsidian({
-    async callback({ app, input: { linkerContent, parentContent, pluginId }, lib: { waitUntil }, obsidianModule }) {
+    async callback({ app, lib: { waitUntil }, obsidianModule, scenario: { linkerContent, parentContent, pluginId } }) {
       // Six waits share it, so their ceilings stay well inside the transport's 30 s cap.
       const WAIT_TIMEOUT_IN_MILLISECONDS = 3500;
       const SETTLE_DELAY_IN_MILLISECONDS = 1000;
@@ -72,7 +73,10 @@ async function runScenario(input: ExtractionScenarioInput, shouldExpectNote: boo
           });
           await waitUntil({
             message: 'the parent\'s block id was not dropped',
-            predicate: async () => !(await app.vault.read(parentFile)).includes('^inv'),
+            predicate: async () => {
+              const content = await app.vault.read(parentFile);
+              return !content.includes('^inv');
+            },
             timeoutInMilliseconds: WAIT_TIMEOUT_IN_MILLISECONDS
           });
         }
@@ -105,7 +109,7 @@ async function runScenario(input: ExtractionScenarioInput, shouldExpectNote: boo
         return view.editor;
       }
     },
-    input,
+    input: { scenario: input },
     vaultPath: getTemporaryVault().path
   });
 }
@@ -113,21 +117,19 @@ async function runScenario(input: ExtractionScenarioInput, shouldExpectNote: boo
 describe('Extract attachment into its own note', () => {
   it('moves the attachment into a note of its own and points every block link at that note', async () => {
     const result = await runScenario({
-      linkerContent: [
-        `See [[${FOLDER}/parent#^inv|the invoice]].`,
-        '',
-        'And [the scan](parent.md#^inv) too.',
-        '',
-        `Not this one: [[${FOLDER}/parent]].`,
-        ''
-      ].join('\n'),
-      parentContent: [
-        'Attachments:',
-        '',
-        `- ![[${FOLDER}/sub/pic.png|March invoice]] ^inv`,
-        '- something else',
-        ''
-      ].join('\n'),
+      linkerContent: `${dedent`
+        See [[${FOLDER}/parent#^inv|the invoice]].
+
+        And [the scan](parent.md#^inv) too.
+
+        Not this one: [[${FOLDER}/parent]].
+      `}\n`,
+      parentContent: `${dedent`
+        Attachments:
+
+        - ![[${FOLDER}/sub/pic.png|March invoice]] ^inv
+        - something else
+      `}\n`,
       pluginId: PLUGIN_ID
     }, true);
 
@@ -156,12 +158,11 @@ describe('Extract attachment into its own note', () => {
   it('refuses an attachment referenced from another note as well', async () => {
     const result = await runScenario({
       linkerContent: `Directly: [[${FOLDER}/sub/pic.png]].\n`,
-      parentContent: [
-        'Attachments:',
-        '',
-        `- ![[${FOLDER}/sub/pic.png|March invoice]] ^inv`,
-        ''
-      ].join('\n'),
+      parentContent: `${dedent`
+        Attachments:
+
+        - ![[${FOLDER}/sub/pic.png|March invoice]] ^inv
+      `}\n`,
       pluginId: PLUGIN_ID
     }, false);
 
