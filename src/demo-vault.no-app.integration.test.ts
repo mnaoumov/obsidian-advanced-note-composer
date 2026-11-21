@@ -52,7 +52,10 @@ registerDemoVaultCoverageSuite({
       'Materials/41 Auto-number moves/Flatten example/5. Second note.md',
       'Materials/41 Auto-number moves/Flatten example/Source folder/3. Numbered child/Deep.md',
       'Materials/41 Auto-number moves/Move example/Destination/1. Alpha/!.md',
-      'Materials/41 Auto-number moves/Move example/Destination/3. Gamma/!.md'
+      'Materials/41 Auto-number moves/Move example/Destination/3. Gamma/!.md',
+      // An attachment note's body is its one embed, which is what `Inline attachment note into its parent`
+      // recognizes; an `# H1` would be body text the inline has to drop. It IS reached from the walkthrough.
+      'Materials/45 Inline attachment/Taxi receipt.md'
     ]
   },
   configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/settings/plugin-settings.ts' }],
