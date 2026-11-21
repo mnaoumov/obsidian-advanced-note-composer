@@ -36,6 +36,7 @@ import type { PluginSettings } from '../../settings/plugin-settings.ts';
 import type { ConfirmDialogModalResult } from '../../ui/confirm-dialog-modal.ts';
 
 import { createBulkOperationRunnerStub } from '../../bulk-operations/bulk-operation-runner-stub.ts';
+import { registerCommandHandlerStub } from '../../command-handler-registration-stub.ts';
 import { InsertMode } from '../../composers/insert-mode.ts';
 import {
   publishCustomAttachmentLocationStub,
@@ -1003,6 +1004,17 @@ describe('FlattenFolderCommandHandler', () => {
     initApp({});
     expect(createHandler({ shouldAddCommandsToSubmenu: true }).handler.shouldAddCommandToSubmenu()).toBe(true);
     expect(createHandler({ shouldAddCommandsToSubmenu: false }).handler.shouldAddCommandToSubmenu()).toBe(false);
+  });
+
+  it('should keep a submenu answer the registering menu surface forced off, and use the setting when it set none', async () => {
+    initApp({});
+    const forcedOff = createHandler().handler;
+    await registerCommandHandlerStub({ handler: forcedOff, shouldAddCommandToSubmenu: false });
+    expect(forcedOff.shouldAddCommandToSubmenu()).toBe(false);
+
+    const unset = createHandler().handler;
+    await registerCommandHandlerStub({ handler: unset });
+    expect(unset.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should always add the command to the folder menu', () => {

@@ -35,6 +35,7 @@ import type { ReorderItemsCommandHandlerParams } from './reorder-items-command-h
 import type { DidConfirmReorderModalParams } from './reorder-modal.ts';
 
 import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
+import { registerCommandHandlerStub } from '../command-handler-registration-stub.ts';
 import { ReorderChildFoldersCommandHandler } from './reorder-child-folders-command-handler.ts';
 import { ReorderSiblingFoldersCommandHandler } from './reorder-sibling-folders-command-handler.ts';
 
@@ -108,6 +109,17 @@ describe('ReorderChildFoldersCommandHandler', () => {
     const { handler } = createChildHandler();
     expect(handler.shouldAddToFolderMenu(castTo<FolderCommandHandlerShouldAddToFolderMenuParams>({}))).toBe(true);
     expect(handler.shouldAddCommandToSubmenu()).toBe(true);
+  });
+
+  it('should keep a submenu answer the registering menu surface forced off, and use the setting when it set none', async () => {
+    initApp();
+    const forcedOff = createChildHandler().handler;
+    await registerCommandHandlerStub({ handler: forcedOff, shouldAddCommandToSubmenu: false });
+    expect(forcedOff.shouldAddCommandToSubmenu()).toBe(false);
+
+    const unset = createChildHandler().handler;
+    await registerCommandHandlerStub({ handler: unset });
+    expect(unset.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should be unavailable with fewer than two child folders', () => {

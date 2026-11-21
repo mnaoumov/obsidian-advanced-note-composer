@@ -24,6 +24,7 @@ import {
 import type { PluginSettingsComponent } from '../settings/plugin-settings-component.ts';
 import type { PluginSettings } from '../settings/plugin-settings.ts';
 
+import { registerCommandHandlerStub } from '../command-handler-registration-stub.ts';
 import { InsertMode } from '../composers/insert-mode.ts';
 import { FrontmatterMergeStrategy } from '../settings/plugin-settings.ts';
 import { MergeComposer } from './merge-composer.ts';
@@ -262,6 +263,16 @@ describe('MergeFileCommandHandler', () => {
     const params = createMockParams(false, false);
     const handler = toTestable(new MergeFileCommandHandler(params));
     expect(handler.shouldAddCommandToSubmenu()).toBe(false);
+  });
+
+  it('should keep a submenu answer the registering menu surface forced off, and use the setting when it set none', async () => {
+    const forcedOff = toTestable(new MergeFileCommandHandler(createMockParams(false, true)));
+    await registerCommandHandlerStub({ handler: forcedOff, shouldAddCommandToSubmenu: false });
+    expect(forcedOff.shouldAddCommandToSubmenu()).toBe(false);
+
+    const unset = toTestable(new MergeFileCommandHandler(createMockParams(false, true)));
+    await registerCommandHandlerStub({ handler: unset });
+    expect(unset.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should return false for link-context-menu source in shouldAddToFileMenu', () => {

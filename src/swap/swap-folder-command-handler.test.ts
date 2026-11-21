@@ -33,6 +33,7 @@ import type { PluginSettings } from '../settings/plugin-settings.ts';
 // The modal is the plugin's OWN sibling UI module: stub only its resolved target folder so the swap
 // proceeds without opening a suggest modal. Everything else (vault, lock, transaction, swapper) is REAL.
 import { createBulkOperationRunnerStub } from '../bulk-operations/bulk-operation-runner-stub.ts';
+import { registerCommandHandlerStub } from '../command-handler-registration-stub.ts';
 import { SwapFolderCommandHandler } from './swap-folder-command-handler.ts';
 import { selectTargetFolderForSwap } from './swap-folder-modal.ts';
 
@@ -293,6 +294,17 @@ describe('SwapFolderCommandHandler', () => {
     initApp();
     expect(createHandler({ shouldAddCommandsToSubmenu: true }).handler.shouldAddCommandToSubmenu()).toBe(true);
     expect(createHandler({ shouldAddCommandsToSubmenu: false }).handler.shouldAddCommandToSubmenu()).toBe(false);
+  });
+
+  it('should keep a submenu answer the registering menu surface forced off, and use the setting when it set none', async () => {
+    initApp();
+    const forcedOff = createHandler().handler;
+    await registerCommandHandlerStub({ handler: forcedOff, shouldAddCommandToSubmenu: false });
+    expect(forcedOff.shouldAddCommandToSubmenu()).toBe(false);
+
+    const unset = createHandler().handler;
+    await registerCommandHandlerStub({ handler: unset });
+    expect(unset.shouldAddCommandToSubmenu()).toBe(true);
   });
 
   it('should always add the command to the folder menu', async () => {
