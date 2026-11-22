@@ -195,6 +195,7 @@ function createMockPlugin(options?: MockPluginOptions): MockPlugin {
         defaultFrontmatterMergeStrategy: FrontmatterMergeStrategy.MergeAndPreferNewValues,
         isPathIgnored: vi.fn().mockReturnValue(false),
         pickerRecencyOrder: PickerRecencyOrder.RecentTargetsFirst,
+        shouldAddMergedNoteNameToAliases: false,
         shouldAllowOnlyCurrentFolderByDefault: false,
         shouldAllowSplitIntoUnresolvedPathByDefault: true,
         shouldAskBeforeMerging,

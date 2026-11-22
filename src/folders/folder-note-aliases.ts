@@ -75,7 +75,7 @@ export function swapDerivedAliases(params: SwapDerivedAliasesParams): string[] {
  * @param existingAliases - The raw property value.
  * @returns The aliases.
  */
-function toAliasList(existingAliases: unknown): string[] {
+export function toAliasList(existingAliases: unknown): string[] {
   if (typeof existingAliases === 'string') {
     return [existingAliases];
   }

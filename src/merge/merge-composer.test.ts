@@ -147,6 +147,7 @@ function createPluginSettingsComponentStub(overrides?: Partial<PluginSettings>):
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
       reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
+      shouldAddMergedNoteNameToAliases: false,
       shouldBlockVaultDuringOperations: false,
       shouldFixFootnotesByDefault: false,
       shouldMergeHeadingsByDefault: false,
@@ -227,6 +228,52 @@ describe('MergeComposer', () => {
       const content = await app.vault.adapter.read('target.md');
       expect(extractFrontmatter(content).content.startsWith('before\n')).toBe(true);
       expect(content.endsWith('source body')).toBe(true);
+    });
+  });
+
+  describe('merged note name as alias', () => {
+    // `Keep original frontmatter` leaves the target's properties untouched, so the alias step is the only writer of
+    // `aliases` here.
+    const KEEP = FrontmatterMergeStrategy.KeepOriginalFrontmatter;
+
+    function useTargetAliases(aliasLines: string): void {
+      resourceLockComponent.unload();
+      app = App.createConfigured__({
+        files: {
+          'source.md': 'source body',
+          'target.md': ['---', 'aliases:', aliasLines, '---', 'target body'].join('\n')
+        }
+      }).asOriginalType__();
+      resourceLockComponent = new ResourceLockComponent(app, 'test-plugin');
+      resourceLockComponent.load();
+    }
+
+    async function readTargetAliases(): Promise<unknown> {
+      return extractFrontmatter(await app.vault.adapter.read('target.md')).frontmatter['aliases'];
+    }
+
+    it('should add the source name to the target aliases when the setting is on', async () => {
+      useTargetAliases('  - existing');
+
+      await createComposer({ defaultFrontmatterMergeStrategy: KEEP, shouldAddMergedNoteNameToAliases: true }).mergeFile();
+
+      expect(await readTargetAliases()).toEqual(['existing', 'source']);
+    });
+
+    it('should not add the alias when the setting is off', async () => {
+      useTargetAliases('  - existing');
+
+      await createComposer({ defaultFrontmatterMergeStrategy: KEEP }).mergeFile();
+
+      expect(await readTargetAliases()).toEqual(['existing']);
+    });
+
+    it('should not duplicate an alias the target already has', async () => {
+      useTargetAliases('  - Source');
+
+      await createComposer({ defaultFrontmatterMergeStrategy: KEEP, shouldAddMergedNoteNameToAliases: true }).mergeFile();
+
+      expect(await readTargetAliases()).toEqual(['Source']);
     });
   });
 

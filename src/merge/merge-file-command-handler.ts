@@ -93,6 +93,7 @@ export class MergeFileCommandHandler extends FileCommandHandler {
       pluginNoticeComponent: this.pluginNoticeComponent,
       pluginSettingsComponent: this.pluginSettingsComponent,
       resourceLockComponent: this.resourceLockComponent,
+      shouldAddSourceNameToAliases: result.shouldAddSourceNameToAliases,
       shouldFixFootnotes: result.shouldFixFootnotes,
       shouldMergeAtSourceLink: result.shouldMergeAtSourceLink,
       shouldMergeHeadings: result.shouldMergeHeadings,

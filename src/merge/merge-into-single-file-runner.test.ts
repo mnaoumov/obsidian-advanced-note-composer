@@ -111,6 +111,7 @@ function createContext(settingsOverrides?: Partial<PluginSettings>): RunnerHarne
       isPathIgnored: () => false,
       mergeTemplate: '{{content}}',
       reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
+      shouldAddMergedNoteNameToAliases: false,
       shouldAlwaysMergeExcludedItems: false,
       shouldBlockVaultDuringOperations: false,
       shouldFixFootnotesByDefault: false,
