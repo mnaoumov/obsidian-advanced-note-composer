@@ -1,6 +1,6 @@
 # Split
 
-A split is an extraction driven by the note's own structure: instead of pointing at one thing, you let the headings decide. It scales from one level of headings to the entire hierarchy turned into a folder tree, and every split has to answer the same question first — are you creating a note, or merging into one that already exists?
+A split is an extraction driven by the note's own structure: instead of pointing at one thing, you let the headings, or the horizontal rules, decide. It scales from one level of headings to the entire hierarchy turned into a folder tree, and every split has to answer the same question first — are you creating a note, or merging into one that already exists?
 
 | Note | What it covers |
 | --- | --- |
@@ -12,3 +12,4 @@ A split is an extraction driven by the note's own structure: instead of pointing
 | [14 Split heading recursively](<./14 Split heading recursively.md>) | The same, scoped to the one heading your cursor is in |
 | [15 Name first, then the folder](<./15 Name first, then the folder.md>) | Naming a new note before it can be placed, and what decides where it goes |
 | [40 Auto-number splits](<./40 Auto-number splits.md>) | Numbering what a split creates, continuing the sequence already in the destination |
+| [46 Split by horizontal rules](<./46 Split by horizontal rules.md>) | Every block between horizontal rules, extracted in one command |

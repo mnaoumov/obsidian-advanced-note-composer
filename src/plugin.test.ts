@@ -80,6 +80,10 @@ vi.mock('./split/extract/extract-this-heading-editor-command-handler.ts', () => 
   ExtractThisHeadingEditorCommandHandler: vi.fn()
 }));
 
+vi.mock('./split/extract/split-note-by-horizontal-rules-editor-command-handler.ts', () => ({
+  SplitNoteByHorizontalRulesEditorCommandHandler: vi.fn()
+}));
+
 vi.mock('./smart-cut/cancel-move-command-handler.ts', () => ({
   CancelMoveCommandHandler: vi.fn()
 }));
@@ -255,8 +259,8 @@ describe('Plugin', () => {
     // handler's own suite.
     const buildCommandHandlers = registerCommandHandlers.mock.calls[0]?.[0] as () => CommandHandler[];
     const commandHandlers = buildCommandHandlers();
-    // 46 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
-    const EXPECTED_COMMAND_HANDLER_COUNT = 63;
+    // 47 declared directly, plus one per flatten mode (3) and two per heading level (6 x 2).
+    const EXPECTED_COMMAND_HANDLER_COUNT = 64;
     expect(commandHandlers).toHaveLength(EXPECTED_COMMAND_HANDLER_COUNT);
     expect(commandHandlers.every(Boolean)).toBe(true);
     expect(TemplatesLanguageComponent).toHaveBeenCalledOnce();

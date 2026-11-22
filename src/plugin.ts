@@ -63,6 +63,7 @@ import { ExtractBeforeCursorEditorCommandHandler } from './split/extract/extract
 import { ExtractBetweenHorizontalRulesEditorCommandHandler } from './split/extract/extract-between-horizontal-rules-editor-command-handler.ts';
 import { ExtractCurrentSelectionEditorCommandHandler } from './split/extract/extract-current-selection-editor-command-handler.ts';
 import { ExtractThisHeadingEditorCommandHandler } from './split/extract/extract-this-heading-editor-command-handler.ts';
+import { SplitNoteByHorizontalRulesEditorCommandHandler } from './split/extract/split-note-by-horizontal-rules-editor-command-handler.ts';
 import { SplitHeadingRecursivelyEditorCommandHandler } from './split/recursive/split-heading-recursively-editor-command-handler.ts';
 import { SplitNoteByHeadingsContentEditorCommandHandler } from './split/recursive/split-note-by-headings-content-editor-command-handler.ts';
 import { SplitNoteByHeadingsEditorCommandHandler } from './split/recursive/split-note-by-headings-editor-command-handler.ts';
@@ -349,6 +350,13 @@ export class Plugin extends PluginBase {
         pluginSettingsComponent,
         resourceLockComponent,
         selectionHighlightComponent
+      }),
+      new SplitNoteByHorizontalRulesEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
       }),
       new ExtractAttachmentIntoNoteEditorCommandHandler({
         app: this.app,
