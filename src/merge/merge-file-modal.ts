@@ -66,6 +66,7 @@ interface MergeFileModalResult {
   readonly insertMode: InsertMode;
   readonly isModifier: boolean;
   readonly item: Item | null;
+  readonly shouldAddSourceNameToAliases: boolean;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
   readonly shouldFixFootnotes: boolean;
@@ -84,6 +85,7 @@ interface PrepareForMergeFileResult {
   readonly frontmatterMergeStrategy: FrontmatterMergeStrategy;
   readonly insertMode: InsertMode;
   readonly isNewTargetFile: boolean;
+  readonly shouldAddSourceNameToAliases: boolean;
   readonly shouldAllowOnlyCurrentFolder: boolean;
   readonly shouldAllowSplitIntoUnresolvedPath: boolean;
   readonly shouldFixFootnotes: boolean;
@@ -102,6 +104,7 @@ class MergeFileModal extends SuggestModalBase {
 
   private isSelected = false;
   private readonly promiseResolve: PromiseResolve<MergeFileModalResult | null>;
+  private shouldAddSourceNameToAliases: boolean;
   private shouldAllowSplitIntoUnresolvedPath: boolean;
   private shouldFixFootnotes: boolean;
   private shouldMergeAtSourceLink: boolean;
@@ -115,6 +118,7 @@ class MergeFileModal extends SuggestModalBase {
     this.shouldFixFootnotes = this.pluginSettingsComponent.settings.shouldFixFootnotesByDefault;
     this.shouldMergeHeadings = this.pluginSettingsComponent.settings.shouldMergeHeadingsByDefault;
     this.shouldMergeAtSourceLink = this.pluginSettingsComponent.settings.shouldMergeAtSourceLinkByDefault;
+    this.shouldAddSourceNameToAliases = this.pluginSettingsComponent.settings.shouldAddMergedNoteNameToAliases;
     this.shouldAllowSplitIntoUnresolvedPath = this.pluginSettingsComponent.settings.shouldAllowSplitIntoUnresolvedPathByDefault;
     this.frontmatterMergeStrategy = this.pluginSettingsComponent.settings.defaultFrontmatterMergeStrategy;
 
@@ -254,6 +258,18 @@ class MergeFileModal extends SuggestModalBase {
       purpose: 'Merge at the link to the source'
     });
 
+    builder.addCheckbox({
+      key: '7',
+      modifiers: ['Alt'],
+      onChange: (isChecked: boolean) => {
+        this.shouldAddSourceNameToAliases = isChecked;
+      },
+      onInit: (checkboxEl) => {
+        checkboxEl.checked = this.shouldAddSourceNameToAliases;
+      },
+      purpose: 'Add the merged note name to aliases'
+    });
+
     builder.build(this, { shouldShowInstructions: this.pluginSettingsComponent.settings.shouldShowModalInstructions });
   }
 
@@ -277,6 +293,7 @@ class MergeFileModal extends SuggestModalBase {
       insertMode: getInsertModeFromEvent($event),
       isModifier: Keymap.isModifier($event, 'Mod'),
       item,
+      shouldAddSourceNameToAliases: this.shouldAddSourceNameToAliases,
       shouldAllowOnlyCurrentFolder: this.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: this.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: this.shouldFixFootnotes,
@@ -335,6 +352,7 @@ export async function prepareForMergeFile(params: PrepareForMergeFileParams): Pr
       frontmatterMergeStrategy: result.frontmatterMergeStrategy,
       insertMode: result.insertMode,
       isNewTargetFile: selectItemResult.isNewTargetFile,
+      shouldAddSourceNameToAliases: result.shouldAddSourceNameToAliases,
       shouldAllowOnlyCurrentFolder: result.shouldAllowOnlyCurrentFolder,
       shouldAllowSplitIntoUnresolvedPath: result.shouldAllowSplitIntoUnresolvedPath,
       shouldFixFootnotes: result.shouldFixFootnotes,

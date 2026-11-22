@@ -258,6 +258,23 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
               }),
               this.settingEx({
                 desc: createFragment((f) => {
+                  f.appendText('Whether a merge adds the name of the note it merged away to the destination note\'s ');
+                  appendCodeBlock(f, 'aliases');
+                  f.appendText(', so searching by the old name still finds the note it went into. Nothing is added when the destination already has that alias or the two names are the same.');
+                  f.createEl('br');
+                  f.appendText('Applies to every merge command. For a file merge it is the default of the picker\'s ');
+                  appendCodeBlock(f, 'Add the merged note name to aliases');
+                  f.appendText(' checkbox.');
+                }),
+                name: 'Should add merged note name to aliases',
+                render: (setting) => {
+                  setting.addToggle((toggle) => {
+                    this.bind({ propertyName: 'shouldAddMergedNoteNameToAliases', valueComponent: toggle });
+                  });
+                }
+              }),
+              this.settingEx({
+                desc: createFragment((f) => {
                   f.appendText('Files whose name ends with one of these extensions are treated as attachments, not notes, so a merge never inlines their contents. Splitting and flattening a folder classify them the same way.');
                   f.createEl('br');
                   f.appendText('Insert one extension per line, written out in full including the leading dot. For example, ');

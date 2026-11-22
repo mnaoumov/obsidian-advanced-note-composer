@@ -129,6 +129,7 @@ function createHandler(settingsOverrides?: Partial<PluginSettings>): HandlerCont
         nameTransformTemplate: '',
         reorderedFolderNameTemplate: '{{index}}. {{safeFolderName}}',
         shouldAddCommandsToSubmenu: true,
+        shouldAddMergedNoteNameToAliases: false,
         shouldAlwaysMergeExcludedItems: false,
         shouldBlockCommandOnPath: () => false,
         shouldBlockVaultDuringOperations: false,

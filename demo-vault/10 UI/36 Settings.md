@@ -16,6 +16,8 @@ The `Merge` page groups its settings by **which command reads them**, and so doe
   - merge notes on ignored paths too, instead of skipping and reporting them. About what a merge picks up, and nothing else.
 - `shouldOfferExcludedPathsAsMergeDestinations`
   - offer a note or folder on an ignored path as a merge destination, and let the merge land there. Off by default; the two exclusion settings are set independently.
+- `shouldAddMergedNoteNameToAliases`
+  - add the merged-away note's name to the destination's `aliases`, so searching by the old name still finds it. Off by default; the merge picker's `Add the merged note name to aliases` checkbox (`Alt+7`) changes it for one file merge.
 - `attachmentExtensions`
   - markdown files that are really attachments (default `.excalidraw.md`), never merged as text. Splitting and flattening classify them the same way. It blocks nothing: to keep a path out of merges, use `Merge exclude paths`, which takes a path, a glob or a `/regular expression/flags`.
 

@@ -3,6 +3,10 @@ import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction'
 import type { MaybeReturn } from '@mnaoumov/typescript-lib/type';
 
 import {
+  parseFrontmatter,
+  setFrontmatter
+} from '@mnaoumov/obsidian-lib/frontmatter';
+import {
   editReferences,
   extractReferenceFile,
   updateLink
@@ -31,14 +35,24 @@ import {
   showOperationCompletionNotice,
   showOperationProgressNotice
 } from '../ui/operation-notices.ts';
+import { addMergedNoteAlias } from './merged-note-alias.ts';
 import {
   findHeadingAboveResidualLink,
   findResidualSourceLink
 } from './residual-source-link.ts';
 
+const ALIASES_PROPERTY_NAME = 'aliases';
+
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  /**
+   * Whether the source note's name is added to the target note's `aliases`, so searching by the old name still
+   * finds the note it was merged into. Defaults to the `shouldAddMergedNoteNameToAliases` setting; the
+   * single-file merge passes the picker's checkbox.
+   */
+  readonly shouldAddSourceNameToAliases?: boolean;
 
   /**
    * Whether the source note goes in place of the one link or embed to it the target holds (the residual an
@@ -69,6 +83,7 @@ export class MergeComposer extends ComposerBase {
   protected override readonly shouldKeepSourceTitleForNewTargetFile: boolean = true;
 
   private readonly consoleDebugComponent: ConsoleDebugComponent;
+  private readonly shouldAddSourceNameToAliases: boolean;
   private readonly shouldMergeAtSourceLink: boolean;
   private readonly shouldMoveAttachments: boolean;
   private readonly shouldOpenAfterMerge: boolean;
@@ -80,6 +95,7 @@ export class MergeComposer extends ComposerBase {
     });
 
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.shouldAddSourceNameToAliases = params.shouldAddSourceNameToAliases ?? params.pluginSettingsComponent.settings.shouldAddMergedNoteNameToAliases;
     this.shouldMergeAtSourceLink = params.shouldMergeAtSourceLink ?? false;
     this.shouldOpenAfterMerge = params.shouldOpenAfterMerge ?? params.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge;
     this.shouldMoveAttachments = params.shouldMoveAttachments ?? params.pluginSettingsComponent.settings.shouldMoveAttachmentsWhenMergingFile;
@@ -154,6 +170,9 @@ export class MergeComposer extends ComposerBase {
             await this.replaceResidualSourceLinkWithToken(vaultTransaction);
           }
           await this.insertIntoTargetFile({ contentToInsert: sourceContent, preservedFrontmatter, vaultTransaction });
+          if (this.shouldAddSourceNameToAliases) {
+            await this.addSourceNameToTargetAliases(vaultTransaction);
+          }
           await vaultTransaction.trash(this.sourceFile);
         },
         injectedVaultTransaction: this.injectedVaultTransaction,
@@ -245,6 +264,24 @@ export class MergeComposer extends ComposerBase {
 
   protected override prepareBacklinkSubpaths(): Set<string> {
     return new Set(['']);
+  }
+
+  /**
+   * Adds the source note's name to the target note's `aliases` (ported from `Merge as Alias`). Written after
+   * the content and frontmatter merge, through the transaction, so a rollback removes it with the rest.
+   *
+   * @param vaultTransaction - The merge's transaction.
+   */
+  private async addSourceNameToTargetAliases(vaultTransaction: VaultTransaction): Promise<void> {
+    await vaultTransaction.process(this.targetFile, (content) => {
+      const frontmatter = parseFrontmatter(content);
+      const aliases = addMergedNoteAlias({
+        existingAliases: frontmatter[ALIASES_PROPERTY_NAME],
+        sourceName: this.sourceFile.basename,
+        targetName: this.targetFile.basename
+      });
+      return aliases ? setFrontmatter(content, { ...frontmatter, [ALIASES_PROPERTY_NAME]: aliases }) : content;
+    });
   }
 
   /**

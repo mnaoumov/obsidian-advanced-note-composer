@@ -37,6 +37,10 @@ The picker's `Merge at the link to the source` checkbox (`Alt+6`) turns it off f
 
 When the link sits right under a heading and the merged note starts with that same heading (same level, same text), the heading is written once while `Merge headings` is on: the merged note's own heading takes the place of the destination's heading and the link together. With `Merge headings` off, both headings stay.
 
+## Keep the old name as an alias
+
+**Should add merged note name to aliases** (under `Merge`, `All merges`, off by default) adds the merged-away note's name to the destination's `aliases`, so searching for the old name still finds the note it went into. Links to the old note already keep its name as their display text. The picker's `Add the merged note name to aliases` checkbox (`Alt+7`) changes it for one merge, and the folder merges follow the setting. Nothing is added when the destination already has that alias, or carries the same name.
+
 ## Attachments follow the note
 
 **Should move attachments when merging a file** (under `Merge`, on by default) makes the attachments a note owns follow it when the note is merged away — otherwise they would be left behind in a folder the note no longer lives in. It applies to [`Merge these files into one file...`](<../01 Merge/04 Merge multiple files.md>) too.

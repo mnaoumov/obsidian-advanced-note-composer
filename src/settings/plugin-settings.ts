@@ -702,6 +702,13 @@ export class PluginSettings {
   public replacement = '_';
   public shouldAddCommandsToSubmenu = true;
   public shouldAddInvalidTitleToNoteAlias = true;
+
+  /**
+   * Whether a merge adds the merged-away note's name to the destination note's `aliases`, so searching by the old
+   * name still finds the note it was merged into. Seeds the merge picker's checkbox; the batch merges read it
+   * directly. Off by default.
+   */
+  public shouldAddMergedNoteNameToAliases = false;
   public shouldAllowOnlyCurrentFolderByDefault = false;
 
   public shouldAllowSplitIntoUnresolvedPathByDefault = true;
