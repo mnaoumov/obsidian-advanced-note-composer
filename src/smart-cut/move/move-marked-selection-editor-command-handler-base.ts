@@ -211,6 +211,10 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
     await composer.splitFile();
   }
 
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
   /**
    * Which smart cut & paste move this handler performs (issue #174). Decided by the handler, since only it
    * knows which move this is — the same reasoning as {@link shouldJumpToMovedContent} — and passed to the
@@ -238,10 +242,6 @@ export abstract class MoveMarkedSelectionEditorCommandHandlerBase extends Active
    */
   protected resolveOptions(defaultTextAfterExtractionMode: TextAfterExtractionMode): Promise<MoveOptions | null> {
     return Promise.resolve(this.buildDefaultOptions(defaultTextAfterExtractionMode));
-  }
-
-  protected override shouldAddCommandToSubmenu(): boolean {
-    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToEditorMenu(): boolean {

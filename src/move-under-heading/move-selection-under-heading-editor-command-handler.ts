@@ -110,7 +110,7 @@ export class MoveSelectionUnderHeadingEditorCommandHandler extends ActiveEditorC
     });
   }
 
-  protected override shouldAddCommandToSubmenu(): boolean {
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
     return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 

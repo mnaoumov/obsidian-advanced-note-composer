@@ -172,8 +172,8 @@ export class SplitNoteByHorizontalRulesEditorCommandHandler extends EditorComman
     });
   }
 
-  protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() || this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   protected override shouldAddToEditorMenu(editor: Editor, context: MarkdownFileInfo): boolean {

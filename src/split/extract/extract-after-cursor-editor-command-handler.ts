@@ -111,7 +111,7 @@ export class ExtractAfterCursorEditorCommandHandler extends EditorCommandHandler
     await composer.splitFile();
   }
 
-  protected override shouldAddCommandToSubmenu(): boolean {
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
     return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
