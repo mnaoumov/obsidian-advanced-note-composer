@@ -25,6 +25,7 @@ import { RenameFolderCommandHandler } from './folders/rename-folder-command-hand
 import { RenameHeadingEditorCommandHandler } from './headings/rename-heading-editor-command-handler.ts';
 import { MergeFolderIntoFileCommandHandler } from './merge/folder-into-file/merge-folder-into-file-command-handler.ts';
 import { MergeFolderCommandHandler } from './merge/folder/merge-folder-command-handler.ts';
+import { MergeLinkedNotesCommandHandler } from './merge/linked-notes/merge-linked-notes-command-handler.ts';
 import { MergeFileCommandHandler } from './merge/merge-file-command-handler.ts';
 import {
   clearRecentTargets,
@@ -278,6 +279,13 @@ export class Plugin extends PluginBase {
 
     await this.commandHandlerComponent.registerCommandHandlers(() => [
       new MergeFileCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
+      new MergeLinkedNotesCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
         pluginNoticeComponent: this.pluginNoticeComponent,

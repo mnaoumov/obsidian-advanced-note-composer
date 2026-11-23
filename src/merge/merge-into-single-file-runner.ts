@@ -40,6 +40,7 @@ import {
   showOperationCompletionNotice,
   showOperationPermanentProgressNotice
 } from '../ui/operation-notices.ts';
+import { replaceSourceLinksWithTokens } from './linked-notes/linked-notes-to-merge-back.ts';
 import { MergeComposer } from './merge-composer.ts';
 
 /**
@@ -81,6 +82,14 @@ export interface MergeFilesIntoSingleFileParams {
    */
   readonly progressLabel: string;
   readonly resourceLockComponent: ResourceLockComponent;
+
+  /**
+   * Whether each source goes in place of the target's link to it rather than being appended (issue #315,
+   * `Merge linked notes back into this note...`). Every link is swapped for a token before the first merge, so the
+   * content an earlier source brings in cannot make a later link ambiguous, and a token left unfilled at the end
+   * fails the batch, which then rolls back.
+   */
+  readonly shouldMergeAtSourceLinks?: boolean | undefined;
 
   /**
    * Whether each source note's OWN attachments follow it into the target's attachment folder (issue
@@ -167,6 +176,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
     pluginSettingsComponent,
     progressLabel,
     resourceLockComponent,
+    shouldMergeAtSourceLinks = false,
     shouldRelocateOwnedAttachments = false,
     sourceFiles,
     targetFile
@@ -256,6 +266,16 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
           vaultTransaction
         });
 
+        const insertTokens = shouldMergeAtSourceLinks
+          ? await replaceSourceLinksWithTokens({
+            app,
+            shouldMergeHeadings: settings.shouldMergeHeadingsByDefault,
+            sourceFiles: notesToMerge,
+            targetFile,
+            vaultTransaction
+          })
+          : new Map<TFile, string>();
+
         let isFirstMergeIntoNewTarget = isNewTargetFile;
         const pendingHeadings: string[] = [];
         for (const sourceFile of sourcesToMerge) {
@@ -277,10 +297,12 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
             pendingHeadings.length = 0;
             await vaultTransaction.process(targetFile, (targetFileContent) => targetFileContent + headingBlock);
           }
+          const insertToken = insertTokens.get(sourceFile);
           const composer = new MergeComposer({
             app,
             consoleDebugComponent,
             headingLevelShift: headingPlanEntry?.depth ?? 0,
+            ...insertToken !== undefined && { insertTokenAtSourceLink: insertToken },
             isNewTargetFile: isFirstMergeIntoNewTarget,
             pluginNoticeComponent,
             pluginSettingsComponent,
@@ -302,6 +324,15 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
           await composer.mergeFile();
           isFirstMergeIntoNewTarget = false;
           mergedCount++;
+        }
+
+        if (insertTokens.size > 0) {
+          // A merge that declined to write (its own guard tripped) leaves its token behind, and with it a hole
+          // where its link was, so the whole batch is rolled back rather than committed with it.
+          const targetContent = await app.vault.read(targetFile);
+          if ([...insertTokens.values()].some((token) => targetContent.includes(token))) {
+            throw new Error(`Not every linked note was merged into ${targetFile.path}.`);
+          }
         }
 
         /*

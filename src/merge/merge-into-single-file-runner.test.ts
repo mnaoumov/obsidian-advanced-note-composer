@@ -39,6 +39,7 @@ import {
   createTemplaterPluginStub,
   registerPluginStub
 } from '../templates/templater-stub.ts';
+import { replaceSourceLinksWithTokens } from './linked-notes/linked-notes-to-merge-back.ts';
 import { mergeFilesIntoSingleFile } from './merge-into-single-file-runner.ts';
 
 // Return-value stubs for metadata-cache reads only: test-mocks has no metadata indexer, so getCacheSafe
@@ -61,6 +62,12 @@ vi.mock('@mnaoumov/typescript-lib/html-element', () => ({
 
 vi.mock('@mnaoumov/obsidian-lib/markdown', () => ({
   renderInternalLink: vi.fn().mockResolvedValue(createSpan())
+}));
+
+// The metadata cache is stubbed to `null` above, so the link lookup cannot run here; its own suite covers it. This
+// stand-in swaps `[[<name>]]` for `TOKEN-<name>` the way the real one swaps the link for a token.
+vi.mock('./linked-notes/linked-notes-to-merge-back.ts', () => ({
+  replaceSourceLinksWithTokens: vi.fn()
 }));
 
 let app: AppOriginal;
@@ -176,6 +183,107 @@ function openInTab(path: string): WorkspaceLeafOriginal {
 }
 
 describe('mergeFilesIntoSingleFile', () => {
+  describe('merging at the links (issue #315)', () => {
+    function stubTokens(extraTokenFile: null | string): void {
+      vi.mocked(replaceSourceLinksWithTokens).mockImplementation(async ({ sourceFiles, targetFile, vaultTransaction }) => {
+        const tokens = new Map<TFileOriginal, string>();
+        await vaultTransaction.process(targetFile, (content) => {
+          let result = content;
+          for (const sourceFile of sourceFiles) {
+            tokens.set(sourceFile, `TOKEN-${sourceFile.basename}`);
+            result = result.replace(`[[${sourceFile.basename}]]`, () => `TOKEN-${sourceFile.basename}`);
+          }
+          if (extraTokenFile !== null) {
+            tokens.set(getFile(extraTokenFile), 'TOKEN-STRAY');
+            result += '\nTOKEN-STRAY';
+          }
+          return result;
+        });
+        return tokens;
+      });
+    }
+
+    it('puts each source in place of its link', async () => {
+      initApp({
+        'a.md': 'alpha body',
+        'b.md': 'bravo body',
+        'target.md': 'intro\n[[a]]\nmiddle\n[[b]]\noutro'
+      });
+      stubTokens(null);
+      const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext();
+
+      const result = await mergeFilesIntoSingleFile({
+        app,
+        consoleDebugComponent,
+        isNewTargetFile: false,
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        progressLabel: 'Merging linked notes',
+        resourceLockComponent,
+        shouldMergeAtSourceLinks: true,
+        sourceFiles: [getFile('a.md'), getFile('b.md')],
+        targetFile: getFile('target.md')
+      });
+
+      expect(result.mergedCount).toBe(2);
+      // `toContain`: the stubbed metadata cache makes the frontmatter merge write an empty block above the body.
+      const merged = await app.vault.adapter.read('target.md');
+      expect(merged).toContain('intro\nalpha body\nmiddle\nbravo body\noutro');
+      expect(merged).not.toContain('TOKEN-');
+      expect(await app.vault.adapter.exists('a.md')).toBe(false);
+    });
+
+    it('rolls the whole batch back when a token is left unfilled', async () => {
+      initApp({
+        'a.md': 'alpha body',
+        'target.md': 'intro\n[[a]]'
+      });
+      stubTokens('target.md');
+      const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext();
+
+      await expect(mergeFilesIntoSingleFile({
+        app,
+        consoleDebugComponent,
+        isNewTargetFile: false,
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        progressLabel: 'Merging linked notes',
+        resourceLockComponent,
+        shouldMergeAtSourceLinks: true,
+        sourceFiles: [getFile('a.md')],
+        targetFile: getFile('target.md')
+      })).rejects.toThrow('Not every linked note was merged into target.md.');
+
+      expect(await app.vault.adapter.read('target.md')).toBe('intro\n[[a]]');
+      expect(await app.vault.adapter.read('a.md')).toBe('alpha body');
+    });
+
+    it('merges nothing at a link when every source is ignored', async () => {
+      initApp({
+        'a.md': 'alpha body',
+        'target.md': 'intro\n[[a]]'
+      });
+      stubTokens(null);
+      const { consoleDebugComponent, pluginNoticeComponent, pluginSettingsComponent } = createContext({ isPathIgnored: () => true });
+
+      const result = await mergeFilesIntoSingleFile({
+        app,
+        consoleDebugComponent,
+        isNewTargetFile: false,
+        pluginNoticeComponent,
+        pluginSettingsComponent,
+        progressLabel: 'Merging linked notes',
+        resourceLockComponent,
+        shouldMergeAtSourceLinks: true,
+        sourceFiles: [getFile('a.md')],
+        targetFile: getFile('target.md')
+      });
+
+      expect(result.mergedCount).toBe(0);
+      expect(await app.vault.adapter.read('target.md')).toBe('intro\n[[a]]');
+    });
+  });
+
   it('merges every source into a single new target, in order, and trashes the sources', async () => {
     initApp({
       'a.md': 'alpha body',

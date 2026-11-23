@@ -45,7 +45,7 @@ Each row is one family of commands; its link opens the demo-vault section that w
 
 | Capability | In one line |
 | --- | --- |
-| [Merge](<./demo-vault/01 Merge/README.md>) | A note into another, a folder into a folder, several notes at once, or a folder tree into one file, with frontmatter reconciled and attachments carried along; an attachment note back into its parent |
+| [Merge](<./demo-vault/01 Merge/README.md>) | A note into another, a folder into a folder, several notes at once, or a folder tree into one file, with frontmatter reconciled and attachments carried along; every linked part back into its note at once; an attachment note back into its parent |
 | [Extract](<./demo-vault/02 Extract/README.md>) | A selection, a heading, the block between horizontal rules, or everything before or after the cursor into its own note, leaving a link, an embed or nothing; an embedded attachment into a note of its own |
 | [Split](<./demo-vault/03 Split/README.md>) | A note by heading level or at its horizontal rules, or its whole heading hierarchy into a folder tree, optionally auto-numbered |
 | [Headings](<./demo-vault/04 Headings/README.md>) | Reorder, re-nest and number a note's sections, or rename a heading and have its links follow |
