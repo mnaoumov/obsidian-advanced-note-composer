@@ -64,6 +64,11 @@ export const MENU_PLACEABLE_COMMANDS: readonly MenuPlaceableCommand[] = [
   },
   {
     commandCategory: CommandCategory.SplitAndExtract,
+    id: 'move-selection-under-heading',
+    name: 'Move selection under heading...'
+  },
+  {
+    commandCategory: CommandCategory.SplitAndExtract,
     id: 'extract-this-heading',
     name: 'Extract this heading...'
   },
@@ -201,6 +206,11 @@ export const MENU_PLACEABLE_COMMANDS: readonly MenuPlaceableCommand[] = [
     commandCategory: CommandCategory.SmartCutAndPaste,
     id: 'move-marked-selection-to-bottom-of-file',
     name: 'Smart cut & paste: Move marked selection to bottom of file'
+  },
+  {
+    commandCategory: CommandCategory.SmartCutAndPaste,
+    id: 'move-marked-selection-under-heading',
+    name: 'Smart cut & paste: Move marked selection under heading...'
   },
   {
     commandCategory: CommandCategory.Swap,

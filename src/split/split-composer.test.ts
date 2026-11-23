@@ -65,6 +65,7 @@ import { buildExtractedSubpathPredicate } from './extracted-link-targets.ts';
 import {
   getSelections,
   padEdgeMoveTemplate,
+  padTemplateStartWithLineBreak,
   resolveSmartCutAndPasteTemplate,
   resolveSplitTemplateForNewTargetFile,
   SplitComposer
@@ -86,9 +87,12 @@ interface CreateComposerOptions {
   readonly settingsOverrides?: Partial<PluginSettings>;
   readonly shouldIncludeFrontmatter?: boolean;
   readonly shouldJumpToMovedContent?: boolean;
+  readonly shouldOpenTargetAfterMove?: boolean;
+  readonly shouldStartTemplateOnNewLine?: boolean;
   readonly smartCutAndPasteMoveKind?: SmartCutAndPasteMoveKind;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
+  readonly targetSubpath?: string;
   readonly templateOverride?: string;
   readonly vaultTransaction?: VaultTransaction;
 }
@@ -101,9 +105,12 @@ interface OptionalComposerParams {
   readonly insertToken?: string;
   readonly shouldIncludeFrontmatter?: boolean;
   readonly shouldJumpToMovedContent?: boolean;
+  readonly shouldOpenTargetAfterMove?: boolean;
+  readonly shouldStartTemplateOnNewLine?: boolean;
   readonly smartCutAndPasteMoveKind?: SmartCutAndPasteMoveKind;
   readonly targetCursorEndOffset?: number;
   readonly targetCursorOffset?: number;
+  readonly targetSubpath?: string;
   readonly templateOverride?: string;
   readonly vaultTransaction?: VaultTransaction;
 }
@@ -343,9 +350,12 @@ function optionalComposerParams(options?: CreateComposerOptions): OptionalCompos
     insertToken: options?.insertToken,
     shouldIncludeFrontmatter: options?.shouldIncludeFrontmatter,
     shouldJumpToMovedContent: options?.shouldJumpToMovedContent,
+    shouldOpenTargetAfterMove: options?.shouldOpenTargetAfterMove,
+    shouldStartTemplateOnNewLine: options?.shouldStartTemplateOnNewLine,
     smartCutAndPasteMoveKind: options?.smartCutAndPasteMoveKind,
     targetCursorEndOffset: options?.targetCursorEndOffset,
     targetCursorOffset: options?.targetCursorOffset,
+    targetSubpath: options?.targetSubpath,
     templateOverride: options?.templateOverride,
     vaultTransaction: options?.vaultTransaction
   });
@@ -531,6 +541,44 @@ describe('splitFile', () => {
       'selected text'
     );
     expect(editor.replaceSelection).toHaveBeenCalledWith('![[target]]');
+  });
+
+  it('should move under a heading on a line of its own, link the heading and not open the target (Move selection under heading...)', async () => {
+    const generateMarkdownLink = vi.spyOn(app.fileManager, 'generateMarkdownLink').mockReturnValue('[[target#H]]');
+    const editor = createEditorDouble();
+    const composer = createComposer({
+      editor,
+      insertToken: '<!--token-->',
+      isNewTargetFile: false,
+      shouldOpenTargetAfterMove: false,
+      shouldStartTemplateOnNewLine: true,
+      // `target body`: right after `target`, the end of a "line" the content must not be glued onto.
+      targetCursorOffset: 6,
+      targetSubpath: '#H'
+    });
+
+    await composer.splitFile();
+
+    // The test-mocks frontmatter write leaves an empty `{}` block on top; the body is what is asserted.
+    expect(await app.vault.adapter.read('target.md')).toContain('target\nselected text body');
+    expect(generateMarkdownLink).toHaveBeenCalledWith(getTargetFile(), 'source.md', '#H');
+    expect(editor.replaceSelection).toHaveBeenCalledWith('[[target#H]]');
+    // The source is re-opened to write the residual; the target is not opened.
+    expect(openFileMock).not.toHaveBeenCalledWith(getTargetFile(), { active: true });
+  });
+
+  it('should still open the target of a move when the open-after-split setting is on', async () => {
+    const composer = createComposer({
+      insertToken: '<!--token-->',
+      isNewTargetFile: false,
+      settingsOverrides: { shouldOpenTargetNoteAfterSplit: true },
+      shouldOpenTargetAfterMove: false,
+      targetCursorOffset: 6
+    });
+
+    await composer.splitFile();
+
+    expect(openFileMock).toHaveBeenCalledWith(getTargetFile(), { active: true });
   });
 
   it('should replace the selection with an empty string for None mode', async () => {
@@ -1823,6 +1871,13 @@ describe('SplitComposer getTemplate', () => {
     expect(targetContent).not.toContain('merge:');
     expect(targetContent).not.toContain('smart:');
     expect(targetContent).not.toContain('split:');
+  });
+});
+
+describe('padTemplateStartWithLineBreak', () => {
+  it('should start a template on a new line once', () => {
+    expect(padTemplateStartWithLineBreak('{{content}}')).toBe('\n{{content}}');
+    expect(padTemplateStartWithLineBreak('\n\n{{content}}')).toBe('\n\n{{content}}');
   });
 });
 

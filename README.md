@@ -46,12 +46,12 @@ Each row is one family of commands; its link opens the demo-vault section that w
 | Capability | In one line |
 | --- | --- |
 | [Merge](<./demo-vault/01 Merge/README.md>) | A note into another, a folder into a folder, several notes at once, or a folder tree into one file, with frontmatter reconciled and attachments carried along; every linked part back into its note at once; an attachment note back into its parent |
-| [Extract](<./demo-vault/02 Extract/README.md>) | A selection, a heading, the block between horizontal rules, or everything before or after the cursor into its own note, leaving a link, an embed or nothing; an embedded attachment into a note of its own |
+| [Extract](<./demo-vault/02 Extract/README.md>) | A selection, a heading, the block between horizontal rules, or everything before or after the cursor into its own note, leaving a link, an embed or nothing; an embedded attachment into a note of its own; a selection under a heading picked in any note |
 | [Split](<./demo-vault/03 Split/README.md>) | A note by heading level or at its horizontal rules, or its whole heading hierarchy into a folder tree, optionally auto-numbered |
 | [Headings](<./demo-vault/04 Headings/README.md>) | Reorder, re-nest and number a note's sections, or rename a heading and have its links follow |
 | [Swap](<./demo-vault/05 Swap/README.md>) | Two files, two folders or two selections trade places in one reversible operation |
 | [Folder operations](<./demo-vault/06 Folder operations/README.md>) | Flatten, move, create from a template, reorder and renumber, or rename a folder with its folder note; bulk rename a selection of notes and folders |
-| [Smart cut & paste](<./demo-vault/07 Smart cut and paste/README.md>) | Mark a selection or a heading, then drop it at an exact cursor position in any note |
+| [Smart cut & paste](<./demo-vault/07 Smart cut and paste/README.md>) | Mark a selection or a heading, then drop it at an exact cursor position in any note, or under a picked heading |
 | [Include / exclude paths](<./demo-vault/08 Include and exclude/README.md>) | Per command category, what the plugin may touch and where its commands are offered |
 | [Titles, links and frontmatter](<./demo-vault/09 Titles, links and frontmatter/README.md>) | Links keep resolving, invalid title characters are cleaned up, and content can be wrapped in a template |
 | [UI](<./demo-vault/10 UI/README.md>) | Minimizable dialogs, a changeable target, operation notices, and command menu placement |
@@ -83,7 +83,7 @@ Merges also preserve keys from `Permanent Links` when it is enabled: see [Merge 
 | [`SimpleMerge`](https://community.obsidian.md/plugins/simple-merge) | Compiles the notes an index links into one document; live re-sync | Alternative merge inputs: notes, folders and selections; the merge moves content rather than compiling a copy |
 | [`Split by Heading`](https://community.obsidian.md/plugins/split-by-heading) | One note per heading of a chosen level; merges linked notes back | Overlaps on splitting by heading; also a recursive folder tree; merges back one note at a time |
 | [`Splitsmith`](https://community.obsidian.md/plugins/splitsmith) | Splits by heading, delimiter, cursor or selection; AI cut suggestions; checks the split rebuilds the original | Overlaps on splitting and extraction; also merges, swaps and moves; no AI |
-| [`Text Mover`](https://community.obsidian.md/plugins/text-mover) | Moves text under a heading of this or another note, or into a daily note | Overlaps on moving text; drops it at a cursor or the top or bottom of a note, not under a picked heading |
+| [`Text Mover`](https://community.obsidian.md/plugins/text-mover) | Moves text under a heading of this or another note, or into a daily note | Overlaps on moving text under a picked heading, which `Move selection under heading...` ports; no daily-note destination |
 | [`Text Transporter`](https://community.obsidian.md/plugins/obsidian42-text-transporter) | Copies, moves and links text, lines and blocks | Overlaps on text moves; also handles whole notes, headings and folders |
 
 Last searched for similar plugins on 2026-11-21.

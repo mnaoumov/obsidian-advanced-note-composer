@@ -109,6 +109,20 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
    */
   readonly shouldMoveAttachments?: boolean;
 
+  /**
+   * Whether a move flow (one with an `insertToken`) opens the target note once it has landed. Defaults to
+   * `true`, which is what the smart cut & paste moves and the same-note extract want. `Move selection under
+   * heading...` passes `false`: it writes into a note the user never opened, so it follows the `Should open
+   * target note after split` setting like any other extract into an existing note.
+   */
+  readonly shouldOpenTargetAfterMove?: boolean;
+
+  /**
+   * Whether the template is made to start on a new line (see {@link padTemplateStartWithLineBreak}). Set by
+   * `Move selection under heading...`, whose insert point is the end of a line in the middle of a note.
+   */
+  readonly shouldStartTemplateOnNewLine?: boolean;
+
   // Which smart cut & paste move this split is (mark → move here / at cursor / to top / bottom). Its
   // PRESENCE marks the split as a smart cut & paste move at all, so `getTemplate` prefers the smart cut &
   // paste templates (the per-direction override, then the shared one, then the split → merge chain when
@@ -126,6 +140,13 @@ interface SplitComposerConstructorParams extends ComposerBaseConstructorParamsBa
   // end of note) — used by the top/bottom move commands and same-note extract; a number pins it to a
   // specific offset (the paste cursor of `Move marked selection here`). Ignored without an `insertToken`.
   readonly targetCursorOffset?: null | number;
+
+  /**
+   * The subpath (`#Heading`) the residual link or embed left in the source points at. Set by `Move selection
+   * under heading...`, so the link leads to the heading the content went under rather than to the top of the
+   * note. Empty by default.
+   */
+  readonly targetSubpath?: string;
 
   // Overrides the template resolution entirely for this operation, whatever the settings say. Set by the
   // recursive split, which passes the identity template so its structural passes write the extracted
@@ -159,11 +180,14 @@ export class SplitComposer extends ComposerBase {
   private readonly selectedText: string;
   private readonly shouldJumpToMovedContent: boolean;
   private readonly shouldMoveAttachments: boolean;
+  private readonly shouldOpenTargetAfterMove: boolean;
+  private readonly shouldStartTemplateOnNewLine: boolean;
   private readonly smartCutAndPasteMoveKind: SmartCutAndPasteMoveKind | undefined;
   // The view the source was re-opened in, whose editor every later source write goes through.
   private sourceView: MarkdownView | null = null;
   private readonly targetCursorEndOffset: null | number;
   private readonly targetCursorOffset: null | number;
+  private readonly targetSubpath: string;
   private readonly templateOverride: string | undefined;
   private readonly textAfterExtractionMode: TextAfterExtractionMode;
 
@@ -192,8 +216,11 @@ export class SplitComposer extends ComposerBase {
     // A same-note extract has one attachment folder for both ends, so there is nothing to relocate — and
     // `isAtProperAttachmentPath` would refuse every move anyway.
     this.shouldMoveAttachments = !isSameFile && (params.shouldMoveAttachments ?? settings.shouldMoveAttachmentsWhenSplitting);
+    this.shouldOpenTargetAfterMove = params.shouldOpenTargetAfterMove ?? true;
+    this.shouldStartTemplateOnNewLine = params.shouldStartTemplateOnNewLine ?? false;
     this.targetCursorOffset = params.targetCursorOffset ?? null;
     this.targetCursorEndOffset = params.targetCursorEndOffset ?? null;
+    this.targetSubpath = params.targetSubpath ?? '';
     this.templateOverride = params.templateOverride;
     // A same-note residual (self-link/embed) is meaningless, so default it to `None` unless the user
     // opted in — mirroring the `Move marked selection here` handler.
@@ -382,7 +409,9 @@ export class SplitComposer extends ComposerBase {
         });
       }
 
-      if (!this.isMultipleSplit && (this.insertToken !== null || this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit)) {
+      const shouldOpenTarget = (this.insertToken !== null && this.shouldOpenTargetAfterMove)
+        || this.pluginSettingsComponent.settings.shouldOpenTargetNoteAfterSplit;
+      if (!this.isMultipleSplit && shouldOpenTarget) {
         await openFileAfterOperation({ app: this.app, file: this.targetFile });
 
         // For a smart cut & paste move (mark → move here / at cursor / to top / bottom), land the cursor
@@ -444,7 +473,11 @@ export class SplitComposer extends ComposerBase {
     // Otherwise padding is applied to whatever the chain resolves, NOT only to the smart cut & paste branch:
     // the reported top-move merge happens with the SHIPPED DEFAULTS, where both smart templates are empty and
     // the chain falls all the way through to `mergeTemplate`. See `padEdgeMoveTemplate`.
-    return this.templateOverride ?? padEdgeMoveTemplate(this.resolveConfiguredTemplate(), this.smartCutAndPasteMoveKind);
+    if (this.templateOverride !== undefined) {
+      return this.templateOverride;
+    }
+    const template = this.resolveConfiguredTemplate();
+    return this.shouldStartTemplateOnNewLine ? padTemplateStartWithLineBreak(template) : padEdgeMoveTemplate(template, this.smartCutAndPasteMoveKind);
   }
 
   protected override prepareBacklinkSubpaths(): Set<string> {
@@ -917,7 +950,7 @@ export class SplitComposer extends ComposerBase {
    * by {@link textAfterExtractionMode}: an embed, a link to the target note, or nothing.
    */
   private replaceSourceSelection(): void {
-    const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path);
+    const markdownLink = this.app.fileManager.generateMarkdownLink(this.targetFile, this.sourceFile.path, this.targetSubpath);
 
     switch (this.textAfterExtractionMode) {
       case TextAfterExtractionMode.EmbedNewFile: {
@@ -1102,15 +1135,27 @@ export function padEdgeMoveTemplate(template: string, kind: SmartCutAndPasteMove
     return template;
   }
 
-  let padded = template;
-  if (!padded.startsWith('\n')) {
-    padded = `\n${padded}`;
-  }
+  let padded = padTemplateStartWithLineBreak(template);
   if (!padded.endsWith('\n')) {
     padded += '\n';
   }
 
   return padded;
+}
+
+/**
+ * Starts a template with a line break when it does not already start with one, so content inserted at the
+ * END of a line lands on a line of its own instead of being glued onto that line.
+ *
+ * `Move selection under heading...` needs only this half: its insert point is always the end of a line (the
+ * heading line, or the last non-blank line of the heading's body), so what follows it already starts with a
+ * line break or is the end of the note.
+ *
+ * @param template - The resolved template.
+ * @returns The template, starting with a line break.
+ */
+export function padTemplateStartWithLineBreak(template: string): string {
+  return template.startsWith('\n') ? template : `\n${template}`;
 }
 
 /**
