@@ -5,7 +5,10 @@ import type {
 
 import { isMarkdownFile } from '@mnaoumov/obsidian-lib/file-system';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
-import { resolveTemplaterPluginApi, TemplaterRunMode  } from '@mnaoumov/obsidian-lib/templater';
+import {
+  resolveTemplaterPluginApi,
+  TemplaterRunMode
+} from '@mnaoumov/obsidian-lib/templater';
 
 import type { TemplaterPreludeTokens } from './templater-prelude.ts';
 

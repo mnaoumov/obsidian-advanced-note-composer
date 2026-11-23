@@ -12,7 +12,10 @@ import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/fo
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
-import { resolveTemplaterPluginApi, TemplaterRunMode  } from '@mnaoumov/obsidian-lib/templater';
+import {
+  resolveTemplaterPluginApi,
+  TemplaterRunMode
+} from '@mnaoumov/obsidian-lib/templater';
 import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
 import { noop } from '@mnaoumov/typescript-lib/function';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
