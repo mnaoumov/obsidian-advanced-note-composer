@@ -22,6 +22,7 @@ import {
 } from '@mnaoumov/obsidian-lib/file-system';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { resolveTemplaterPluginApi } from '@mnaoumov/obsidian-lib/templater';
 import {
   getAvailablePath,
   getOrCreateFileSafe,
@@ -41,7 +42,6 @@ import { compareNatural } from '../../natural-sort.ts';
 import { recordRecentTarget } from '../../recency/recent-targets.ts';
 import { isFileOrFolderCommandBlocked } from '../../settings/command-visibility/command-block.ts';
 import { CommandCategory } from '../../settings/plugin-settings.ts';
-import { getTemplaterPluginApi } from '../../templates/templater.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -370,7 +370,7 @@ export class MergeFolderCommandHandler extends FolderCommandHandler {
     if (!this.pluginSettingsComponent.settings.shouldRunTemplaterOnDestinationFile) {
       return;
     }
-    const templaterPlugin = getTemplaterPluginApi(this.app);
+    const templaterPlugin = resolveTemplaterPluginApi(this.app);
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
         f.appendText('You have enabled setting ');

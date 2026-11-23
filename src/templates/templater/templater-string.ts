@@ -5,11 +5,10 @@ import type {
 
 import { isMarkdownFile } from '@mnaoumov/obsidian-lib/file-system';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
-import { TemplaterRunMode } from '@mnaoumov/obsidian-lib/templater';
+import { resolveTemplaterPluginApi, TemplaterRunMode  } from '@mnaoumov/obsidian-lib/templater';
 
 import type { TemplaterPreludeTokens } from './templater-prelude.ts';
 
-import { getTemplaterPluginApi } from '../templater.ts';
 import { buildTemplaterPrelude } from './templater-prelude.ts';
 
 /**
@@ -152,7 +151,7 @@ export async function renderStringWithTemplater(params: RenderStringWithTemplate
     return resolvedTemplate;
   }
 
-  const templaterPlugin = getTemplaterPluginApi(app);
+  const templaterPlugin = resolveTemplaterPluginApi(app);
   if (!templaterPlugin) {
     throw new TemplateRenderError(`${settingName} uses Templater syntax, but the Templater plugin is not installed`);
   }
@@ -212,7 +211,7 @@ export async function renderValueListWithTemplater(params: RenderValueListWithTe
 /**
  * Resolves the note the `Templater` run reports on through `tp.file.*` (issue #218).
  *
- * `Templater` insists on a file — it reads `target_file.basename`/`.stat` EAGERLY (see `templater.ts`) — but
+ * `Templater` insists on a file — it reads `target_file.basename`/`.stat` EAGERLY (see `TemplaterApi.parse_template`) — but
  * the commands that need a string template most are the folder ones, which have no note of their own, so
  * requiring an OPEN note made a configured `Name transform template` refuse every folder command whenever
  * the user had no note focused. That was issue #218, reported twice over: as a validator message in

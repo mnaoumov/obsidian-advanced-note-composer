@@ -22,6 +22,7 @@ import {
   getFrontmatterSafe
 } from '@mnaoumov/obsidian-lib/metadata-cache';
 import { isPositionInOffsetRange } from '@mnaoumov/obsidian-lib/position';
+import { resolveTemplaterPluginApi } from '@mnaoumov/obsidian-lib/templater';
 import { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
 import { noop } from '@mnaoumov/typescript-lib/function';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
@@ -57,7 +58,6 @@ import {
 } from '../settings/plugin-settings.ts';
 import { buildExtractedSubpathPredicate } from '../split/extracted-link-targets.ts';
 import { resolveTemplateTokens } from '../templates/template-tokens.ts';
-import { getTemplaterPluginApi } from '../templates/templater.ts';
 import { recordPendingTemplaterCursor } from '../templates/templater/templater-cursor.ts';
 import { buildOperationNoticeContent } from '../ui/operation-notices.ts';
 import {
@@ -570,7 +570,7 @@ export abstract class ComposerBase {
       return;
     }
 
-    const templaterPlugin = getTemplaterPluginApi(this.app);
+    const templaterPlugin = resolveTemplaterPluginApi(this.app);
     if (!templaterPlugin) {
       if (this.shouldShowNotice) {
         this.pluginNoticeComponent.showNotice(createFragment((f) => {

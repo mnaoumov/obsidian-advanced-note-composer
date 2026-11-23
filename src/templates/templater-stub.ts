@@ -1,13 +1,12 @@
+import type {
+  TemplaterApi,
+  TemplaterEditorHandler
+} from '@mnaoumov/obsidian-lib/templater';
 import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type { App } from 'obsidian';
 
 import { noopAsync } from '@mnaoumov/typescript-lib/function';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
-
-import type {
-  TemplaterApi,
-  TemplaterEditorHandler
-} from './templater.ts';
 
 /**
  * Options for {@link createTemplaterPluginStub}.

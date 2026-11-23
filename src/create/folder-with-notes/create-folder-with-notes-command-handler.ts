@@ -12,7 +12,7 @@ import { FolderCommandHandler } from '@mnaoumov/obsidian-lib/command-handlers/fo
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
 import { prompt } from '@mnaoumov/obsidian-lib/modals/prompt';
-import { TemplaterRunMode } from '@mnaoumov/obsidian-lib/templater';
+import { resolveTemplaterPluginApi, TemplaterRunMode  } from '@mnaoumov/obsidian-lib/templater';
 import { getAvailablePath } from '@mnaoumov/obsidian-lib/vault';
 import { noop } from '@mnaoumov/typescript-lib/function';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
@@ -40,7 +40,6 @@ import {
   NameTransformError
 } from '../../templates/name-transform.ts';
 import { resolveCreateFolderTemplateTokens } from '../../templates/template-tokens.ts';
-import { getTemplaterPluginApi } from '../../templates/templater.ts';
 import { recordPendingTemplaterCursor } from '../../templates/templater/templater-cursor.ts';
 import { buildTemplaterPrelude } from '../../templates/templater/templater-prelude.ts';
 import { applyPropertiesWrittenDuringRun } from '../../templates/templater/templater-run-properties.ts';
@@ -833,7 +832,7 @@ export class CreateFolderWithNotesCommandHandler extends FolderCommandHandler {
       return;
     }
 
-    const templaterPlugin = getTemplaterPluginApi(this.app);
+    const templaterPlugin = resolveTemplaterPluginApi(this.app);
     if (!templaterPlugin) {
       this.pluginNoticeComponent.showNotice(createFragment((f) => {
         f.appendText('You have enabled setting ');

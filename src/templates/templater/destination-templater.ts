@@ -5,8 +5,8 @@ import type {
 } from 'obsidian';
 
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
+import { resolveTemplaterPluginApi } from '@mnaoumov/obsidian-lib/templater';
 
-import { getTemplaterPluginApi } from '../templater.ts';
 import { recordPendingTemplaterCursor } from './templater-cursor.ts';
 
 /**
@@ -57,7 +57,7 @@ export function resolveDestinationTemplaterRunner(params: ResolveDestinationTemp
     return null;
   }
 
-  const templaterPlugin = getTemplaterPluginApi(app);
+  const templaterPlugin = resolveTemplaterPluginApi(app);
   if (!templaterPlugin) {
     if (shouldWarnIfMissing) {
       pluginNoticeComponent.showNotice(createFragment((f) => {

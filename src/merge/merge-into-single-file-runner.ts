@@ -10,6 +10,7 @@ import type {
 import { reportBulkOperationProgress } from '@mnaoumov/obsidian-lib/bulk-operation-progress';
 import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { renderInternalLink } from '@mnaoumov/obsidian-lib/markdown';
+import { resolveTemplaterPluginApi } from '@mnaoumov/obsidian-lib/templater';
 import { createFragmentAsync } from '@mnaoumov/typescript-lib/html-element';
 import {
   MarkdownView,
@@ -34,7 +35,6 @@ import {
 import { runLockedTransaction } from '../composers/locked-transaction.ts';
 import { recordRecentTarget } from '../recency/recent-targets.ts';
 import { CommandCategory } from '../settings/plugin-settings.ts';
-import { getTemplaterPluginApi } from '../templates/templater.ts';
 import {
   buildOperationNoticeContent,
   showOperationCompletionNotice,
@@ -522,7 +522,7 @@ async function showIgnoredFilesNotice(app: App, pluginNoticeComponent: PluginNot
 }
 
 function warnIfTemplaterMissing(app: App, pluginNoticeComponent: PluginNoticeComponent, shouldRunTemplater: boolean): void {
-  if (!shouldRunTemplater || getTemplaterPluginApi(app)) {
+  if (!shouldRunTemplater || resolveTemplaterPluginApi(app)) {
     return;
   }
   pluginNoticeComponent.showNotice(createFragment((f) => {
