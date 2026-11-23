@@ -316,6 +316,10 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
     });
   }
 
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  }
+
   /**
    * Resolves what this invocation will split, from the cursor and the note's heading cache.
    *
@@ -325,10 +329,6 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
    * @returns The run, or `null` when there is nothing to split.
    */
   protected abstract resolveRun(editor: Editor, file: TFile, cache: CachedMetadata): null | RecursiveSplitRun;
-
-  protected override shouldAddCommandToSubmenu(): boolean {
-    return super.shouldAddCommandToSubmenu() || this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
-  }
 
   /**
    * Asks once, up front, before restructuring the note. The individual splits that follow are

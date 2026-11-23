@@ -180,7 +180,7 @@ export class ReorderHeadingsEditorCommandHandler extends ActiveEditorCommandHand
     });
   }
 
-  protected override shouldAddCommandToSubmenu(): boolean {
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
     return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 

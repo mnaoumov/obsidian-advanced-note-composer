@@ -72,7 +72,7 @@ export abstract class SelectEditorCommandHandlerBase extends EditorCommandHandle
    */
   protected abstract canSelect(editor: Editor, context: MarkdownFileInfo): boolean;
 
-  protected override shouldAddCommandToSubmenu(): boolean {
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
     return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 

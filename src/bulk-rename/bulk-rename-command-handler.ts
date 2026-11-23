@@ -2,7 +2,6 @@ import type {
   AbstractFileCommandHandlerShouldAddToAbstractFileMenuParams,
   AbstractFileCommandHandlerShouldAddToAbstractFilesMenuParams
 } from '@mnaoumov/obsidian-lib/command-handlers/abstract-file-command-handler';
-import type { CommandHandlerRegistrationContext } from '@mnaoumov/obsidian-lib/command-handlers/command-handler';
 import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type { ResourceLockComponent } from '@mnaoumov/obsidian-lib/resource-lock';
 import type { VaultTransaction } from '@mnaoumov/obsidian-lib/vault-transaction';
@@ -115,7 +114,6 @@ export class BulkRenameCommandHandler extends AbstractFileCommandHandler {
   private readonly bulkOperationRunner: BulkOperationRunner;
   private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
-  private registrationShouldAddCommandToSubmenu: boolean | null = null;
   private readonly resourceLockComponent: ResourceLockComponent;
 
   private readonly selectBulkRenameRequest: SelectBulkRenameRequest;
@@ -135,11 +133,6 @@ export class BulkRenameCommandHandler extends AbstractFileCommandHandler {
     this.pluginSettingsComponent = params.pluginSettingsComponent;
     this.resourceLockComponent = params.resourceLockComponent;
     this.selectBulkRenameRequest = params.selectBulkRenameRequest;
-  }
-
-  public override async onRegistered(context: CommandHandlerRegistrationContext): Promise<void> {
-    await super.onRegistered(context);
-    this.registrationShouldAddCommandToSubmenu = context.shouldAddCommandToSubmenu ?? null;
   }
 
   protected override canExecuteAbstractFile(abstractFile: TAbstractFile): boolean {
@@ -183,11 +176,8 @@ export class BulkRenameCommandHandler extends AbstractFileCommandHandler {
     });
   }
 
-  protected override shouldAddCommandToSubmenu(): boolean {
-    // `obsidian-lib` answers `false` both when nothing set it and when a menu surface that wraps every item in a
-    // plugin-titled entry forced it off, so the registration's own answer is kept to let the setting fill only the
-    // unset case.
-    return this.registrationShouldAddCommandToSubmenu ?? this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
+  protected override getDefaultShouldAddCommandToSubmenu(): boolean {
+    return this.pluginSettingsComponent.settings.shouldAddCommandsToSubmenu;
   }
 
   // eslint-disable-next-line typescript-dev-toolkit/params-options-name-match -- Override must keep the base param type.
