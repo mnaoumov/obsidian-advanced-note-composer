@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## 6.6.0
+
+This release has 6 new features and 2 documentation changes. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- **merge:** merge all linked notes back into the active note at once (#315)
+- **move:** move a selection under a heading picked in any note
+- **split:** add Split note by horizontal rules, an idea from Splitsmith
+- **merge:** add the merged note's name to the target's aliases
+- **attachments:** inline an attachment note into its parent
+- **attachments:** extract an attachment into its own note
+
+### Documentation
+
+- refresh the See also section
+- use the plugin badge line in the README
+
 ## 6.5.0
 
 This release has 1 new feature, 1 fix and 1 documentation change. 6 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
