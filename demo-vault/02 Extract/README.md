@@ -10,3 +10,4 @@ Extracting is the opposite of merging: it takes part of a note out into a note o
 | [08 Extract between horizontal rules](<./08 Extract between horizontal rules.md>) | The block between the rules nearest the cursor — no selecting, which suits mobile |
 | [37 Create empty note](<./37 Create empty note.md>) | Extracting NOTHING: an empty note plus a link at the cursor, from the editor or the file explorer |
 | [44 Extract attachment into its own note](<./44 Extract attachment into its own note.md>) | An embedded attachment into a note of its own, with every `[[parent#^block]]` link moved to that note |
+| [46 Move selection under heading](<./46 Move selection under heading.md>) | A selection, or a marked smart cut & paste selection, under a heading chosen in any note, without opening it |

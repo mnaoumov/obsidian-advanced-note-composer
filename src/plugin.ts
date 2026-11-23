@@ -27,6 +27,8 @@ import { MergeFolderIntoFileCommandHandler } from './merge/folder-into-file/merg
 import { MergeFolderCommandHandler } from './merge/folder/merge-folder-command-handler.ts';
 import { MergeLinkedNotesCommandHandler } from './merge/linked-notes/merge-linked-notes-command-handler.ts';
 import { MergeFileCommandHandler } from './merge/merge-file-command-handler.ts';
+import { MoveMarkedSelectionUnderHeadingEditorCommandHandler } from './move-under-heading/move-marked-selection-under-heading-editor-command-handler.ts';
+import { MoveSelectionUnderHeadingEditorCommandHandler } from './move-under-heading/move-selection-under-heading-editor-command-handler.ts';
 import {
   clearRecentTargets,
   recordRecentVisit
@@ -293,6 +295,13 @@ export class Plugin extends PluginBase {
         resourceLockComponent
       }),
       buildExtractCurrentSelectionEditorCommandHandler(),
+      new MoveSelectionUnderHeadingEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
       new ExtractThisHeadingEditorCommandHandler({
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
@@ -457,6 +466,14 @@ export class Plugin extends PluginBase {
       buildMoveAtCursorHandler(true),
       buildMoveToEdgeHandler(InsertMode.Prepend),
       buildMoveToEdgeHandler(InsertMode.Append),
+      new MoveMarkedSelectionUnderHeadingEditorCommandHandler({
+        app: this.app,
+        consoleDebugComponent: this.consoleDebugComponent,
+        moveSelectionBuffer,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        pluginSettingsComponent,
+        resourceLockComponent
+      }),
       buildCancelMoveCommandHandler(),
       buildOpenSplitModalCommandHandler(),
       new MergeFolderCommandHandler({
