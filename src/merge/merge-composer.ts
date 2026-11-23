@@ -45,6 +45,14 @@ const ALIASES_PROPERTY_NAME = 'aliases';
 
 interface MergeComposerConstructorParams extends ComposerBaseConstructorParamsBase {
   readonly consoleDebugComponent: ConsoleDebugComponent;
+
+  /**
+   * The token a batch merge at the links has already put in the target in place of the link to the source (issue
+   * #315). The note goes there, exactly as {@link MergeComposerConstructorParams.shouldMergeAtSourceLink} would put
+   * it in place of the link itself, without looking the link up again.
+   */
+  readonly insertTokenAtSourceLink?: string;
+
   readonly pluginSettingsComponent: PluginSettingsComponent;
 
   /**
@@ -99,6 +107,12 @@ export class MergeComposer extends ComposerBase {
     this.shouldMergeAtSourceLink = params.shouldMergeAtSourceLink ?? false;
     this.shouldOpenAfterMerge = params.shouldOpenAfterMerge ?? params.pluginSettingsComponent.settings.shouldOpenNoteAfterMerge;
     this.shouldMoveAttachments = params.shouldMoveAttachments ?? params.pluginSettingsComponent.settings.shouldMoveAttachmentsWhenMergingFile;
+    if (params.insertTokenAtSourceLink === undefined) {
+      return;
+    }
+
+    this.insertToken = params.insertTokenAtSourceLink;
+    this.shouldTrimLineBreaksAtInsertToken = true;
   }
 
   public async mergeFile(): Promise<void> {
