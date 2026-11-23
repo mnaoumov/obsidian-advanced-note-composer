@@ -314,7 +314,7 @@ describe('merge folder contents into a single file does not cycle the active lea
             // Proof the recording above is of a merge that actually happened: every note's heading landed in
             // the merged note. Without this an early bail-out would look like "no cycling" and pass.
             mergedHeadingCount: [...mergedContent.matchAll(/^# (?:Note|Nested) /gm)].length,
-            recording: [...context.recording ?? []],
+            recording: [...(context.recording ?? [])],
             sourceGone: app.vault.getAbstractFileByPath(sourceFolder) === null
           };
         },

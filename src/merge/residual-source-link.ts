@@ -105,7 +105,7 @@ export async function findResidualSourceLink(params: FindResidualSourceLinkParam
     return null;
   }
   const cache = await getCacheSafe(app, targetFile);
-  const references: ReferenceCache[] = [...cache?.links ?? [], ...cache?.embeds ?? []];
+  const references: ReferenceCache[] = [...(cache?.links ?? []), ...(cache?.embeds ?? [])];
   const sourceReferences = references.filter((reference) => {
     const { path } = parseLinktext(reference.link);
     return app.metadataCache.getFirstLinkpathDest(path, targetFile.path) === sourceFile;

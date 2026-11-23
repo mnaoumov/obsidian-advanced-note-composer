@@ -38,7 +38,7 @@ interface MockPluginSettingsComponentResult {
 
 // Partial: the library's own release-notes component imports this module too, and needs the rest of it.
 vi.mock('@mnaoumov/obsidian-lib/html-element', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/html-element')>(),
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/html-element')>()),
   appendCodeBlock: vi.fn()
 }));
 

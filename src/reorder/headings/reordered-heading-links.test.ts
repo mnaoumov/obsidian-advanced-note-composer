@@ -31,7 +31,7 @@ import {
 } from './reordered-heading-links.ts';
 
 vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>(),
+  ...(await importOriginal<typeof import('obsidian')>()),
   resolveSubpath: vi.fn()
 }));
 

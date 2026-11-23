@@ -528,14 +528,14 @@ export abstract class SplitRecursivelyEditorCommandHandlerBase extends ActiveEdi
         continue;
       }
       createdNotes.push(
-        ...await this.splitBranch({
+        ...(await this.splitBranch({
           editor: childEditor,
           file: child.file,
           isRootPass: false,
           minLevel: child.level + 1,
           rootFolderOverride: null,
           rootHeadingLine: null
-        })
+        }))
       );
     }
 

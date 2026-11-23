@@ -209,7 +209,7 @@ describe('folder merge opens the first note of the destination folder (issue #21
         async callback({ app, context, renderDelayInMilliseconds }) {
           // Long enough for a second, unwanted open to show up in the recorder before it is read.
           await sleep(renderDelayInMilliseconds);
-          return { activePath: app.workspace.getActiveFile()?.path ?? null, recording: [...context.recording ?? []] };
+          return { activePath: app.workspace.getActiveFile()?.path ?? null, recording: [...(context.recording ?? [])] };
         },
         contextId,
         input: { renderDelayInMilliseconds: RENDER_DELAY_IN_MILLISECONDS },

@@ -366,7 +366,7 @@ export function collectAttachmentsReferencedBySelections(params: CollectAttachme
   // Embeds and links in one pass: the reported case is an embedded image, but a heading that merely LINKS
   // to its PDF owns it just as much.
   /* v8 ignore next 2 -- defensive ?? for a note the metadata cache has not indexed yet. */
-  const references = [...cache?.embeds ?? [], ...cache?.links ?? []];
+  const references = [...(cache?.embeds ?? []), ...(cache?.links ?? [])];
 
   const selectedAttachments = new Map<string, TFile>();
   const pathsReferencedByTheRemainder = new Set<string>();

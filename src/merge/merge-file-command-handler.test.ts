@@ -50,7 +50,7 @@ interface TestableHandler {
 // imports `MARKDOWN_FILE_EXTENSION` from here — a factory listing only the mocked function makes that import
 // `undefined` and the whole suite fails to load.
 vi.mock(import('@mnaoumov/obsidian-lib/file-system'), async (importOriginal) => ({
-  ...await importOriginal(),
+  ...(await importOriginal()),
   isMarkdownFile: vi.fn()
 }));
 

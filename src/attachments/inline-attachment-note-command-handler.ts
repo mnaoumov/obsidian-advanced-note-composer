@@ -348,7 +348,7 @@ export class InlineAttachmentNoteCommandHandler extends FileCommandHandler {
           const alias = parsed?.alias ?? (isEmbed ? undefined : reference.displayText ?? noteFile.basename);
           rewrittenLinkCount++;
           return generateMarkdownLink({
-            ...alias !== undefined && { alias },
+            ...(alias !== undefined && { alias }),
             app: this.app,
             isEmbed,
             originalLink: reference.original,
@@ -373,7 +373,7 @@ export class InlineAttachmentNoteCommandHandler extends FileCommandHandler {
     }
 
     const newLink = generateMarkdownLink({
-      ...analysis.linkText !== null && { alias: analysis.linkText },
+      ...(analysis.linkText !== null && { alias: analysis.linkText }),
       app: this.app,
       isEmbed: analysis.isEmbed,
       sourcePathOrFile: parentFile,

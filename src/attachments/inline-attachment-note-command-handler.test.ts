@@ -77,12 +77,12 @@ interface CapturedConfirmParams {
 }
 
 vi.mock('@mnaoumov/obsidian-lib/file-system', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/file-system')>(),
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/file-system')>()),
   isMarkdownFile: vi.fn()
 }));
 
 vi.mock('@mnaoumov/obsidian-lib/link', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/link')>(),
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/link')>()),
   buildBacklinksSnapshot: vi.fn((params: BuildBacklinksSnapshotParamsStub) => {
     params.payloadProvider();
     return 'snapshot';
@@ -133,13 +133,13 @@ vi.mock('./attachments.ts', () => ({
 }));
 
 vi.mock('./extract-attachment-into-note.ts', async (importOriginal) => ({
-  ...await importOriginal<typeof import('./extract-attachment-into-note.ts')>(),
+  ...(await importOriginal<typeof import('./extract-attachment-into-note.ts')>()),
   countReferences: vi.fn(),
   findBlockIdOnLine: vi.fn()
 }));
 
 vi.mock('./inline-attachment-note.ts', async (importOriginal) => ({
-  ...await importOriginal<typeof import('./inline-attachment-note.ts')>(),
+  ...(await importOriginal<typeof import('./inline-attachment-note.ts')>()),
   analyzeAttachmentNote: vi.fn(),
   findAttachmentNoteReference: vi.fn(),
   findBlockEndLine: vi.fn(),

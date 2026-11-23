@@ -244,9 +244,13 @@ function getFolder(path: string): TFolder {
   return ensureNonNullable(app.vault.getFolderByPath(path));
 }
 
-function initApp(files: Record<string, string> = {}, plugins?: Record<string, unknown>): void {
+function initApp(files: Record<string, string> = {}): void {
+  initAppWithPlugins(files, {});
+}
+
+function initAppWithPlugins(files: Record<string, string>, plugins: Record<string, unknown>): void {
   app = App.createConfigured__({ files }).asOriginalType__();
-  for (const [id, plugin] of Object.entries(plugins ?? {})) {
+  for (const [id, plugin] of Object.entries(plugins)) {
     registerPluginStub(app, id, plugin);
   }
   vi.spyOn(app.vault, 'getAvailablePath').mockImplementation((basePath, extension) => {
@@ -557,7 +561,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should map a character that the replacement string would otherwise mangle', async () => {
       const parseTemplate = vi.fn().mockResolvedValue('A - B');
-      initApp({ 'parent/note.md': 'note' }, {
+      initAppWithPlugins({ 'parent/note.md': 'note' }, {
         'templater-obsidian': createTemplaterPluginStub({
           // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
           templater: { create_running_config: vi.fn().mockReturnValue({}), parse_template: parseTemplate }
@@ -586,7 +590,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should report a template that throws something other than an Error', async () => {
       // `Templater` runs user JS, and `throw "boom"` is legal JS.
-      initApp({ 'parent/note.md': 'note' }, {
+      initAppWithPlugins({ 'parent/note.md': 'note' }, {
         'templater-obsidian': createTemplaterPluginStub({
           // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
           templater: { create_running_config: vi.fn().mockReturnValue({}), parse_template: vi.fn().mockRejectedValue('boom') }
@@ -1053,7 +1057,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
     });
 
     it('should report a transform that throws something other than an Error', async () => {
-      initApp({ 'parent/note.md': 'note' }, {
+      initAppWithPlugins({ 'parent/note.md': 'note' }, {
         'templater-obsidian': createTemplaterPluginStub({
           // eslint-disable-next-line camelcase -- `Templater`'s own API method name.
           templater: { create_running_config: vi.fn().mockReturnValue({}), parse_template: vi.fn().mockRejectedValue('boom') }
@@ -1086,7 +1090,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
   describe('templater', () => {
     it('should warn when templater is enabled but the plugin is not installed', async () => {
-      initApp({ 'parent/note.md': 'note' }, {});
+      initAppWithPlugins({ 'parent/note.md': 'note' }, {});
       mockPrompt.mockResolvedValue('alpha');
       const { handler, showNotice } = createHandler({ shouldRunTemplaterOnDestinationFile: true });
 
@@ -1101,7 +1105,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const parseTemplate = vi.fn().mockResolvedValue('rendered\n');
       const startTask = vi.fn();
       const endTask = vi.fn().mockResolvedValue(undefined);
-      initApp({ 'parent/note.md': 'note' }, {
+      initAppWithPlugins({ 'parent/note.md': 'note' }, {
         'templater-obsidian': createTemplaterPluginStub({
           templater: {
             /* eslint-disable camelcase -- `Templater`'s own API method names. */
@@ -1141,7 +1145,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
       const parseTemplate = vi.fn()
         .mockRejectedValueOnce(new Error('bad template'))
         .mockResolvedValueOnce('second\n');
-      initApp({ 'parent/note.md': 'note' }, {
+      initAppWithPlugins({ 'parent/note.md': 'note' }, {
         'templater-obsidian': createTemplaterPluginStub({
           templater: {
             /* eslint-disable camelcase -- `Templater`'s own API method names. */
@@ -1179,7 +1183,7 @@ describe('CreateFolderWithNotesCommandHandler', () => {
 
     it('should report a created note whose template throws something other than an Error', async () => {
       // `Templater` runs user JS, and `throw "boom"` is legal JS.
-      initApp({ 'parent/note.md': 'note' }, {
+      initAppWithPlugins({ 'parent/note.md': 'note' }, {
         'templater-obsidian': createTemplaterPluginStub({
           templater: {
             /* eslint-disable camelcase -- `Templater`'s own API method names. */

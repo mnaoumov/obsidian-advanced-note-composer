@@ -303,7 +303,7 @@ export class ExtractAttachmentIntoNoteEditorCommandHandler extends EditorCommand
         const parsed = parseLink(reference.original);
         rewrittenLinkCount++;
         return generateMarkdownLink({
-          ...parsed?.alias !== undefined && { alias: parsed.alias },
+          ...(parsed?.alias !== undefined && { alias: parsed.alias }),
           app: this.app,
           isEmbed: parsed?.isEmbed ?? false,
           originalLink: reference.original,

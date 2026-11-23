@@ -460,7 +460,7 @@ function fanOutRetiredExcludePaths(
     return;
   }
 
-  legacySettings[propertyName] = [...retiredPaths, ...legacySettings[propertyName] ?? []];
+  legacySettings[propertyName] = [...retiredPaths, ...(legacySettings[propertyName] ?? [])];
 }
 
 /**
@@ -580,7 +580,7 @@ function foldRetiredRenameContentPaths(
   fanOutRetiredExcludePaths(
     legacySettings,
     'renameCommandExcludePaths',
-    [...retiredExcludePaths, ...legacySettings.renameExcludePaths ?? []].filter((path) => !renameCommandExcludePaths.includes(path))
+    [...retiredExcludePaths, ...(legacySettings.renameExcludePaths ?? [])].filter((path) => !renameCommandExcludePaths.includes(path))
   );
 }
 

@@ -252,7 +252,7 @@ export function setObsidianSetting(app: App, key: Parameters<App['vault']['setCo
  * Manual equivalent: open the note, select the text, and open the command palette (or right-click).
  */
 export async function showAvailableCommands(app: App, options: ShowAvailableCommandsOptions): Promise<void> {
-  await runCommandSetup(app, { commandId: '', notePath: options.notePath, ...options.selection !== undefined && { selection: options.selection } });
+  await runCommandSetup(app, { commandId: '', notePath: options.notePath, ...(options.selection !== undefined && { selection: options.selection }) });
   const available: string[] = [];
   const unavailable: string[] = [];
   for (const commandId of options.commandIds) {
@@ -342,8 +342,8 @@ export function showFileMenu(app: App, paths: string[], anchorEl?: HTMLElement |
 
   const rect = anchorEl?.getBoundingClientRect();
   menu.showAtPosition({
-    x: rect ? rect.left : window.innerWidth * MENU_X_FRACTION_WITHOUT_ANCHOR,
-    y: rect ? rect.bottom : window.innerHeight * MENU_Y_FRACTION_WITHOUT_ANCHOR
+    x: rect ? rect.left : activeWindow.innerWidth * MENU_X_FRACTION_WITHOUT_ANCHOR,
+    y: rect ? rect.bottom : activeWindow.innerHeight * MENU_Y_FRACTION_WITHOUT_ANCHOR
   });
   shownMenus.push(menu);
 }
@@ -378,7 +378,7 @@ export async function resetDemo(app: App, paths: string[], createdInFolders: str
   for (const folderPath of createdInFolders) {
     const folder = folderPath === '' ? app.vault.getRoot() : app.vault.getFolderByPath(folderPath);
     // eslint-disable-next-line unicorn/no-useless-spread -- A copy: deleting a child removes it from `children` mid-loop.
-    for (const child of [...folder?.children ?? []]) {
+    for (const child of [...(folder?.children ?? [])]) {
       if (isSnapshotted(child.path) && !await adapter.exists(`${SNAPSHOT_FOLDER}/${child.path}`)) {
         await deleteIfExists(app, child);
       }
@@ -592,7 +592,7 @@ async function restoreFolder(app: App, path: string): Promise<void> {
   const shippedChildren = new Set([...listed.files, ...listed.folders].map((childPath) => childPath.slice(SNAPSHOT_FOLDER.length + 1)));
   const folder = app.vault.getFolderByPath(path);
   // eslint-disable-next-line unicorn/no-useless-spread -- A copy: deleting a child removes it from `children` mid-loop.
-  for (const child of [...folder?.children ?? []]) {
+  for (const child of [...(folder?.children ?? [])]) {
     if (!shippedChildren.has(child.path)) {
       await deleteIfExists(app, child);
     }

@@ -47,7 +47,7 @@ interface RenderInternalLinkParamsStub {
 }
 
 vi.mock('@mnaoumov/obsidian-lib/file-system', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/file-system')>(),
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/file-system')>()),
   isMarkdownFile: vi.fn()
 }));
 

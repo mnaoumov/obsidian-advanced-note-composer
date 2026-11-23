@@ -203,7 +203,7 @@ export function findAttachmentReferenceAtCursor(params: FindAttachmentReferenceA
   } = params;
 
   const candidates: AttachmentReferenceAtCursor[] = [];
-  for (const reference of [...cache.embeds ?? [], ...cache.links ?? []]) {
+  for (const reference of [...(cache.embeds ?? []), ...(cache.links ?? [])]) {
     if (reference.position.start.line > line || reference.position.end.line < line) {
       continue;
     }

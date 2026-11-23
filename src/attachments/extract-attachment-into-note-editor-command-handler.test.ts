@@ -57,7 +57,7 @@ interface BuildBacklinksSnapshotParamsStub {
 }
 
 vi.mock('@mnaoumov/obsidian-lib/link', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/link')>(),
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/link')>()),
   buildBacklinksSnapshot: vi.fn((params: BuildBacklinksSnapshotParamsStub) => {
     params.payloadProvider();
     return 'snapshot';
@@ -100,7 +100,7 @@ vi.mock('./attachments.ts', () => ({
 }));
 
 vi.mock('./extract-attachment-into-note.ts', async (importOriginal) => ({
-  ...await importOriginal<typeof import('./extract-attachment-into-note.ts')>(),
+  ...(await importOriginal<typeof import('./extract-attachment-into-note.ts')>()),
   countReferences: vi.fn(),
   findAttachmentReferenceAtCursor: vi.fn(),
   findBlockIdOnLine: vi.fn()

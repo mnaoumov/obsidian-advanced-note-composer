@@ -16,7 +16,7 @@ import {
 import { buildExtractedSubpathPredicate } from './extracted-link-targets.ts';
 
 vi.mock('obsidian', async (importOriginal) => ({
-  ...await importOriginal<typeof import('obsidian')>(),
+  ...(await importOriginal<typeof import('obsidian')>()),
   resolveSubpath: vi.fn()
 }));
 

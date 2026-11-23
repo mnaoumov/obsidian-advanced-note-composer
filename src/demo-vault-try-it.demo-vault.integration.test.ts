@@ -46,7 +46,7 @@ async function clickButton(notePath: string, caption: string): Promise<ClickResu
       function findButton(): HTMLButtonElement | null {
         const view = app.workspace.getActiveViewOfType(obsidianModule.MarkdownView);
         const scroller = view?.containerEl.querySelector<HTMLElement>('.markdown-preview-view');
-        const found = [...view?.containerEl.querySelectorAll<HTMLButtonElement>(':scope .block-language-code-button button.mod-cta') ?? []]
+        const found = [...(view?.containerEl.querySelectorAll<HTMLButtonElement>(':scope .block-language-code-button button.mod-cta') ?? [])]
           .find((candidate) => candidate.textContent === buttonCaption);
         if (!found && scroller) {
           const isAtBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - SCROLL_BOTTOM_TOLERANCE_IN_PIXELS;

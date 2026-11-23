@@ -51,7 +51,7 @@ interface AbortableComposer {
 // REAL against test-mocks' synchronous indexer, so editReferences sees the target's links; the vault, lock,
 // transaction, and link rewriting are all real too.
 vi.mock('@mnaoumov/obsidian-lib/metadata-cache', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>(),
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>()),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
   getFrontmatterSafe: vi.fn().mockResolvedValue({})
 }));

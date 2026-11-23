@@ -186,7 +186,7 @@ describe('command menu placement (issues #252, #254)', () => {
           const commandName = ITEM_TITLE;
           const settingTab = await openSettingTab();
           const settingItem = await findSettingItem({ app, name: commandName, settingTab });
-          const toggleEls = [...settingItem?.querySelectorAll('.checkbox-container') ?? []];
+          const toggleEls = [...(settingItem?.querySelectorAll('.checkbox-container') ?? [])];
           if (toggleEls.length !== 2) {
             throw new TypeError(`"${commandName}" did not render two placement toggles.`);
           }

@@ -64,7 +64,7 @@ interface Testable {
 }
 
 vi.mock('@mnaoumov/obsidian-lib/metadata-cache', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>(),
+  ...(await importOriginal<typeof import('@mnaoumov/obsidian-lib/metadata-cache')>()),
   getBacklinksForFileSafe: vi.fn().mockResolvedValue(new Map()),
   getCacheSafe: vi.fn().mockResolvedValue(null),
   getFrontmatterSafe: vi.fn().mockResolvedValue({})

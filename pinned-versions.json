@@ -40,19 +40,26 @@
       "expect": "^7.0.3",
       "manualCheck": "The check reads the range @wdio/utils declares, not a version, because that range is what forces the override. When it moves to ^8 or later the override and this entry can both go. Before lifting it, re-run the deepmergeCustom probe rather than trusting the range alone: @wdio/config passes a handler that reads `meta.key`, and that is precisely the API 8.0.0 renamed, so a regression there would be silent rather than a crash."
     },
+    "glob": {
+      "section": "overrides",
+      "why": "Clears GHSA-3g3m-2fjr-6pw4 (AbortSignal cancellation bypass, glob >=9 <=14.0.1; patched 14.0.2). obsidian-integration-testing pins webdriverio, whose @wdio/config and archiver-utils still require glob ^10.2.2 and ^10.0.0, so no direct dependency update reaches the fix. Both call only the retained sync API, which glob 14 keeps with its CommonJS build. Forcing 14 also drops glob 10's nested minimatch 9, one of the two GHSA-g3hv-75wg-m249 paths. NEVER take the `npm audit fix --force` remedy: it downgrades obsidian-integration-testing to 1.1.2. Mirrors the same override in obsidian-tag-notes.",
+      "check": "node -e \"const fs=require('node:fs');for(const p of ['@wdio/config','archiver-utils'])console.log(JSON.parse(fs.readFileSync('node_modules/'+p+'/package.json','utf8')).dependencies.glob)\"",
+      "expect": "^10.2.2\n^10.0.0",
+      "manualCheck": "Remove the override when both consumers admit >=14.0.2. Re-run npm audit and the project gate."
+    },
+    "@microsoft/eslint-plugin-sdl": {
+      "section": "overrides",
+      "why": "A scoped override, `eslint-plugin-n` ^17.24.0 under @microsoft/eslint-plugin-sdl, clears GHSA-g3hv-75wg-m249 (minimatch denial of service through glob part amplification, 7.0.0 - 11.0.0) on the path eslint-plugin-obsidianmd -> @microsoft/eslint-plugin-sdl -> eslint-plugin-n 17.10.3 -> a minimatch inside that range. eslint-plugin-n 17.24 depends on minimatch 3.x, outside the advisory range, and stays within the 17.x major sdl declares. It is scoped so the direct eslint-plugin-n 18 the toolkit brings is untouched. The P21 minimatch 11 recipe, as in obsidian-tag-notes.",
+      "check": "node -e \"const fs=require('node:fs');process.stdout.write(JSON.parse(fs.readFileSync('node_modules/@microsoft/eslint-plugin-sdl/package.json','utf8')).dependencies['eslint-plugin-n'])\"",
+      "expect": "17.10.3",
+      "manualCheck": "When @microsoft/eslint-plugin-sdl declares an eslint-plugin-n whose minimatch is outside 7.0.0 - 11.0.0, drop the override and this entry after a clean npm audit."
+    },
     "katex": {
       "section": "overrides",
       "why": "Clears GHSA-238p-pmpm-9mq7 (KaTeX prototype pollution bypassing trust restrictions, >=0.11.0 <0.18.2), which also carried the advisories on micromark-extension-math and markdownlint. Reached only through the toolkit packages -> markdownlint -> micromark-extension-math@3.1.0 (its newest release), which declares katex ^0.16.0, so no bump reaches the fix. The 0.x minor jump is safe because nothing here ever runs KaTeX: markdownlint imports only `math` (the micromark syntax extension) from micromark-extension-math, and katex is required solely by its `mathHtml` half, which markdownlint never loads. NEVER take the `npm audit fix --force` remedy: it downgrades the toolkit packages. Mirrors the same override in obsidian-patterns.",
       "check": "node -e \"const fs=require('node:fs');process.stdout.write(JSON.parse(fs.readFileSync('node_modules/micromark-extension-math/package.json','utf8')).dependencies.katex)\"",
       "expect": "^0.16.0",
       "manualCheck": "The check reads the range micromark-extension-math declares. When it admits 0.18.2 or later the override and this entry can both go."
-    },
-    "moment": {
-      "section": "overrides",
-      "why": "Clears GHSA-4p3w-j4w9-5jqw (moment path traversal via a crafted non-string locale name, >=2.29.2 <2.31.0), which also carried the advisories on obsidian 1.12.3, eslint-plugin-obsidianmd and @mnaoumov/obsidian-dev-toolkit. Reached through eslint-plugin-obsidianmd -> obsidian@1.12.3, which pins moment at the exact 2.29.4. The direct obsidian@1.14.4 already uses 2.31.0, so the override collapses the tree onto that one copy rather than adding a version; it is a minor move within 2.x. Mirrors the same override in obsidian-patterns.",
-      "check": "node -e \"const fs=require('node:fs');process.stdout.write(JSON.parse(fs.readFileSync('node_modules/eslint-plugin-obsidianmd/node_modules/obsidian/package.json','utf8')).dependencies.moment)\"",
-      "expect": "2.29.4",
-      "manualCheck": "The check reads the exact moment pin of the obsidian copy eslint-plugin-obsidianmd brings (it declares obsidian 1.12.3 exactly). When eslint-plugin-obsidianmd moves to an obsidian whose moment is 2.31.0 or later, or that nested copy disappears and the check fails to read it, re-run `npm audit` without the override and drop both if it stays clean."
     },
     "typescript": {
       "section": "devDependencies",

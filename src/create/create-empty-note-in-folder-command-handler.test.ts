@@ -64,7 +64,7 @@ vi.mock('@mnaoumov/obsidian-lib/modals/prompt', () => ({
 }));
 
 vi.mock(import('./create-note.ts'), async (importOriginal) => ({
-  ...await importOriginal(),
+  ...(await importOriginal()),
   createNoteFromTypedName: vi.fn()
 }));
 

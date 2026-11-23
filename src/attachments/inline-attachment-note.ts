@@ -288,7 +288,7 @@ export function findAttachmentNoteReference(params: FindAttachmentNoteReferenceP
     cache,
     noteFile
   } = params;
-  const [reference, ...otherReferences] = [...cache.embeds ?? [], ...cache.links ?? []];
+  const [reference, ...otherReferences] = [...(cache.embeds ?? []), ...(cache.links ?? [])];
   if (!reference || otherReferences.length > 0) {
     return null;
   }
@@ -355,7 +355,7 @@ export function findReferencesToNote(params: FindReferencesToNoteParams): Refere
     noteFile,
     sourceFile
   } = params;
-  return [...cache.embeds ?? [], ...cache.links ?? []]
+  return [...(cache.embeds ?? []), ...(cache.links ?? [])]
     .filter((reference) => app.metadataCache.getFirstLinkpathDest(parseLinktext(reference.link).path, sourceFile.path) === noteFile)
     .sort((a, b) => a.position.start.offset - b.position.start.offset);
 }

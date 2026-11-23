@@ -233,7 +233,7 @@ describe('folder merge does not cycle the active leaf (issue #106)', () => {
         async callback({ context, renderDelayInMilliseconds }) {
           // Long enough for a late activation to reach the recorder before it is read.
           await sleep(renderDelayInMilliseconds);
-          return { recording: [...context.recording ?? []] };
+          return { recording: [...(context.recording ?? [])] };
         },
         contextId,
         input: { renderDelayInMilliseconds: RENDER_DELAY_IN_MILLISECONDS },

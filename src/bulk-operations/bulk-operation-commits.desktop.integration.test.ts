@@ -72,7 +72,7 @@ async function setSettings(input: SetSettingsInput): Promise<void> {
           });
           return;
         }
-        queue.push(...node._children ?? []);
+        queue.push(...(node._children ?? []));
       }
       throw new Error('Settings component was not found.');
     },

@@ -285,7 +285,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
           // The merge does not iterate through `loop()`, so it refreshes a bulk-operation commit's lease lock itself.
           reportBulkOperationProgress();
           const headingPlanEntry = headingPlanByPath.get(sourceFile.path);
-          pendingHeadings.push(...headingPlanEntry?.headings ?? []);
+          pendingHeadings.push(...(headingPlanEntry?.headings ?? []));
           if (isMergeIgnored(pluginSettingsComponent, sourceFile.path, targetFile.path)) {
             ignoredSourceFiles.push(sourceFile);
             continue;
@@ -302,7 +302,7 @@ export async function mergeFilesIntoSingleFile(params: MergeFilesIntoSingleFileP
             app,
             consoleDebugComponent,
             headingLevelShift: headingPlanEntry?.depth ?? 0,
-            ...insertToken !== undefined && { insertTokenAtSourceLink: insertToken },
+            ...(insertToken !== undefined && { insertTokenAtSourceLink: insertToken }),
             isNewTargetFile: isFirstMergeIntoNewTarget,
             pluginNoticeComponent,
             pluginSettingsComponent,

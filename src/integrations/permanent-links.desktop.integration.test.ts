@@ -82,7 +82,7 @@ describe('Permanent Links in a note merge', () => {
             settingsComponent = node as SettingsCarrier;
             break;
           }
-          queue.push(...node._children ?? []);
+          queue.push(...(node._children ?? []));
         }
         if (!settingsComponent) {
           throw new Error('Settings component not found.');

@@ -138,7 +138,7 @@ export async function replaceSourceLinksWithTokens(params: ReplaceSourceLinksWit
 
 function collectLinkedMarkdownFiles(app: App, targetFile: TFile, cache: CachedMetadata | null): TFile[] {
   const files = new Set<TFile>();
-  for (const reference of [...cache?.links ?? [], ...cache?.embeds ?? []]) {
+  for (const reference of [...(cache?.links ?? []), ...(cache?.embeds ?? [])]) {
     const { path, subpath } = parseLinktext(reference.link);
     if (subpath !== '') {
       continue;

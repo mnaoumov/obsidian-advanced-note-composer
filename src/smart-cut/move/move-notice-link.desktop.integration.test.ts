@@ -159,7 +159,7 @@ describe('smart cut & paste completion notice link (issue #300)', () => {
          * @returns The state after the click, or `no notice link` when the notice had already gone.
          */
         async function clickNoticeLink(): Promise<string> {
-          const lastLineBox = [...findNoticeLink()?.getClientRects() ?? []].at(-1);
+          const lastLineBox = [...(findNoticeLink()?.getClientRects() ?? [])].at(-1);
           if (!lastLineBox) {
             return 'no notice link';
           }

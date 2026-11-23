@@ -69,7 +69,7 @@ async function reportRecordedErrors(context: TestContext): Promise<void> {
     entries = await evalInObsidian({
       callback() {
         const host = window as ErrorRecorderHost;
-        return [...host.__advancedNoteComposerErrorRecorder?.entries ?? []];
+        return [...(host.__advancedNoteComposerErrorRecorder?.entries ?? [])];
       }
     });
   } catch {

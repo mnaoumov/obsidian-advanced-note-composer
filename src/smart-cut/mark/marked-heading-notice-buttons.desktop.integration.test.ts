@@ -223,7 +223,7 @@ async function driveHeadingAction(label: string, title: string): Promise<Heading
 
       function clickNoticeButton(buttonText: string): void {
         const containerEl = activeDocument.querySelector('.advanced-note-composer-move-notice-buttons');
-        const buttonEl = [...containerEl?.querySelectorAll('button') ?? []].find((el) => el.textContent === buttonText);
+        const buttonEl = [...(containerEl?.querySelectorAll('button') ?? [])].find((el) => el.textContent === buttonText);
         if (!(buttonEl instanceof HTMLElement)) {
           throw new TypeError(`The "${buttonText}" notice button was not found.`);
         }
@@ -238,7 +238,7 @@ async function driveHeadingAction(label: string, title: string): Promise<Heading
       }
 
       function closeModal(modalElToClose: Element | null): void {
-        const cancelButtonEl = [...modalElToClose?.querySelectorAll('button') ?? []].find((el) => el.textContent === 'Cancel');
+        const cancelButtonEl = [...(modalElToClose?.querySelectorAll('button') ?? [])].find((el) => el.textContent === 'Cancel');
         if (!(cancelButtonEl instanceof HTMLElement)) {
           throw new TypeError('The "Cancel" button was not found.');
         }

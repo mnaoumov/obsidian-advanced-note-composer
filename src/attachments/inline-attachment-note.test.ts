@@ -92,7 +92,7 @@ describe('analyzeAttachmentNote', () => {
   const EMBED = '![[pic.png]]';
 
   function analyze(content: string, frontmatter: CachedMetadata['frontmatter'], original = EMBED, file = noteFile): ReturnType<typeof analyzeAttachmentNote> {
-    const cache: CachedMetadata = { embeds: [reference({ link: 'pic.png', original, startOffset: content.indexOf(original) })], ...frontmatter && { frontmatter } };
+    const cache: CachedMetadata = { embeds: [reference({ link: 'pic.png', original, startOffset: content.indexOf(original) })], ...(frontmatter && { frontmatter }) };
     return analyzeAttachmentNote({ app, attachmentExtensions: [], cache, content, noteFile: file });
   }
 
