@@ -63,6 +63,18 @@ const TEMPLATE_FIRST_EXCEPTIONS = new Set(['Folder note']);
 
 const TOP_LEVEL_LABEL = 'top level';
 
+/**
+ * Every test here builds a settings component, a tab and its full declaration tree, and that fixed cost
+ * alone took over 6 s for one test under `npm run gate`'s `test:coverage` on a loaded 2-processor machine,
+ * against Vitest's 5 s default. `renderRows` already renders only the rows a test reads, which took the
+ * worst case from about 12 s down; this covers what is left. Only the test that renders every row
+ * (templates first) gets a longer budget still.
+ */
+const SETTINGS_TAB_TEST_TIMEOUT_IN_MILLISECONDS = 30_000;
+const WHOLE_TAB_RENDER_TIMEOUT_IN_MILLISECONDS = 60_000;
+
+vi.setConfig({ testTimeout: SETTINGS_TAB_TEST_TIMEOUT_IN_MILLISECONDS });
+
 interface AppStatics {
   readonly createConfigured__: () => App;
 }
@@ -326,7 +338,7 @@ describe('PluginSettingsTab', () => {
   it('should render a placement row as an editor-menu toggle and a margin toggle, and compose them', async () => {
     const pluginSettingsComponent = await createSettingsComponent();
     const tab = await createSettingsTab(pluginSettingsComponent);
-    renderRows(tab);
+    renderRows(tab, ['Split note by headings recursively...']);
 
     const [editorMenuToggle, marginToggle] = toggles
       .filter((toggle) => toggle.name === 'Split note by headings recursively...')
@@ -359,7 +371,8 @@ describe('PluginSettingsTab', () => {
   // anywhere below it is a section the user has to scroll to again.
   it('should render only the root heading', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    // The headings are recorded while the declarations are walked, so one row renders them all.
+    renderRows(tab, ['Should fix footnotes']);
 
     expect(headings).toEqual(['Common']);
   });
@@ -380,7 +393,11 @@ describe('PluginSettingsTab', () => {
 
   // Issue #220: every header that has a template leads with it, so the templates stop reading as though
   // they were placed at random.
-  it('should lead every header that has a template with its templates', async () => {
+  /*
+   * The one test that renders EVERY row: which rows are templates is known only from what their `render`
+   * callbacks add. That costs seconds under `test:coverage` on a loaded machine, hence its own timeout.
+   */
+  it('should lead every header that has a template with its templates', { timeout: WHOLE_TAB_RENDER_TIMEOUT_IN_MILLISECONDS }, async () => {
     const tab = await createSettingsTab();
     renderRows(tab);
 
@@ -496,9 +513,12 @@ describe('PluginSettingsTab', () => {
   // describe itself in terms of a DIFFERENT command, which is what sent the reporter looking.
   it('should name only its own command in each folder-merge description', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
-
     const containers = collectContainers(tab);
+    renderRows(tab, [
+      ...(containers.get('Merge current folder with another folder') ?? []),
+      ...(containers.get('Merge folder contents into a single file') ?? [])
+    ]);
+
     for (const rowName of containers.get('Merge current folder with another folder') ?? []) {
       // Asserted first so the negative below cannot pass vacuously on an unrendered description.
       expect(findDesc(rowName)).not.toBe('');
@@ -525,7 +545,7 @@ describe('PluginSettingsTab', () => {
 
   it('should render the expected named settings', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should allow only current folder', 'Should show console debug messages', 'Should replace invalid characters', 'Replacement string', 'Frontmatter merge strategy', 'Should use source title when destination has none', 'Should add commands to submenu', 'Merge folder into file location', 'Should ask for the target folder when splitting']);
 
     const allNames = [...toggles, ...texts, ...dropdowns].map((entry) => entry.name);
     expect(allNames).toContain('Should allow only current folder');
@@ -544,7 +564,7 @@ describe('PluginSettingsTab', () => {
   // already in the box, and a second modal on that path would cost everyone more than the bug costs anyone.
   it('should leave the target folder prompt off by default', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should ask for the target folder when splitting']);
 
     const prompt = toggles.find((toggle) => toggle.name === 'Should ask for the target folder when splitting');
     expect(prompt?.component.getValue()).toBe(false);
@@ -552,7 +572,7 @@ describe('PluginSettingsTab', () => {
 
   it('should offer the three merged-note locations, defaulting to the pre-#178 behavior', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Merge folder into file location']);
 
     const location = dropdowns.find((dropdown) => dropdown.name === 'Merge folder into file location');
     const options = [...(location?.component.selectEl.options ?? [])].map((option) => option.value);
@@ -568,7 +588,7 @@ describe('PluginSettingsTab', () => {
   // and `Create` is what the picker did before the switch existed whenever the typed name matched nothing.
   it('should offer both split target modes, defaulting to create', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Default split target mode']);
 
     const mode = dropdowns.find((dropdown) => dropdown.name === 'Default split target mode');
     const options = [...(mode?.component.selectEl.options ?? [])].map((option) => option.value);
@@ -581,9 +601,10 @@ describe('PluginSettingsTab', () => {
   // nobody knows about is a token nobody uses.
   it('should list the folder tokens in every note template description', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    const noteTemplateRowNames = ['Merge template', 'Split template', 'Smart cut & paste template', 'Split into folder note name'];
+    renderRows(tab, noteTemplateRowNames);
 
-    for (const name of ['Merge template', 'Split template', 'Smart cut & paste template', 'Split into folder note name']) {
+    for (const name of noteTemplateRowNames) {
       const desc = findDesc(name);
       expect(desc).toContain('{{folderName}}');
       expect(desc).toContain('{{safeFolderName}}');
@@ -598,10 +619,11 @@ describe('PluginSettingsTab', () => {
 
   it('should explain the path, glob and regular-expression forms in the include/exclude path descriptions', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
-
     // The command-visibility filter (issue #198) takes the same entry forms, so it explains them too.
-    for (const name of ['Merge include paths', 'Merge exclude paths', 'Merge command include paths', 'Merge command exclude paths']) {
+    const mergePathRowNames = ['Merge include paths', 'Merge exclude paths', 'Merge command include paths', 'Merge command exclude paths'];
+    renderRows(tab, mergePathRowNames);
+
+    for (const name of mergePathRowNames) {
       const desc = findDesc(name);
       expect(desc).toContain('A path matches that note or folder and everything inside it');
       expect(desc).toContain('A glob is an entry holding');
@@ -615,14 +637,13 @@ describe('PluginSettingsTab', () => {
   // about any one category, so rather than being lost it now rides on every content-exclude row.
   it('should keep the attachment-folder advice on every content exclude row', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    const contentExcludeRowNames = COMMAND_CATEGORIES
+      .filter((commandCategory) => commandCategory !== CommandCategory.Select && commandCategory !== CommandCategory.Rename)
+      .map((commandCategory) => `${commandCategory} exclude paths`);
+    renderRows(tab, contentExcludeRowNames);
 
-    for (const commandCategory of COMMAND_CATEGORIES) {
-      if (commandCategory === CommandCategory.Select || commandCategory === CommandCategory.Rename) {
-        continue;
-      }
-
-      expect(findDesc(`${commandCategory} exclude paths`)).toContain('This is how to protect your attachment folder');
+    for (const name of contentExcludeRowNames) {
+      expect(findDesc(name)).toContain('This is how to protect your attachment folder');
     }
   });
 
@@ -630,34 +651,35 @@ describe('PluginSettingsTab', () => {
   // Two empty lists already mean "block nothing", so a master switch would only add an incoherent state.
   it('should render the command path lists instead of a blocking toggle', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Merge command exclude paths', 'Merge command include paths']);
 
     expect(findDesc('Merge command exclude paths')).toContain('Hide the Merge commands');
     expect(findDesc('Merge command include paths')).toContain('Offer the Merge commands only');
-    expect(() => findToggle('Should block commands on excluded paths')).toThrow();
+    // Checked against the declarations: the filtered render above would not have rendered it either way.
+    expect(collectRows(tab).map((row) => row.name)).not.toContain('Should block commands on excluded paths');
   });
 
   // Issue #271 deleted the four all-commands boxes. Leaving one behind would put the plugin back in the
   // state the reporter objected to, where a path can be listed in two places that disagree.
-  it('should render no all-commands path rows', async () => {
+  it('should declare no all-commands path rows', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    const rowNames = collectRows(tab).map((row) => row.name);
 
     for (const name of ['Include paths', 'Exclude paths', 'Command include paths', 'Command exclude paths']) {
-      expect(() => findDesc(name)).toThrow();
+      expect(rowNames).not.toContain(name);
     }
   });
 
   it('should render the per-operation-overrides toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should show per-operation option overrides']);
 
     expect(findToggle('Should show per-operation option overrides').getValue()).toBe(true);
   });
 
   it('should render the lock-all-notes toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should lock all notes when marking selection']);
 
     expect(findToggle('Should lock all notes when marking selection').getValue()).toBe(false);
   });
@@ -666,7 +688,7 @@ describe('PluginSettingsTab', () => {
   // split modal's switch-to-smart-cut mark through the same helper and are locked by it just as much.
   it('should describe the lock-all-notes row as covering every way a selection gets marked', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should lock all notes when marking selection']);
 
     const desc = findDesc('Should lock all notes when marking selection');
     expect(desc).toContain('Mark selection to move');
@@ -681,7 +703,7 @@ describe('PluginSettingsTab', () => {
   // descriptions name those families.
   it('should name the less obvious command families in the common rows', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should fix footnotes', 'Should run templater on destination file']);
 
     expect(findDesc('Should fix footnotes')).toContain('smart cut & paste move');
     const templaterDesc = findDesc('Should run templater on destination file');
@@ -692,21 +714,21 @@ describe('PluginSettingsTab', () => {
 
   it('should render the always-merge-excluded-items toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should always merge excluded items']);
 
     expect(findToggle('Should always merge excluded items').getValue()).toBe(false);
   });
 
   it('should render the ask-before-swapping toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should ask before swapping']);
 
     expect(findToggle('Should ask before swapping').getValue()).toBe(true);
   });
 
   it('should render the jump-to-moved-content toggles bound to their settings', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should jump to content moved to top of file', 'Should jump to content moved to bottom of file']);
 
     expect(findToggle('Should jump to content moved to top of file').getValue()).toBe(true);
     expect(findToggle('Should jump to content moved to bottom of file').getValue()).toBe(true);
@@ -714,14 +736,14 @@ describe('PluginSettingsTab', () => {
 
   it('should render the split-into-folder toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should split into folder']);
 
     expect(findToggle('Should split into folder').getValue()).toBe(false);
   });
 
   it('should render the split-into-folder note name highlighter bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Split into folder note name']);
 
     expect(findCodeHighlighter('Split into folder note name').getValue()).toBe('');
   });
@@ -729,7 +751,7 @@ describe('PluginSettingsTab', () => {
   // Discussion #309: empty is Obsidian's own default location, which is what the placeholder says.
   it('should render the folder for split notes text box bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Folder for split notes']);
 
     const entry = texts.find((text) => text.name === 'Folder for split notes');
     expect(entry?.component.getValue()).toBe('');
@@ -746,7 +768,7 @@ describe('PluginSettingsTab', () => {
   )('should keep $name empty once its box is cleared', async ({ defaultValue, name, propertyName }) => {
     const pluginSettingsComponent = await createSettingsComponent();
     const tab = await createSettingsTab(pluginSettingsComponent);
-    renderRows(tab);
+    renderRows(tab, [name]);
 
     const codeHighlighter = findCodeHighlighter(name);
     // The default is real text rather than a placeholder, so an empty box cannot be mistaken for it.
@@ -763,14 +785,14 @@ describe('PluginSettingsTab', () => {
 
   it('should render the split-headings-automatically toggle bound to its setting', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should split headings automatically']);
 
     expect(findToggle('Should split headings automatically').getValue()).toBe(false);
   });
 
   it('should render the create-folder rename-button toggles bound to their settings', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should show rename button for the created folder', 'Should show rename button for created notes']);
 
     // Issue #214 makes the issue-#200 buttons optional, never withdrawn — so both default to shown.
     expect(findToggle('Should show rename button for the created folder').getValue()).toBe(true);
@@ -779,9 +801,9 @@ describe('PluginSettingsTab', () => {
 
   it('should re-render settings when display is called twice', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should fix footnotes']);
     const firstRenderHeadings = headings.length;
-    renderRows(tab);
+    renderRows(tab, ['Should fix footnotes']);
 
     expect(headings.length).toBe(firstRenderHeadings * 2);
   });
@@ -796,7 +818,7 @@ describe('debug controller toggle', () => {
     }));
 
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should show console debug messages']);
 
     expect(findToggle('Should show console debug messages').getValue()).toBe(true);
   });
@@ -811,7 +833,7 @@ describe('debug controller toggle', () => {
     }));
 
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should show console debug messages']);
 
     findToggle('Should show console debug messages').setValue(true);
     expect(enableMock).toHaveBeenCalledWith(PLUGIN_ID);
@@ -828,7 +850,7 @@ describe('debug controller toggle', () => {
     }));
 
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should show console debug messages']);
 
     findToggle('Should show console debug messages').setValue(false);
     expect(disableMock).toHaveBeenCalledWith(PLUGIN_ID);
@@ -838,7 +860,7 @@ describe('debug controller toggle', () => {
 describe('shouldReplaceInvalidTitleCharacters', () => {
   it('should enable the replacement text input when replacing invalid characters is on', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Replacement string']);
 
     expect(isRowDisabled(tab, 'Replacement string')).toBe(false);
   });
@@ -848,7 +870,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
     castTo<PluginSettings>(settingsComponent.settings).shouldReplaceInvalidTitleCharacters = false;
 
     const tab = await createSettingsTab(settingsComponent);
-    renderRows(tab);
+    renderRows(tab, ['Replacement string']);
 
     // The predicate is what the tab owns; Obsidian applies it — and propagates it to the row's
     // components — on every render and on every `refreshDomState()`.
@@ -857,7 +879,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
 
   it('should offer every folder-note location, Auto first', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Folder note location']);
 
     const location = dropdowns.find((dropdown) => dropdown.name === 'Folder note location');
     const options = [...(location?.component.selectEl.options ?? [])].map((option) => option.value);
@@ -871,7 +893,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
 
   it('should disable the folder-note name row while the location is Auto, that plugin supplying the name', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Folder note name template']);
 
     expect(isRowDisabled(tab, 'Folder note name template')).toBe(true);
   });
@@ -881,14 +903,14 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
     castTo<PluginSettings>(settingsComponent.settings).folderNoteLocation = FolderNoteLocation.ParentFolder;
 
     const tab = await createSettingsTab(settingsComponent);
-    renderRows(tab);
+    renderRows(tab, ['Folder note name template']);
 
     expect(isRowDisabled(tab, 'Folder note name template')).toBe(false);
   });
 
   it('should re-evaluate the predicates when the folder-note location changes', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Folder note location']);
 
     const refreshDomStateSpy = vi.fn();
     tab.refreshDomState = refreshDomStateSpy;
@@ -905,7 +927,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
 
   it('should re-evaluate the predicates when the replace-invalid-characters toggle changes', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should replace invalid characters']);
 
     const refreshDomStateSpy = vi.fn();
     tab.refreshDomState = refreshDomStateSpy;
@@ -924,7 +946,7 @@ describe('shouldReplaceInvalidTitleCharacters', () => {
 describe('shouldBlockVaultDuringOperations', () => {
   it('should enable the blocking-dialog row while operation notices are on', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should block the vault during operations']);
 
     expect(isRowDisabled(tab, 'Should block the vault during operations')).toBe(false);
   });
@@ -934,14 +956,14 @@ describe('shouldBlockVaultDuringOperations', () => {
     castTo<PluginSettings>(settingsComponent.settings).shouldShowOperationNotices = false;
 
     const tab = await createSettingsTab(settingsComponent);
-    renderRows(tab);
+    renderRows(tab, ['Should block the vault during operations']);
 
     expect(isRowDisabled(tab, 'Should block the vault during operations')).toBe(true);
   });
 
   it('should re-evaluate the predicates when the operation-notices toggle changes', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should show operation notices']);
 
     const refreshDomStateSpy = vi.fn();
     tab.refreshDomState = refreshDomStateSpy;
@@ -964,7 +986,7 @@ describe('shouldAskBeforeCreatingFolder', () => {
   it('should disable the rename-button rows while the confirmation dialog is off', async () => {
     // Off is the DEFAULT for this flow, unlike every other `shouldAskBefore*`.
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, RENAME_BUTTON_ROW_NAMES);
 
     for (const name of RENAME_BUTTON_ROW_NAMES) {
       expect(isRowDisabled(tab, name)).toBe(true);
@@ -976,7 +998,7 @@ describe('shouldAskBeforeCreatingFolder', () => {
     castTo<PluginSettings>(settingsComponent.settings).shouldAskBeforeCreatingFolder = true;
 
     const tab = await createSettingsTab(settingsComponent);
-    renderRows(tab);
+    renderRows(tab, RENAME_BUTTON_ROW_NAMES);
 
     for (const name of RENAME_BUTTON_ROW_NAMES) {
       expect(isRowDisabled(tab, name)).toBe(false);
@@ -985,7 +1007,7 @@ describe('shouldAskBeforeCreatingFolder', () => {
 
   it('should re-evaluate the predicates when the ask-before-creating toggle changes', async () => {
     const tab = await createSettingsTab();
-    renderRows(tab);
+    renderRows(tab, ['Should ask before creating a folder']);
 
     const refreshDomStateSpy = vi.fn();
     tab.refreshDomState = refreshDomStateSpy;
@@ -1131,11 +1153,25 @@ function isRowDisabled(tab: PluginSettingsTab, name: string): boolean {
  * Renders the declared rows the way Obsidian does when the tab is opened: it applies the name and the
  * description, then runs the row's `render` callback.
  *
+ * Pass the names of the rows a test reads. Rendering the whole tab costs ~100 ms per test on an idle
+ * machine but 3-12 s under `test:coverage` on a loaded one, past the 5 s test timeout, while nearly
+ * every test reads one or two rows. A name that no row carries throws, so a typo cannot make a test pass
+ * on rows that were never rendered. Only a test that needs EVERY row omits the list.
+ *
  * @param tab - The settings tab.
+ * @param rowNames - The names of the rows to render, or `undefined` for every row.
  */
-function renderRows(tab: PluginSettingsTab): void {
-  for (const row of collectRows(tab, true)) {
-    if (!('render' in row)) {
+function renderRows(tab: PluginSettingsTab, rowNames?: readonly string[]): void {
+  const rows = collectRows(tab, true);
+  const wantedNames = rowNames === undefined ? null : new Set(rowNames);
+  for (const name of wantedNames ?? []) {
+    if (rows.every((row) => row.name !== name)) {
+      throw new Error(`Row "${name}" was not declared.`);
+    }
+  }
+
+  for (const row of rows) {
+    if (!('render' in row) || (wantedNames !== null && !wantedNames.has(row.name))) {
       continue;
     }
 
