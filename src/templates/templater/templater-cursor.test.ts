@@ -1,3 +1,4 @@
+import type { TemplaterEditorHandler } from '@mnaoumov/obsidian-lib/templater';
 import type {
   App as AppOriginal,
   TFile
@@ -13,8 +14,6 @@ import {
   it,
   vi
 } from 'vitest';
-
-import type { TemplaterEditorHandler } from '../templater.ts';
 
 import {
   createTemplaterPluginStub,
