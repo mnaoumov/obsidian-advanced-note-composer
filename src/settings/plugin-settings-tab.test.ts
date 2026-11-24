@@ -64,10 +64,16 @@ const TEMPLATE_FIRST_EXCEPTIONS = new Set(['Folder note']);
 const TOP_LEVEL_LABEL = 'top level';
 
 /**
- * Rendering the whole tab took up to 12 s per test under `test:coverage` on a loaded 2-processor machine,
- * against Vitest's 5 s default. Only the test that genuinely needs every row pays it; see `renderRows`.
+ * Every test here builds a settings component, a tab and its full declaration tree, and that fixed cost
+ * alone took over 6 s for one test under `npm run gate`'s `test:coverage` on a loaded 2-processor machine,
+ * against Vitest's 5 s default. `renderRows` already renders only the rows a test reads, which took the
+ * worst case from about 12 s down; this covers what is left. Only the test that renders every row
+ * (templates first) gets a longer budget still.
  */
+const SETTINGS_TAB_TEST_TIMEOUT_IN_MILLISECONDS = 30_000;
 const WHOLE_TAB_RENDER_TIMEOUT_IN_MILLISECONDS = 60_000;
+
+vi.setConfig({ testTimeout: SETTINGS_TAB_TEST_TIMEOUT_IN_MILLISECONDS });
 
 interface AppStatics {
   readonly createConfigured__: () => App;
