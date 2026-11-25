@@ -253,6 +253,44 @@
   }
 }
 
+// `Use regular expression` and `Match case` share one row of checkboxes, under `Replace with`.
+.advanced-note-composer-bulk-rename-flags {
+  .setting-item-info {
+    display: none;
+  }
+
+  .setting-item-control {
+    flex-wrap: wrap;
+    gap: var(--size-4-4);
+    justify-content: flex-start;
+  }
+}
+
+.advanced-note-composer-bulk-rename-flag {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--size-4-1);
+}
+
+// The compact phone layout (discussion #316): each row's description took two lines there, so it is hidden
+// and the field's placeholder and tooltip carry it; `Rename` and `Cancel` sit side by side instead of stacked by
+// Obsidian's mobile `column-reverse`, which also gives `Cancel` a top margin of its own.
+.is-phone .advanced-note-composer-bulk-rename-modal {
+  .setting-item-description {
+    display: none;
+  }
+
+  .modal-button-container {
+    flex-direction: row;
+
+    button {
+      flex: 1 1 0;
+      margin-top: 0;
+      width: auto;
+    }
+  }
+}
+
 .advanced-note-composer-bulk-rename-summary {
   flex-shrink: 0;
   margin-block: var(--size-4-2);
