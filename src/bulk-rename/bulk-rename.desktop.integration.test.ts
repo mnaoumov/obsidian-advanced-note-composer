@@ -24,12 +24,18 @@ interface BulkRenameProbeArguments {
    */
   readonly scenario: string;
   readonly shouldConfirm: boolean;
+
+  /**
+   * Lays the dialog out as on a phone, through the body class Obsidian's phone CSS keys on.
+   */
+  readonly shouldUsePhoneLayout?: boolean;
 }
 
 interface BulkRenameProbeResult {
   readonly filePaths: readonly string[];
   readonly isRenameButtonDisabled: boolean;
   readonly linkerContent: string;
+  readonly phoneLayout: null | PhoneLayoutMeasurement;
   readonly previewText: string;
 }
 
@@ -37,6 +43,13 @@ interface ComponentTreeNode {
   readonly _children?: ComponentTreeNode[];
   readonly editAndSave?: unknown;
   readonly settings?: SubmenuSettings;
+}
+
+interface PhoneLayoutMeasurement {
+  readonly contentDisplay: string;
+  readonly isContentOverflowing: boolean;
+  readonly previewFullHeight: number;
+  readonly previewHeight: number;
 }
 
 interface SettingsCarrier {
@@ -51,7 +64,7 @@ interface SubmenuSettings {
 
 async function runBulkRename(files: Readonly<Record<string, string>>, input: BulkRenameProbeArguments): Promise<BulkRenameProbeResult> {
   return await evalInObsidian({
-    async callback({ app, expectedPath, fields, files: fixtureFiles, lib: { clickElement, waitUntil }, obsidianModule, paths, pluginId, scenario, shouldConfirm }): Promise<BulkRenameProbeResult> {
+    async callback({ app, expectedPath, fields, files: fixtureFiles, lib: { clickElement, waitUntil }, obsidianModule, paths, pluginId, scenario, shouldConfirm, shouldUsePhoneLayout }): Promise<BulkRenameProbeResult> {
       // Four waits share the transport's ~30 s per-closure cap.
       const WAIT_TIMEOUT_IN_MILLISECONDS = 6000;
 
@@ -65,7 +78,11 @@ async function runBulkRename(files: Readonly<Record<string, string>>, input: Bul
 
       const settingsComponent = findSettingsComponent();
       const isOriginalSubmenu = settingsComponent.settings.shouldAddCommandsToSubmenu;
+      const wasPhone = document.body.hasClass('is-phone');
       try {
+        if (shouldUsePhoneLayout) {
+          document.body.addClass('is-phone');
+        }
         await settingsComponent.editAndSave((settings) => {
           settings.shouldAddCommandsToSubmenu = false;
         });
@@ -112,6 +129,7 @@ async function runBulkRename(files: Readonly<Record<string, string>>, input: Bul
         const previewEl = document.querySelector('.advanced-note-composer-bulk-rename-preview');
         const previewText = previewEl?.textContent ?? '';
         const isRenameButtonDisabled = renameButton.disabled;
+        const phoneLayout = shouldUsePhoneLayout ? measurePhoneLayout() : null;
 
         if (shouldConfirm) {
           await clickElement({ element: renameButton });
@@ -134,12 +152,35 @@ async function runBulkRename(files: Readonly<Record<string, string>>, input: Bul
           filePaths: app.vault.getFiles().map((file) => file.path).filter((path) => path.startsWith(`bulk/${scenario}/`)).sort(),
           isRenameButtonDisabled,
           linkerContent: linker ? await app.vault.read(linker) : '',
+          phoneLayout,
           previewText
         };
       } finally {
+        if (!wasPhone) {
+          document.body.removeClass('is-phone');
+        }
         await settingsComponent.editAndSave((settings) => {
           settings.shouldAddCommandsToSubmenu = isOriginalSubmenu;
         });
+      }
+
+      function measurePhoneLayout(): PhoneLayoutMeasurement {
+        const contentEl = document.querySelector<HTMLElement>('.advanced-note-composer-bulk-rename-modal .modal-content');
+        const previewElement = document.querySelector<HTMLElement>('.advanced-note-composer-bulk-rename-preview');
+        if (!contentEl || !previewElement) {
+          throw new Error('The dialog has no content or preview element.');
+        }
+        const previewStyle = getComputedStyle(previewElement);
+        const borderHeight = previewElement.offsetHeight - previewElement.clientHeight;
+        const paddingHeight = Number.parseFloat(previewStyle.paddingTop) + Number.parseFloat(previewStyle.paddingBottom);
+        const maxHeight = Number.parseFloat(previewStyle.maxHeight) + (previewStyle.boxSizing === 'border-box' ? 0 : borderHeight + paddingHeight);
+        return {
+          contentDisplay: getComputedStyle(contentEl).display,
+          isContentOverflowing: contentEl.scrollHeight > contentEl.clientHeight,
+          // What the preview would show uncut: its content, up to its own `max-height`, borders included.
+          previewFullHeight: Math.min(previewElement.scrollHeight + borderHeight, maxHeight),
+          previewHeight: previewElement.offsetHeight
+        };
       }
 
       function findSettingsComponent(): SettingsCarrier {
@@ -200,6 +241,30 @@ describe('Bulk rename... on the explorer multi-item menu', () => {
       shouldConfirm: true
     });
     expect(result.filePaths).toEqual(['bulk/case/Note.md']);
+  });
+
+  // Discussion #316: on a phone the preview was squeezed to a sliver that could not be scrolled.
+  it('keeps the whole preview visible in the phone layout, where the dialog scrolls instead', async () => {
+    const files: Record<string, string> = {};
+    const paths: string[] = [];
+    for (let index = 1; index <= 8; index++) {
+      const path = `bulk/phone/note ${index.toString()}.md`;
+      files[path] = 'note';
+      paths.push(path);
+    }
+    const result = await runBulkRename(files, {
+      expectedPath: '',
+      fields: { prefix: 'x ' },
+      paths,
+      scenario: 'phone',
+      shouldConfirm: false,
+      shouldUsePhoneLayout: true
+    });
+
+    // The premise: the phone layout is in force, and the fields alone overflow the dialog.
+    expect(result.phoneLayout?.contentDisplay).toBe('flex');
+    expect(result.phoneLayout?.isContentOverflowing).toBe(true);
+    expect(result.phoneLayout?.previewHeight).toBeGreaterThanOrEqual((result.phoneLayout?.previewFullHeight ?? Infinity) - 1);
   });
 
   it('refuses a batch whose new name something outside it already holds', async () => {

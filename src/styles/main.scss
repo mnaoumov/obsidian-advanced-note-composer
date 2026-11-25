@@ -254,6 +254,7 @@
 }
 
 .advanced-note-composer-bulk-rename-summary {
+  flex-shrink: 0;
   margin-block: var(--size-4-2);
 
   &.mod-warning {
@@ -261,9 +262,13 @@
   }
 }
 
+// On a phone Obsidian makes `.modal-content` a scrolling flex column, and a flex item with its own
+// `overflow` has an automatic minimum height of 0, so the preview was squeezed to a sliver nobody could
+// scroll (discussion #316). It keeps its own height and the dialog scrolls instead.
 .advanced-note-composer-bulk-rename-preview {
   border: var(--border-width) solid var(--background-modifier-border);
   border-radius: var(--radius-s);
+  flex-shrink: 0;
   font-size: var(--font-ui-small);
   max-height: 12em;
   overflow-y: auto;
