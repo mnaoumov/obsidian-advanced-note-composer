@@ -18,6 +18,13 @@ import {
   DEFAULT_BULK_RENAME_REQUEST
 } from './bulk-rename-plan.ts';
 
+interface AddTextRowParams {
+  readonly description: string;
+  readonly key: 'findText' | 'prefix' | 'replaceText' | 'suffix';
+  readonly name: string;
+  readonly placeholder: string;
+}
+
 interface BulkRenameModalConstructorParams extends SelectBulkRenameRequestParams {
   readonly promiseResolve: PromiseResolve<BulkRenameRequest | null>;
 }
@@ -59,24 +66,24 @@ class BulkRenameModal extends Modal {
     this.modalEl.addClass('advanced-note-composer-bulk-rename-modal');
     this.setTitle(`Bulk rename ${this.plan.entries.length.toString()} items`);
 
-    this.addTextRow('Find', 'Text to find. Leave empty to rename by the other fields only.', 'findText');
-    this.addTextRow('Replace with', 'With a regular expression, $1 names its first group.', 'replaceText');
+    this.addTextRow({
+      description: 'Text to find. Leave empty to rename by the other fields only.',
+      key: 'findText',
+      name: 'Find',
+      placeholder: 'Text to find'
+    });
+    this.addTextRow({
+      description: 'With a regular expression, $1 names its first group.',
+      key: 'replaceText',
+      name: 'Replace with',
+      placeholder: 'Replacement, $1 = first group'
+    });
 
-    new Setting(this.contentEl)
-      .setName('Use regular expression')
-      .addToggle((toggle) => {
-        toggle.setValue(this.options.isRegularExpression).onChange((value) => {
-          this.update({ isRegularExpression: value });
-        });
-      });
-
-    new Setting(this.contentEl)
-      .setName('Match case')
-      .addToggle((toggle) => {
-        toggle.setValue(this.options.isCaseSensitive).onChange((value) => {
-          this.update({ isCaseSensitive: value });
-        });
-      });
+    // Both switches share one row under `Replace with`, since they qualify the find and replace above them.
+    // As two settings rows they took two full rows on a phone (discussion #316).
+    const flagsSetting = new Setting(this.contentEl).setClass('advanced-note-composer-bulk-rename-flags');
+    this.addFlag(flagsSetting.controlEl, 'Use regular expression', 'isRegularExpression');
+    this.addFlag(flagsSetting.controlEl, 'Match case', 'isCaseSensitive');
 
     new Setting(this.contentEl)
       .setName('Change case')
@@ -95,14 +102,26 @@ class BulkRenameModal extends Modal {
         });
       });
 
-    this.addTextRow('Prefix', 'Added before the name. {{index}} numbers the items, {{index:00}} pads the number.', 'prefix');
-    this.addTextRow('Suffix', 'Added after the name, before the extension. Takes the same tokens.', 'suffix');
+    this.addTextRow({
+      description: 'Added before the name. {{index}} numbers the items, {{index:00}} pads the number.',
+      key: 'prefix',
+      name: 'Prefix',
+      placeholder: 'e.g. {{index:00}}. '
+    });
+    this.addTextRow({
+      description: 'Added after the name, before the extension. Takes the same tokens.',
+      key: 'suffix',
+      name: 'Suffix',
+      placeholder: 'e.g. ({{index}})'
+    });
 
+    const startNumberDescription = 'The number {{index}} gives the first item.';
     new Setting(this.contentEl)
       .setName('Start number')
-      .setDesc('The number {{index}} gives the first item.')
+      .setDesc(startNumberDescription)
       .addText((text) => {
         text.inputEl.type = 'number';
+        text.inputEl.title = startNumberDescription;
         text.setValue(this.options.startIndex.toString()).onChange((value) => {
           const startIndex = Number.parseInt(value, 10);
           this.update({ startIndex: Number.isNaN(startIndex) ? DEFAULT_BULK_RENAME_REQUEST.startIndex : startIndex });
@@ -125,12 +144,29 @@ class BulkRenameModal extends Modal {
     this.renderPreview();
   }
 
-  private addTextRow(name: string, description: string, key: 'findText' | 'prefix' | 'replaceText' | 'suffix'): void {
+  private addFlag(containerEl: HTMLElement, text: string, key: 'isCaseSensitive' | 'isRegularExpression'): void {
+    containerEl.createEl('label', { cls: 'advanced-note-composer-bulk-rename-flag' }, (labelEl) => {
+      const checkboxEl = labelEl.createEl('input', { type: 'checkbox' });
+      checkboxEl.dataset['bulkRenameFlag'] = key;
+      checkboxEl.checked = this.options[key];
+      checkboxEl.addEventListener('change', () => {
+        this.update({ [key]: checkboxEl.checked });
+      });
+      labelEl.appendText(text);
+    });
+  }
+
+  // The description doubles as the field's tooltip, and a short hint goes in the placeholder: the phone layout
+  // hides the descriptions, which took two lines per row there (discussion #316).
+  private addTextRow(params: AddTextRowParams): void {
     new Setting(this.contentEl)
-      .setName(name)
-      .setDesc(description)
+      .setName(params.name)
+      .setDesc(params.description)
       .addText((text) => {
+        const key = params.key;
         text.inputEl.dataset['bulkRenameField'] = key;
+        text.inputEl.title = params.description;
+        text.setPlaceholder(params.placeholder);
         text.setValue(this.options[key]).onChange((value) => {
           this.update({ [key]: value });
         });

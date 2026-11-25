@@ -17,6 +17,11 @@ interface BulkRenameProbeArguments {
    */
   readonly expectedPath: string;
   readonly fields: Readonly<Record<string, string>>;
+
+  /**
+   * The option checkboxes to tick (`isRegularExpression`, `isCaseSensitive`), by their `data-bulk-rename-flag`.
+   */
+  readonly flags?: readonly string[];
   readonly paths: readonly string[];
 
   /**
@@ -26,7 +31,7 @@ interface BulkRenameProbeArguments {
   readonly shouldConfirm: boolean;
 
   /**
-   * Lays the dialog out as on a phone, through the body class Obsidian's phone CSS keys on.
+   * Lays the dialog out as on a phone, through the body classes Obsidian's mobile and phone CSS key on.
    */
   readonly shouldUsePhoneLayout?: boolean;
 }
@@ -46,10 +51,14 @@ interface ComponentTreeNode {
 }
 
 interface PhoneLayoutMeasurement {
+  readonly areButtonsSideBySide: boolean;
+  readonly areFlagsOnOneRow: boolean;
   readonly contentDisplay: string;
+  readonly fieldPlaceholders: readonly string[];
   readonly isContentOverflowing: boolean;
   readonly previewFullHeight: number;
   readonly previewHeight: number;
+  readonly visibleDescriptionCount: number;
 }
 
 interface SettingsCarrier {
@@ -64,7 +73,7 @@ interface SubmenuSettings {
 
 async function runBulkRename(files: Readonly<Record<string, string>>, input: BulkRenameProbeArguments): Promise<BulkRenameProbeResult> {
   return await evalInObsidian({
-    async callback({ app, expectedPath, fields, files: fixtureFiles, lib: { clickElement, waitUntil }, obsidianModule, paths, pluginId, scenario, shouldConfirm, shouldUsePhoneLayout }): Promise<BulkRenameProbeResult> {
+    async callback({ app, expectedPath, fields, files: fixtureFiles, flags, lib: { clickElement, waitUntil }, obsidianModule, paths, pluginId, scenario, shouldConfirm, shouldUsePhoneLayout }): Promise<BulkRenameProbeResult> {
       // Four waits share the transport's ~30 s per-closure cap.
       const WAIT_TIMEOUT_IN_MILLISECONDS = 6000;
 
@@ -78,10 +87,12 @@ async function runBulkRename(files: Readonly<Record<string, string>>, input: Bul
 
       const settingsComponent = findSettingsComponent();
       const isOriginalSubmenu = settingsComponent.settings.shouldAddCommandsToSubmenu;
-      const wasPhone = document.body.hasClass('is-phone');
+      // A phone carries both classes: `is-mobile` stacks the dialog buttons, `is-phone` lays the content out.
+      const PHONE_CLASSES = ['is-mobile', 'is-phone'];
+      const originalPhoneClasses = new Set(PHONE_CLASSES.filter((cls) => document.body.hasClass(cls)));
       try {
         if (shouldUsePhoneLayout) {
-          document.body.addClass('is-phone');
+          document.body.addClasses(PHONE_CLASSES);
         }
         await settingsComponent.editAndSave((settings) => {
           settings.shouldAddCommandsToSubmenu = false;
@@ -121,6 +132,14 @@ async function runBulkRename(files: Readonly<Record<string, string>>, input: Bul
           fieldInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
 
+        for (const flag of flags ?? []) {
+          const checkbox = document.querySelector(`.advanced-note-composer-bulk-rename-modal input[data-bulk-rename-flag="${CSS.escape(flag)}"]`);
+          if (!(checkbox instanceof HTMLInputElement)) {
+            throw new TypeError(`No ${flag} checkbox.`);
+          }
+          checkbox.click();
+        }
+
         const renameButton = [...document.querySelectorAll('.advanced-note-composer-bulk-rename-modal .modal-button-container button')]
           .find((button) => button.textContent === 'Rename');
         if (!(renameButton instanceof HTMLButtonElement)) {
@@ -156,9 +175,7 @@ async function runBulkRename(files: Readonly<Record<string, string>>, input: Bul
           previewText
         };
       } finally {
-        if (!wasPhone) {
-          document.body.removeClass('is-phone');
-        }
+        document.body.removeClasses(PHONE_CLASSES.filter((cls) => !originalPhoneClasses.has(cls)));
         await settingsComponent.editAndSave((settings) => {
           settings.shouldAddCommandsToSubmenu = isOriginalSubmenu;
         });
@@ -170,16 +187,30 @@ async function runBulkRename(files: Readonly<Record<string, string>>, input: Bul
         if (!contentEl || !previewElement) {
           throw new Error('The dialog has no content or preview element.');
         }
+        const modalSelector = '.advanced-note-composer-bulk-rename-modal';
+        const flagRects = [...document.querySelectorAll(`${modalSelector} input[data-bulk-rename-flag]`)].map((el) => el.getBoundingClientRect());
+        const buttonRects = [...document.querySelectorAll(`${modalSelector} .modal-button-container button`)].map((el) => el.getBoundingClientRect());
+        const [firstFlag, secondFlag] = flagRects;
+        const [firstButton, secondButton] = buttonRects;
         const previewStyle = getComputedStyle(previewElement);
         const borderHeight = previewElement.offsetHeight - previewElement.clientHeight;
         const paddingHeight = Number.parseFloat(previewStyle.paddingTop) + Number.parseFloat(previewStyle.paddingBottom);
         const maxHeight = Number.parseFloat(previewStyle.maxHeight) + (previewStyle.boxSizing === 'border-box' ? 0 : borderHeight + paddingHeight);
         return {
+          areButtonsSideBySide: buttonRects.length === 2 && firstButton !== undefined && secondButton !== undefined
+            // One row: the two overlap vertically (their tops may differ by a few pixels) and not horizontally.
+            && firstButton.top < secondButton.bottom && secondButton.top < firstButton.bottom
+            && (firstButton.right <= secondButton.left || secondButton.right <= firstButton.left),
+          areFlagsOnOneRow: flagRects.length === 2 && firstFlag !== undefined && secondFlag !== undefined
+            && Math.abs(firstFlag.top - secondFlag.top) < 1,
           contentDisplay: getComputedStyle(contentEl).display,
+          fieldPlaceholders: [...document.querySelectorAll<HTMLInputElement>(`${modalSelector} input[data-bulk-rename-field]`)].map((el) => el.placeholder),
           isContentOverflowing: contentEl.scrollHeight > contentEl.clientHeight,
           // What the preview would show uncut: its content, up to its own `max-height`, borders included.
           previewFullHeight: Math.min(previewElement.scrollHeight + borderHeight, maxHeight),
-          previewHeight: previewElement.offsetHeight
+          previewHeight: previewElement.offsetHeight,
+          visibleDescriptionCount: [...document.querySelectorAll<HTMLElement>(`${modalSelector} .setting-item-description`)]
+            .filter((el) => el.offsetHeight > 0).length
         };
       }
 
@@ -265,6 +296,37 @@ describe('Bulk rename... on the explorer multi-item menu', () => {
     expect(result.phoneLayout?.contentDisplay).toBe('flex');
     expect(result.phoneLayout?.isContentOverflowing).toBe(true);
     expect(result.phoneLayout?.previewHeight).toBeGreaterThanOrEqual((result.phoneLayout?.previewFullHeight ?? Infinity) - 1);
+  });
+
+  // Discussion #316: the compact phone layout. No row spends two lines on its description, which the
+  // placeholder carries instead; both options share one row; `Rename` and `Cancel` sit side by side.
+  it('lays the dialog out compactly on a phone', async () => {
+    const result = await runBulkRename({ 'bulk/compact/note.md': 'note' }, {
+      expectedPath: '',
+      fields: {},
+      paths: ['bulk/compact/note.md'],
+      scenario: 'compact',
+      shouldConfirm: false,
+      shouldUsePhoneLayout: true
+    });
+
+    expect(result.phoneLayout?.visibleDescriptionCount).toBe(0);
+    expect(result.phoneLayout?.fieldPlaceholders).toHaveLength(4);
+    expect(result.phoneLayout?.fieldPlaceholders.every((placeholder) => placeholder !== '')).toBe(true);
+    expect(result.phoneLayout?.areFlagsOnOneRow).toBe(true);
+    expect(result.phoneLayout?.areButtonsSideBySide).toBe(true);
+  });
+
+  it('renames through a regular expression once its checkbox is ticked', async () => {
+    const result = await runBulkRename({ 'bulk/regex/note 12.md': 'note' }, {
+      expectedPath: 'bulk/regex/12 note.md',
+      fields: { findText: '^(\\w+) (\\d+)$', replaceText: '$2 $1' },
+      flags: ['isRegularExpression'],
+      paths: ['bulk/regex/note 12.md'],
+      scenario: 'regex',
+      shouldConfirm: true
+    });
+    expect(result.filePaths).toEqual(['bulk/regex/12 note.md']);
   });
 
   it('refuses a batch whose new name something outside it already holds', async () => {
