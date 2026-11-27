@@ -107,7 +107,11 @@ export async function bindHotkey(app: App, commandId: string, hotkey: Hotkey): P
   app.hotkeyManager.setHotkeys(commandId, [hotkey]);
   await app.hotkeyManager.save();
   app.hotkeyManager.bake();
-  new Notice(`Bound hotkey to: ${commandId}`);
+  const commandName = app.commands.findCommand(commandId)?.name ?? commandId;
+  new Notice(createFragment((fragment) => {
+    fragment.appendText('Bound hotkey to: ');
+    appendCodeBlock(fragment, commandName);
+  }));
 }
 
 /**
