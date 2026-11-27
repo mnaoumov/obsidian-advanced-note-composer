@@ -4,7 +4,8 @@ import type { SettingEx } from '@mnaoumov/obsidian-lib/setting-ex';
 import type {
   SettingDefinitionItem,
   SettingDefinitionPage,
-  SettingGroupItem
+  SettingGroupItem,
+  ToggleComponent
 } from 'obsidian';
 
 import { FolderNoteLocation } from '@mnaoumov/obsidian-lib/folder-note';
@@ -22,13 +23,18 @@ import { TOKENIZED_STRING_LANGUAGE } from '../templates/tokenized-string-languag
 import {
   isMenuIncludedInPlacement,
   MenuKind,
+  setCommandMenuPlacements,
   withMenuIncludedInPlacement
 } from './command-visibility/command-menu-placement.ts';
-import { menuPlaceableCommandsOfCategory } from './command-visibility/menu-placeable-commands.ts';
+import {
+  MENU_PLACEABLE_COMMANDS,
+  menuPlaceableCommandsOfCategory
+} from './command-visibility/menu-placeable-commands.ts';
 import {
   Action,
   COMMAND_CATEGORY_PATH_SETTING_NAMES,
   CommandCategory,
+  CommandMenuPlacement,
   EmptyFolderBehaviorAfterMergingFolder,
   FrontmatterMergeStrategy,
   FrontmatterTitleMode,
@@ -91,6 +97,18 @@ interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstr
   readonly pluginId: string;
 }
 
+interface PluginSettingsTabMenuPlacementOfAllSettingParams {
+  /**
+   * The commands the row's buttons change.
+   */
+  readonly commands: readonly MenuPlaceableCommand[];
+
+  /**
+   * The row name.
+   */
+  readonly name: string;
+}
+
 interface PluginSettingsTabSettingPageParams {
   /**
    * The one-line summary shown under the page name on the navigable entry, which is all the user sees of
@@ -110,6 +128,19 @@ interface PluginSettingsTabSettingPageParams {
 }
 
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
+  /**
+   * Set while {@link setMenuPlacementOfAll} moves the rendered toggles to what it just saved, so their
+   * change handlers do not save each value a second time.
+   */
+  private isSyncingMenuPlacementToggles = false;
+
+  /**
+   * The most recently rendered placement toggle of each command and menu, keyed by
+   * {@link menuPlacementToggleKey}, so a bulk change (issue #317) can show its result on the page it was
+   * made from. A page renders a row again each time it is opened, and the newer toggle replaces the older.
+   */
+  private readonly menuPlacementToggles = new Map<string, ToggleComponent>();
+
   private readonly pluginId: string;
 
   public constructor(params: PluginSettingsTabConstructorParams) {
@@ -2376,13 +2407,29 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         desc: 'Menus, notices, and the instruction bar at the bottom of the modal dialogs.',
         items: [
           this.settingEx({
-            desc: 'Whether to add commands to the submenu.',
+            // Issue #317: the reporter's menus were taller than the screen with this off, and its old text
+            // (`Whether to add commands to the submenu.`) did not say that this is what keeps them short.
+            desc: createFragment((f) => {
+              f.appendText('Whether the commands this plugin adds to a context menu (the editor menu, the margin menu, and the file and folder menus) are grouped under one ');
+              appendCodeBlock(f, 'Advanced Note Composer');
+              f.appendText(' entry that opens them as a submenu.');
+              f.createEl('br');
+              f.appendText('With it off, every command is listed in the menu itself, which can make the menu taller than the screen. To choose which commands a menu offers, use ');
+              appendCodeBlock(f, 'Command menus for all commands');
+              f.appendText(' below, or the ');
+              appendCodeBlock(f, '<command family> command menus');
+              f.appendText(' page of each command family.');
+            }),
             name: 'Should add commands to submenu',
             render: (setting) => {
               setting.addToggle((toggle) => {
                 this.bind({ propertyName: 'shouldAddCommandsToSubmenu', valueComponent: toggle });
               });
             }
+          }),
+          this.menuPlacementOfAllSetting({
+            commands: MENU_PLACEABLE_COMMANDS,
+            name: 'Command menus for all commands'
           }),
           this.settingEx({
             desc: createFragment((f) => {
@@ -2574,7 +2621,11 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
     setting.addToggle((toggle) => {
       const { settings } = this.pluginSettingsComponent;
       toggle.setValue(isMenuIncludedInPlacement(settings.commandMenuPlacement(command.id), menuKind));
+      this.menuPlacementToggles.set(menuPlacementToggleKey(command.id, menuKind), toggle);
       toggle.onChange((isIncluded) => {
+        if (this.isSyncingMenuPlacementToggles) {
+          return;
+        }
         invokeAsyncSafely(async () => {
           await this.pluginSettingsComponent.editAndSave((settingsToEdit) => {
             settingsToEdit.commandMenuPlacements.set(
@@ -2841,11 +2892,83 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
    * @returns The page definition.
    */
   private commandMenuPlacementSettingPage(commandCategory: CommandCategory): SettingDefinitionPage {
+    const commands = menuPlaceableCommandsOfCategory(commandCategory);
     return this.settingPage({
       desc: `Which editor context menu offers each ${commandCategory} command.`,
-      items: menuPlaceableCommandsOfCategory(commandCategory).map((command) => this.commandMenuPlacementSetting(command)),
+      items: [
+        this.menuPlacementOfAllSetting({
+          commands,
+          name: `All ${commandCategory} commands`
+        }),
+        ...commands.map((command) => this.commandMenuPlacementSetting(command))
+      ],
       name: `${commandCategory} command menus`
     });
+  }
+
+  /**
+   * A row whose two buttons give many commands one placement at once (issue #317).
+   *
+   * The reporter wanted most commands out of the menus and had to find dozens of toggles across seven
+   * pages to do it. Buttons rather than a pair of toggles, because the commands of a row rarely all share
+   * one placement, and a toggle cannot show "some of them".
+   *
+   * @param params - The parameters.
+   * @returns The row definition.
+   */
+  private menuPlacementOfAllSetting(params: PluginSettingsTabMenuPlacementOfAllSettingParams): SettingGroupItem {
+    return this.settingEx({
+      desc: createFragment((f) => {
+        appendCodeBlock(f, 'Hide all');
+        f.appendText(' takes these commands out of both context menus; they still work from the command palette and their hotkeys. ');
+        appendCodeBlock(f, 'Reset');
+        f.appendText(' puts each of them back in the editor menu, its default.');
+      }),
+      name: params.name,
+      render: (setting) => {
+        setting.addButton((button) => {
+          button.setButtonText('Hide all');
+          button.onClick(() => {
+            invokeAsyncSafely(async () => this.setMenuPlacementOfAll(params.commands, CommandMenuPlacement.Neither));
+          });
+        });
+        setting.addButton((button) => {
+          button.setButtonText('Reset');
+          button.onClick(() => {
+            invokeAsyncSafely(async () => this.setMenuPlacementOfAll(params.commands, null));
+          });
+        });
+      }
+    });
+  }
+
+  /**
+   * Saves one placement for many commands, then moves their rendered toggles to match.
+   *
+   * @param commands - The commands to change.
+   * @param commandMenuPlacement - Their new placement, or `null` for the default.
+   */
+  private async setMenuPlacementOfAll(commands: readonly MenuPlaceableCommand[], commandMenuPlacement: CommandMenuPlacement | null): Promise<void> {
+    await this.pluginSettingsComponent.editAndSave((settingsToEdit) => {
+      setCommandMenuPlacements({
+        commandIds: commands.map((command) => command.id),
+        commandMenuPlacement,
+        commandMenuPlacements: settingsToEdit.commandMenuPlacements
+      });
+    });
+
+    const { settings } = this.pluginSettingsComponent;
+    this.isSyncingMenuPlacementToggles = true;
+    try {
+      for (const command of commands) {
+        for (const menuKind of [MenuKind.EditorMenu, MenuKind.ViewportMenu]) {
+          this.menuPlacementToggles.get(menuPlacementToggleKey(command.id, menuKind))
+            ?.setValue(isMenuIncludedInPlacement(settings.commandMenuPlacement(command.id), menuKind));
+        }
+      }
+    } finally {
+      this.isSyncingMenuPlacementToggles = false;
+    }
   }
 
   /**
@@ -3160,4 +3283,15 @@ function appendPathFormsDesc(f: DocumentFragment): void {
   f.appendText(' too.');
   f.createEl('br');
   f.appendText('If any line is not a valid glob or regular expression, the setting says why, and the whole list is ignored until you fix it.');
+}
+
+/**
+ * The key a rendered placement toggle is remembered under.
+ *
+ * @param commandId - The command the toggle governs.
+ * @param menuKind - The menu it controls.
+ * @returns The key.
+ */
+function menuPlacementToggleKey(commandId: string, menuKind: MenuKind): string {
+  return `${commandId}:${menuKind}`;
 }
