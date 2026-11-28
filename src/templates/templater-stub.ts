@@ -2,7 +2,6 @@ import type {
   TemplaterApi,
   TemplaterEditorHandler
 } from '@mnaoumov/obsidian-lib/templater';
-import type { GenericObject } from '@mnaoumov/typescript-lib/type-guards';
 import type { App } from 'obsidian';
 
 import { noopAsync } from '@mnaoumov/typescript-lib/function';
@@ -87,14 +86,10 @@ export function createTemplaterPluginStub(options: CreateTemplaterPluginStubOpti
  * Registers a stand-in plugin instance with a test app so `@mnaoumov/obsidian-lib`'s availability check reads it
  * as available.
  *
- * `obsidian-test-mocks` 7.2.3 does not model `Plugins.loadingPluginId`, which that check reads, and its strict
- * proxy throws on an unmodeled read, so this assigns it `null` (no plugin loading) alongside the registration.
- *
  * @param app - The test app.
  * @param pluginId - The plugin id to register under.
  * @param plugin - The stand-in instance.
  */
 export function registerPluginStub(app: App, pluginId: string, plugin: unknown): void {
   castTo<PluginsRegistryTestable>(app.plugins).registerPlugin__(pluginId, plugin);
-  castTo<GenericObject>(app.plugins)['loadingPluginId'] = null;
 }
