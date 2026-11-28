@@ -17,8 +17,36 @@ import {
   checkShouldAddCommandToViewportMenu,
   isMenuIncludedInPlacement,
   MenuKind,
+  setCommandMenuPlacements,
   withMenuIncludedInPlacement
 } from './command-menu-placement.ts';
+
+describe('setCommandMenuPlacements', () => {
+  it('should give the named commands one placement and leave the others alone', () => {
+    const commandMenuPlacements = new Map([[OTHER_COMMAND_ID, CommandMenuPlacement.Both]]);
+    setCommandMenuPlacements({
+      commandIds: [RECURSIVE_SPLIT_COMMAND_ID, 'extract-current-selection'],
+      commandMenuPlacement: CommandMenuPlacement.Neither,
+      commandMenuPlacements
+    });
+
+    expect(Object.fromEntries(commandMenuPlacements)).toEqual({
+      'extract-current-selection': CommandMenuPlacement.Neither,
+      [OTHER_COMMAND_ID]: CommandMenuPlacement.Both,
+      [RECURSIVE_SPLIT_COMMAND_ID]: CommandMenuPlacement.Neither
+    });
+  });
+
+  it('should put the named commands back on the default by removing their keys', () => {
+    const commandMenuPlacements = new Map([
+      [OTHER_COMMAND_ID, CommandMenuPlacement.Both],
+      [RECURSIVE_SPLIT_COMMAND_ID, CommandMenuPlacement.Neither]
+    ]);
+    setCommandMenuPlacements({ commandIds: [RECURSIVE_SPLIT_COMMAND_ID], commandMenuPlacement: null, commandMenuPlacements });
+
+    expect([...commandMenuPlacements.keys()]).toEqual([OTHER_COMMAND_ID]);
+  });
+});
 
 const OTHER_COMMAND_ID = 'swap-with-marked-selection';
 const PREVIEW_MODE = 'preview';

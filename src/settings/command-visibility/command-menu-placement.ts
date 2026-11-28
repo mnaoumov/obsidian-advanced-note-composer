@@ -66,6 +66,26 @@ export interface CheckShouldAddCommandToViewportMenuParams {
 }
 
 /**
+ * Parameters for {@link setCommandMenuPlacements}.
+ */
+export interface SetCommandMenuPlacementsParams {
+  /**
+   * The ids of the commands to change, without the plugin-id prefix.
+   */
+  readonly commandIds: readonly string[];
+
+  /**
+   * The placement to give every one of them, or `null` to put each back on the default.
+   */
+  readonly commandMenuPlacement: CommandMenuPlacement | null;
+
+  /**
+   * The stored placements, changed in place.
+   */
+  readonly commandMenuPlacements: Map<string, CommandMenuPlacement>;
+}
+
+/**
  * Whether a command is placed in the EDITOR context menu — the one a right-click on the text
  * raises (issue #252).
  *
@@ -111,6 +131,26 @@ export function isMenuIncludedInPlacement(commandMenuPlacement: CommandMenuPlace
     return false;
   }
   return commandMenuPlacement === (menuKind === MenuKind.EditorMenu ? CommandMenuPlacement.EditorMenu : CommandMenuPlacement.ViewportMenu);
+}
+
+/**
+ * Gives many commands one placement at once (issue #317), so taking a whole family out of the menus is one
+ * click rather than one toggle per command.
+ *
+ * Putting a command back on the default DELETES its key rather than writing the default's value: an absent
+ * key already is the default, and writing it would pin every command to today's default and make the next
+ * default change unreachable, the same reason the legacy converter writes nothing for a default.
+ *
+ * @param params - The parameters.
+ */
+export function setCommandMenuPlacements(params: SetCommandMenuPlacementsParams): void {
+  for (const commandId of params.commandIds) {
+    if (params.commandMenuPlacement === null) {
+      params.commandMenuPlacements.delete(commandId);
+    } else {
+      params.commandMenuPlacements.set(commandId, params.commandMenuPlacement);
+    }
+  }
 }
 
 /**

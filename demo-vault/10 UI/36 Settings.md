@@ -278,7 +278,7 @@ Obsidian has two context menus over an open note, and they never both answer one
 - `shouldHideFolderNoteNameInPickers`
   - show a folder note in the note pickers by its folder's path — `Projects/Alpha` rather than `Projects/Alpha/Alpha` — and search it by that path too. Which note is a folder note is the `Folder note` settings' answer, so a folder note kept beside its folder shows as it always did: its path already is the folder's.
 - `shouldAddCommandsToSubmenu`
-  - group this plugin's context-menu entries under one submenu instead of listing them inline.
+  - group this plugin's context-menu entries under one submenu instead of listing them inline. On by default, and what keeps the menus short. The `Command menus for all commands` row below it hides every command from the context menus, or resets them, in one click — see [38 Command menu placement](<./38 Command menu placement.md>).
 
 `Should show console debug messages` lives on this page too. It has no `data.json` key: the choice is stored by the debug controller the plugin shares with its library, which is why it is not in this list.
 

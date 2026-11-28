@@ -5,7 +5,7 @@ Obsidian has **two** context menus over an open note, and a right-click only eve
 - Right-click **the text** and you get the editor menu — `Cut`, `Copy`, `Format`, and every `Advanced Note Composer` command that applies.
 - Right-click **the empty space beside the text**, the margin `Readable line length` leaves, and you get a much smaller menu: `Readable line length`, `Line numbers`, `Inline title`. The line-number gutter raises that same menu.
 
-The first menu gets long. This plugin alone can put nine items in it, and they sit under everything Obsidian already puts there. So **every command picks which menu it appears in, one command at a time**.
+The first menu gets long. This plugin alone can put nine items in it, and they sit under everything Obsidian already puts there. By default they take up one row: `Settings -> UI -> Should add commands to submenu` is on, so they open from a single `Advanced Note Composer` entry. Turn it off and each one is listed in the menu itself. Either way, **every command picks which menu it appears in, one command at a time**.
 
 ## Try it
 
@@ -55,6 +55,15 @@ Every command that reaches an editor menu at all. Each category's rows are on th
 `Merge` and `Move/flatten` have no rows. Every command in them is invoked from a file or folder in the file explorer, not from inside a note, so there is no editor menu for them to be placed in.
 
 The category sections are there to find a row by, and nothing more: placing one command never moves the rest of its group. That was the whole point of the change — the recursive split could not be demoted to the margin without taking every extract with it.
+
+## Many commands at once
+
+Each `<Category> command menus` page starts with an `All <Category> commands` row, and the `UI` page has a `Command menus for all commands` row. Each has two buttons:
+
+- `Hide all` takes those commands out of both menus. They still run from the command palette and from your hotkeys.
+- `Reset` puts each of them back in the editor menu, its default.
+
+So keeping only a few commands in the menu is one click on `Hide all`, then turning those few back on.
 
 ## What placement does not change
 

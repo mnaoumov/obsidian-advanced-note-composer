@@ -4,6 +4,7 @@ import type { CodeHighlighterComponent } from '@mnaoumov/obsidian-lib/setting-co
 import type { DebugController } from '@mnaoumov/typescript-lib/debug-controller';
 import type {
   BaseComponent,
+  ButtonComponent,
   DropdownComponent,
   Plugin,
   SettingDefinition,
@@ -94,6 +95,7 @@ interface NamedDesc {
 }
 
 const headings: string[] = [];
+const buttons: NamedComponent<ButtonComponent>[] = [];
 const toggles: NamedComponent<ToggleComponent>[] = [];
 const texts: NamedComponent<TextComponent>[] = [];
 const dropdowns: NamedComponent<DropdownComponent>[] = [];
@@ -128,6 +130,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks();
   headings.length = 0;
+  buttons.length = 0;
   toggles.length = 0;
   texts.length = 0;
   dropdowns.length = 0;
@@ -159,6 +162,15 @@ async function createSettingsTab(pluginSettingsComponent?: PluginSettingsCompone
     pluginId: PLUGIN_ID,
     pluginSettingsComponent: settingsComponent
   });
+}
+
+function findButton(name: string, buttonText: string): ButtonComponent {
+  const entry = buttons.find((button) => button.name === name && button.component.buttonEl.textContent === buttonText);
+  if (!entry) {
+    throw new Error(`Button "${buttonText}" of "${name}" was not rendered.`);
+  }
+
+  return entry.component;
 }
 
 function findCodeHighlighter(name: string): CodeHighlighterComponent {
@@ -364,6 +376,72 @@ describe('PluginSettingsTab', () => {
 
     // Its siblings are untouched — the defect issue #254 reports.
     expect(pluginSettingsComponent.settings.commandMenuPlacement('extract-current-selection')).toBe(CommandMenuPlacement.EditorMenu);
+  });
+
+  // Issue #317: taking a whole family out of the menus is one click, not one toggle per command.
+  it('should lead every command menus page with a row that changes all of its commands', async () => {
+    const tab = await createSettingsTab();
+    const containers = collectContainers(tab);
+
+    for (const commandCategory of menuPlaceableCommandCategories()) {
+      expect(containers.get(`${commandCategory} command menus`)?.[0]).toBe(`All ${commandCategory} commands`);
+    }
+
+    expect(containers.get('UI')).toContain('Command menus for all commands');
+  });
+
+  it('should hide a family\'s commands from both menus and reset them, leaving other families alone', async () => {
+    const pluginSettingsComponent = await createSettingsComponent();
+    const tab = await createSettingsTab(pluginSettingsComponent);
+    renderRows(tab, ['All Swap commands', 'Swap selections: Swap with marked selection']);
+    const [editorMenuToggle, marginToggle] = toggles
+      .filter((toggle) => toggle.name === 'Swap selections: Swap with marked selection')
+      .map((toggle) => toggle.component);
+    if (!editorMenuToggle || !marginToggle) {
+      throw new Error('The placement row did not render two toggles.');
+    }
+    const saveSpy = vi.spyOn(pluginSettingsComponent, 'editAndSave');
+
+    findButton('All Swap commands', 'Hide all').buttonEl.click();
+    // The toggles move only once the save has finished, so waiting on them waits for both.
+    await vi.waitFor(() => {
+      expect(editorMenuToggle.getValue()).toBe(false);
+    });
+    expect(pluginSettingsComponent.settings.commandMenuPlacement('mark-selection-to-swap')).toBe(CommandMenuPlacement.Neither);
+    expect(pluginSettingsComponent.settings.commandMenuPlacement('swap-with-marked-selection')).toBe(CommandMenuPlacement.Neither);
+    expect(pluginSettingsComponent.settings.commandMenuPlacement('extract-current-selection')).toBe(CommandMenuPlacement.EditorMenu);
+    // The page shows what was saved, without saving each toggle a second time.
+    expect(editorMenuToggle.getValue()).toBe(false);
+    expect(marginToggle.getValue()).toBe(false);
+    expect(saveSpy).toHaveBeenCalledTimes(1);
+
+    findButton('All Swap commands', 'Reset').buttonEl.click();
+    await vi.waitFor(() => {
+      expect(editorMenuToggle.getValue()).toBe(true);
+    });
+    // Reset removes the keys rather than writing the default, so a later default change still reaches them.
+    expect(pluginSettingsComponent.settings.commandMenuPlacements.has('mark-selection-to-swap')).toBe(false);
+    expect(marginToggle.getValue()).toBe(false);
+  });
+
+  it('should hide every command from the menus with the row on the UI page', async () => {
+    const pluginSettingsComponent = await createSettingsComponent();
+    const tab = await createSettingsTab(pluginSettingsComponent);
+    renderRows(tab, ['Command menus for all commands']);
+
+    findButton('Command menus for all commands', 'Hide all').buttonEl.click();
+    await vi.waitFor(() => {
+      for (const command of MENU_PLACEABLE_COMMANDS) {
+        expect(pluginSettingsComponent.settings.commandMenuPlacement(command.id)).toBe(CommandMenuPlacement.Neither);
+      }
+    });
+  });
+
+  it('should say in the submenu row that it is what keeps the menus short', async () => {
+    const tab = await createSettingsTab();
+    renderRows(tab, ['Should add commands to submenu']);
+
+    expect(findDesc('Should add commands to submenu')).toContain('taller than the screen');
   });
 
   // Issue #282: the only headed group left is the inline one at the ROOT, which is not a section inside a
@@ -1020,7 +1098,7 @@ describe('shouldAskBeforeCreatingFolder', () => {
   });
 });
 
-type AddComponentMethod = 'addDropdown' | 'addText' | 'addToggle';
+type AddComponentMethod = 'addButton' | 'addDropdown' | 'addText' | 'addToggle';
 
 /**
  * Describes the containers a row can sit in — every group, plus every page's own direct rows — as the
@@ -1125,6 +1203,7 @@ function collectTopLevel(tab: PluginSettingsTab): string[] {
 }
 
 function installSettingSpies(): void {
+  spyOnAdd('addButton', buttons);
   spyOnAdd('addToggle', toggles);
   spyOnAdd('addText', texts);
   spyOnAdd('addDropdown', dropdowns);
